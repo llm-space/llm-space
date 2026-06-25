@@ -1,6 +1,7 @@
 "use client";
 
 import type { Thread } from "@llm-space/core";
+import { useCallback } from "react";
 
 import { ThreadPlayground } from "@/components/thread-playground";
 

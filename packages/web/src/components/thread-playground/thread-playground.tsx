@@ -26,18 +26,31 @@ import { TitleEditor } from "./misc/title-editor";
 import { ModelConfigEditor } from "./model/model-config-editor";
 import { SystemPromptEditor } from "./prompt/system-prompt-editor";
 import { ToolListView } from "./tool/tool-list-view";
+import { useThreadPlaygroundEvents } from "./use-thread-playground-events";
 
 export interface ThreadPlaygroundProps {
   className?: string;
   initialValue?: Thread;
   readonly?: boolean;
+  // eslint-disable-next-line no-unused-vars
+  onChange?: (thread: Thread) => void;
+  onStreamingStart?: () => void;
+  onStreamingEnd?: () => void;
 }
 
 export function ThreadPlayground({
   initialValue = _createBlankThread(),
+  onChange,
+  onStreamingStart,
+  onStreamingEnd,
   ...props
 }: ThreadPlaygroundProps) {
   const [store] = useState(() => createThreadStore(initialValue));
+  useThreadPlaygroundEvents(store, {
+    onChange,
+    onStreamingStart,
+    onStreamingEnd,
+  });
   return (
     <ThreadStoreContext.Provider value={store}>
       <ThreadPlaygroundContent {...props} />
@@ -57,7 +70,10 @@ function _createBlankThread(): Thread {
 function ThreadPlaygroundContent({
   className,
   readonly: readonlyFromProps = false,
-}: Omit<ThreadPlaygroundProps, "initialThread">) {
+}: Omit<
+  ThreadPlaygroundProps,
+  "initialValue" | "onChange" | "onStreamingStart" | "onStreamingEnd"
+>) {
   const status = useThreadStore((s) => s.status);
   const { run, abort } = useThreadStoreActions();
   const readonly = useMemo(() => {

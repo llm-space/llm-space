@@ -398,13 +398,13 @@ export function createThreadStore(initialThread: Thread): ThreadStore {
         },
         abort() {
           const { status, abortController } = get();
-          if (status === "running") {
-            try {
-              abortController?.abort();
-            } catch {
-              // Ignored
-            }
-            set({ status: "idle", abortController: null });
+          if (status !== "running") {
+            return;
+          }
+          try {
+            abortController?.abort();
+          } catch {
+            // Ignored
           }
         },
       };
