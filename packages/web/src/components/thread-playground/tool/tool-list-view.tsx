@@ -1,5 +1,6 @@
 "use client";
 
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { type FunctionTool } from "@llm-space/core";
 import { PlusIcon, SquareFunction, XIcon } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
@@ -109,6 +110,8 @@ export function ToolListView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTool, setEditingTool] = useState<FunctionTool | null>(null);
 
+  const [animationContainerRef] = useAutoAnimate({ duration: 150 });
+
   const openAddDialog = useCallback(() => {
     setEditingTool(null);
     setDialogOpen(true);
@@ -129,7 +132,10 @@ export function ToolListView({
   return (
     <>
       <div className={cn("group flex w-full", className)}>
-        <div className="flex min-w-0 grow flex-wrap gap-2">
+        <div
+          ref={animationContainerRef}
+          className="flex min-w-0 grow flex-wrap gap-2"
+        >
           {(!tools || tools.length === 0) && (
             <Button
               className="hover:bg-transparent! -ml-1 px-0"

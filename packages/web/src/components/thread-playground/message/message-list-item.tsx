@@ -1,14 +1,16 @@
 import type { DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import type { ImageDataContent, Message } from "@llm-space/core";
+import { PlusIcon } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 
+import { CodeEditor } from "@/components/code-editor";
+import { Tooltip } from "@/components/tooltip";
+import { Button } from "@/components/ui/button";
+import { CollapsibleContent } from "@/components/ui/collapsible-content";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useThreadStoreActions } from "@/stores/thread-store";
-
-import { CodeEditor } from "../../code-editor";
-import { CollapsibleContent } from "../../ui/collapsible-content";
-import { ShineBorder } from "../../ui/shine-border";
-import { Skeleton } from "../../ui/skeleton";
 
 import { ImageContentList } from "./image-content-view";
 import { MessageListItemHeader } from "./message-list-item-header";
@@ -51,18 +53,19 @@ function _MessageListItem({
     return result;
   }, [message.content]);
   const {
-    run,
-    updateMessageTextContent: updateMessageText,
     addMessageImageContent,
+    insertMessageBefore,
+    run,
+    updateMessageTextContent,
   } = useThreadStoreActions();
   const handleRun = useCallback(async () => {
     await run(message.id);
   }, [run, message.id]);
   const handleTextContentChange = useCallback(
     (value: string) => {
-      updateMessageText(message.id, value);
+      updateMessageTextContent(message.id, value);
     },
-    [updateMessageText, message.id]
+    [updateMessageTextContent, message.id]
   );
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
@@ -115,6 +118,25 @@ function _MessageListItem({
         className
       )}
     >
+      <div
+        className={cn(
+          "transition-border group absolute -top-3.5 flex h-3 w-full shrink-0",
+          "has-[button:hover]:[&>.insert-line]:border-primary has-[button:hover]:[&>.insert-line]:right-0",
+          readonly && "invisible"
+        )}
+      >
+        <div className="insert-line absolute left-0 right-2 top-1.5 border-b border-dashed opacity-0 transition-[opacity,border-color,border-style] group-hover:opacity-100"></div>
+        <Tooltip content="Insert message here">
+          <Button
+            className="text-muted-foreground hover:border-primary hover:bg-primary! hover:text-primary-foreground absolute -right-3 -top-0.5 z-10 size-4 -rotate-90 rounded-full opacity-0 transition-[opacity,background-color,color,border-color] group-hover:opacity-100"
+            variant="outline"
+            size="icon-xs"
+            onClick={() => insertMessageBefore(message.id)}
+          >
+            <PlusIcon className="size-3" />
+          </Button>
+        </Tooltip>
+      </div>
       {streaming && (
         <ShineBorder
           shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]}

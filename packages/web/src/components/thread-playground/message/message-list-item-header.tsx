@@ -50,7 +50,7 @@ function _MessageListItemHeader({
           {...dragHandleProps}
           className={cn(
             "text-muted-foreground hover:text-foreground -ml-3.5 flex shrink-0 cursor-grab items-center opacity-0 transition-opacity active:cursor-grabbing group-hover:opacity-100",
-            readonly || dragHandleProps ? "invisible" : ""
+            readonly ? "invisible" : ""
           )}
         >
           <GripVerticalIcon className="size-4" />

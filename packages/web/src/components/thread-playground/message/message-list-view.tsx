@@ -1,18 +1,25 @@
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   DragDropContext,
   Draggable,
   Droppable,
   type DropResult,
+  type DroppableProvided,
 } from "@hello-pangea/dnd";
-import type { AssistantMessage } from "@llm-space/core";
+import type { AssistantMessage, Message } from "@llm-space/core";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useThreadStore, useThreadStoreActions } from "@/stores/thread-store";
-
-import { Tooltip } from "../../tooltip";
-import { Button } from "../../ui/button";
 
 import { MessageListItem } from "./message-list-item";
 
@@ -26,12 +33,12 @@ export function MessageListView({
   const status = useThreadStore((s) => s.status);
   const collapsedMessageIds = useThreadStore((s) => s.collapsedMessageIds);
   const messages = useThreadStore((s) => s.thread.context?.messages);
-  const { appendMessage, insertMessageBefore, moveMessage } =
-    useThreadStoreActions();
+  const { appendMessage, moveMessage } = useThreadStoreActions();
   const [dragging, setDragging] = useState(false);
   const readonly = useMemo(() => {
-    return readonlyFromProps || dragging || dragging;
-  }, [status, dragging, readonlyFromProps]);
+    return readonlyFromProps || dragging;
+  }, [dragging, readonlyFromProps]);
+
   const handleDragStart = useCallback(() => {
     setDragging(true);
   }, []);
@@ -46,58 +53,13 @@ export function MessageListView({
       <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <Droppable droppableId="message-list">
           {(droppableProvided) => (
-            <div
-              className="flex flex-col"
-              ref={droppableProvided.innerRef}
-              {...droppableProvided.droppableProps}
-            >
-              {(messages ?? []).map((message, index) => (
-                <Draggable
-                  key={message.id}
-                  draggableId={message.id}
-                  index={index}
-                  isDragDisabled={readonly}
-                >
-                  {(draggableProvided) => {
-                    const { style, ...draggableProps } =
-                      draggableProvided.draggableProps;
-                    return (
-                      <div
-                        ref={draggableProvided.innerRef}
-                        {...draggableProps}
-                        style={style as CSSProperties}
-                      >
-                        <div
-                          className={cn(
-                            "group relative flex h-3 w-full shrink-0",
-                            readonly && "invisible"
-                          )}
-                        >
-                          <div className="absolute left-0 right-2 top-1.5 border-b border-dashed opacity-0 transition-opacity group-hover:opacity-100"></div>
-                          <Tooltip content="Insert message here">
-                            <Button
-                              className="text-muted-foreground hover:text-accent-foreground absolute -right-3 -top-1 z-10 -rotate-90 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-                              variant="outline"
-                              size="icon-xs"
-                              onClick={() => insertMessageBefore(message.id)}
-                            >
-                              <PlusIcon className="size-3" />
-                            </Button>
-                          </Tooltip>
-                        </div>
-                        <MessageListItem
-                          message={message}
-                          readonly={readonly}
-                          collapsed={collapsedMessageIds.includes(message.id)}
-                          dragHandleProps={draggableProvided.dragHandleProps}
-                        />
-                      </div>
-                    );
-                  }}
-                </Draggable>
-              ))}
-              {droppableProvided.placeholder}
-            </div>
+            <DroppableMessageList
+              droppableProvided={droppableProvided}
+              messages={messages ?? []}
+              dragging={dragging}
+              readonly={readonly}
+              collapsedMessageIds={collapsedMessageIds}
+            />
           )}
         </Droppable>
       </DragDropContext>
@@ -116,6 +78,82 @@ export function MessageListView({
         <PlusIcon className="size-4" />
         Add message
       </Button>
+    </div>
+  );
+}
+
+function DroppableMessageList({
+  droppableProvided,
+  messages,
+  dragging,
+  readonly,
+  collapsedMessageIds,
+}: {
+  droppableProvided: DroppableProvided;
+  messages: Message[];
+  dragging: boolean;
+  readonly: boolean;
+  collapsedMessageIds: string[];
+}) {
+  const [animationContainerRef, enableAnimations] = useAutoAnimate({
+    duration: 150,
+  });
+  const droppableInnerRef = useRef(droppableProvided.innerRef);
+  droppableInnerRef.current = droppableProvided.innerRef;
+
+  useEffect(() => {
+    const enabled = !readonly && !dragging;
+    if (enabled) {
+      setTimeout(() => {
+        enableAnimations(enabled);
+      }, 0);
+    } else {
+      enableAnimations(false);
+    }
+  }, [enableAnimations, readonly]);
+
+  const setContainerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      droppableInnerRef.current(node);
+      animationContainerRef(node);
+    },
+    [animationContainerRef]
+  );
+
+  return (
+    <div
+      className="flex flex-col gap-3.5 pt-3"
+      ref={setContainerRef}
+      {...droppableProvided.droppableProps}
+    >
+      {messages.map((message, index) => (
+        <Draggable
+          key={message.id}
+          draggableId={message.id}
+          index={index}
+          isDragDisabled={readonly}
+        >
+          {(draggableProvided) => {
+            const { style, ...draggableProps } =
+              draggableProvided.draggableProps;
+            return (
+              <div
+                ref={draggableProvided.innerRef}
+                {...draggableProps}
+                style={style as CSSProperties}
+              >
+                <MessageListItem
+                  message={message}
+                  readonly={readonly}
+                  collapsed={collapsedMessageIds.includes(message.id)}
+                  dragHandleProps={draggableProvided.dragHandleProps}
+                />
+              </div>
+            );
+          }}
+        </Draggable>
+      ))}
+      {droppableProvided.placeholder}
     </div>
   );
 }

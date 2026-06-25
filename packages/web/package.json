@@ -19,6 +19,7 @@
     "@codemirror/language-data": "^6.5.2",
     "@earendil-works/pi-agent-core": "catalog:",
     "@earendil-works/pi-ai": "catalog:",
+    "@formkit/auto-animate": "^0.9.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@llm-space/core": "workspace:*",
     "@t3-oss/env-nextjs": "^0.12.0",
