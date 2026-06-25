@@ -1,0 +1,15 @@
+[tools]
+bun = "1.3"
+
+[env]
+NODE_ENV = "development"
+_.path = "node_modules/.bin"
+
+[tasks.install]
+run = "bun run install"
+
+[tasks.dev]
+run = "bun --filter @llm-space/web dev"
+
+[tasks.lint]
+run = "bun run lint"
