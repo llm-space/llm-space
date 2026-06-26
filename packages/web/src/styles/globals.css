@@ -18,6 +18,19 @@
     }
   }
   --animate-skeleton-extending: skeleton-extending 2s ease-in-out infinite;
+
+  @keyframes run-history-enter {
+    0% {
+      background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+    }
+    15% {
+      background-color: color-mix(in oklab, var(--primary) 35%, transparent);
+    }
+    100% {
+      background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+    }
+  }
+  --animate-run-history-enter: run-history-enter 1.6s ease-out;
 }
 
 @theme inline {

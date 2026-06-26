@@ -15,6 +15,9 @@ export const MAX_HISTORY = 100;
  */
 export const MAX_HISTORY_IMAGE_BYTES = 64 * 1024 * 1024;
 
+/** Maximum number of run snapshots retained in `runHistory`. */
+export const MAX_RUN_HISTORY = 20;
+
 /**
  * Undo/redo history for a thread, kept separate from the thread object itself.
  *
@@ -125,6 +128,29 @@ export function recordSnapshot(
     snapshots.shift();
   }
   return { snapshots, index: snapshots.length - 1 };
+}
+
+/** A snapshot of the thread captured when a run completed. */
+export interface RunSnapshot {
+  thread: Thread;
+  /** Epoch milliseconds (`Date.now()`) when the run completed. */
+  timestamp: number;
+}
+
+/**
+ * Append a snapshot of a completed run, keeping only the most recent
+ * {@link MAX_RUN_HISTORY}. The thread is stored by reference and shares unchanged
+ * substructure with the live thread, so this stays cheap.
+ */
+export function recordRun(
+  runHistory: RunSnapshot[],
+  thread: Thread,
+  timestamp: number
+): RunSnapshot[] {
+  const next = [...runHistory, { thread, timestamp }];
+  return next.length > MAX_RUN_HISTORY
+    ? next.slice(next.length - MAX_RUN_HISTORY)
+    : next;
 }
 
 export function undo(history: ChangeHistory): UndoRedoResult | null {

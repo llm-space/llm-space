@@ -1,8 +1,9 @@
 "use client";
 
 import type { Thread } from "@llm-space/core";
-import { PlayIcon, Redo2Icon, Undo2Icon } from "lucide-react";
+import { HistoryIcon, PlayIcon, Redo2Icon, Undo2Icon } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { usePanelRef } from "react-resizable-panels";
 
 import { cn } from "@/lib/utils";
 import { canRedo, canUndo } from "@/stores/thread-history";
@@ -27,6 +28,7 @@ import { MessageListView } from "./message/message-list-view";
 import { TitleEditor } from "./misc/title-editor";
 import { ModelConfigEditor } from "./model/model-config-editor";
 import { SystemPromptEditor } from "./prompt/system-prompt-editor";
+import { RunHistoryList } from "./run-history-list";
 import { ToolListView } from "./tool/tool-list-view";
 import { useShortcuts } from "./use-shortcuts";
 import { useThreadPlaygroundEvents } from "./use-thread-playground-events";
@@ -60,6 +62,9 @@ export function ThreadPlayground({
     </ThreadStoreContext.Provider>
   );
 }
+
+/** Size the Run history panel expands to when toggled open. */
+const RUN_HISTORY_PANEL_SIZE = "16rem";
 
 function _createBlankThread(): Thread {
   return {
@@ -95,6 +100,19 @@ function ThreadPlaygroundContent({
       // Ignored
     }
   }, []);
+  const runHistoryPanelRef = usePanelRef();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const toggleHistory = useCallback(() => {
+    const panel = runHistoryPanelRef.current;
+    if (!panel) {
+      return;
+    }
+    if (panel.isCollapsed()) {
+      panel.resize(RUN_HISTORY_PANEL_SIZE);
+    } else {
+      panel.collapse();
+    }
+  }, [runHistoryPanelRef]);
   const handleShortcuts = useShortcuts({ readonly: readonlyFromProps });
   return (
     <div
@@ -103,96 +121,136 @@ function ThreadPlaygroundContent({
       tabIndex={0}
       onKeyDownCapture={handleShortcuts}
     >
-      <header className="flex h-12 w-full shrink-0 items-center border-b">
-        <div className="min-w-0 grow px-3">
-          <TitleEditor className="w-96 max-w-full" readonly={readonly} />
-        </div>
-        <div
-          className={cn(
-            "flex items-center gap-0.5 px-1",
-            readonlyFromProps && "hidden"
-          )}
-        >
-          <Tooltip content="Undo">
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              disabled={readonly || !undoable}
-              onClick={undo}
-            >
-              <Undo2Icon className="size-4" />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Redo">
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              disabled={readonly || !redoable}
-              onClick={redo}
-            >
-              <Redo2Icon className="size-4" />
-            </Button>
-          </Tooltip>
-        </div>
-        <div className="px-3">
-          <Tooltip
-            content={
-              status === "running"
-                ? "Stop the running thread "
-                : "Run the thread "
-            }
-          >
-            <Button
-              className={cn("w-20 px-3 py-3.5", readonlyFromProps && "hidden")}
-              disabled={readonlyFromProps}
-              onClick={status === "running" ? handleStop : handleRun}
-            >
-              {status === "running" ? (
-                <Spinner className="size-3" />
-              ) : (
-                <PlayIcon className="size-3" />
+      <ResizablePanelGroup>
+        <ResizablePanel className="flex min-h-0 flex-col overflow-hidden">
+          <header className="flex h-12 w-full shrink-0 items-center border-b">
+            <div className="min-w-0 grow px-3">
+              <TitleEditor className="w-96 max-w-full" readonly={readonly} />
+            </div>
+            <div
+              className={cn(
+                "flex items-center gap-0.5 px-1",
+                readonlyFromProps && "hidden"
               )}
-              {status === "running" ? "Stop" : "Run"}
-            </Button>
-          </Tooltip>
-        </div>
-      </header>
-      <ResizablePanelGroup
-        className="flex min-h-0 grow"
-        orientation="horizontal"
-      >
-        <ResizablePanel className="px-3 pb-3" defaultSize="50%" minSize="300px">
-          <div className="flex size-full flex-col">
-            <div className={"flex w-full border-b py-2"}>
-              <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                Models
-              </div>
-              <div className="flex grow items-center">
-                <ModelConfigEditor readonly={readonly} />
-              </div>
+            >
+              <Tooltip content="Undo last edit">
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  disabled={readonly || !undoable}
+                  onClick={undo}
+                >
+                  <Undo2Icon className="size-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Redo last edit">
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  disabled={readonly || !redoable}
+                  onClick={redo}
+                >
+                  <Redo2Icon className="size-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Run history">
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  aria-expanded={historyOpen}
+                  disabled={readonly}
+                  onClick={toggleHistory}
+                >
+                  <HistoryIcon className="size-4" />
+                </Button>
+              </Tooltip>
             </div>
-            <div className={"flex w-full border-b py-2"}>
-              <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                Tools
-              </div>
-              <div className="flex grow items-center">
-                <ToolListView readonly={readonly} />
-              </div>
+            <div className="flex items-center px-3">
+              <Tooltip
+                content={
+                  <div>
+                    {status === "running"
+                      ? "Stop the running thread "
+                      : "Run the thread "}
+                    <KbdGroup>
+                      <Kbd>⌘ Enter</Kbd>
+                    </KbdGroup>
+                  </div>
+                }
+              >
+                <Button
+                  className={cn(
+                    "w-20 px-3 py-3.5",
+                    readonlyFromProps && "hidden"
+                  )}
+                  disabled={readonlyFromProps}
+                  onClick={status === "running" ? handleStop : handleRun}
+                >
+                  {status === "running" ? (
+                    <Spinner className="size-3" />
+                  ) : (
+                    <PlayIcon className="size-3" />
+                  )}
+                  {status === "running" ? "Stop" : "Run"}
+                </Button>
+              </Tooltip>
             </div>
-            <div className="flex min-h-0 w-full grow flex-col">
-              <div className="text-muted-foreground shrink-0 py-2 text-sm">
-                System prompt
+          </header>
+          <ResizablePanelGroup
+            className="flex min-h-0 grow"
+            orientation="horizontal"
+          >
+            <ResizablePanel
+              className="px-3 pb-3"
+              defaultSize="50%"
+              minSize="300px"
+            >
+              <div className="flex size-full flex-col">
+                <div className={"flex w-full border-b py-2"}>
+                  <div className="text-muted-foreground w-20 shrink-0 text-sm">
+                    Models
+                  </div>
+                  <div className="flex grow items-center">
+                    <ModelConfigEditor readonly={readonly} />
+                  </div>
+                </div>
+                <div className={"flex w-full border-b py-2"}>
+                  <div className="text-muted-foreground w-20 shrink-0 text-sm">
+                    Tools
+                  </div>
+                  <div className="flex grow items-center">
+                    <ToolListView readonly={readonly} />
+                  </div>
+                </div>
+                <div className="flex min-h-0 w-full grow flex-col">
+                  <div className="text-muted-foreground shrink-0 py-2 text-sm">
+                    System prompt
+                  </div>
+                  <SystemPromptEditor
+                    className="min-h-0 grow"
+                    readonly={readonly}
+                  />
+                </div>
               </div>
-              <SystemPromptEditor
-                className="min-h-0 grow"
-                readonly={readonly}
-              />
-            </div>
-          </div>
+            </ResizablePanel>
+            <ResizableHandle className="opacity-50 hover:opacity-100" />
+            <ResizablePanel minSize="300px">
+              <MessageListView readonly={readonly} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
-        <ResizableHandle className="opacity-50 hover:opacity-100" />
-        <ResizablePanel minSize="300px">
-          <MessageListView readonly={readonly} />
+        <ResizableHandle />
+        <ResizablePanel
+          panelRef={runHistoryPanelRef}
+          collapsible
+          collapsedSize={0}
+          defaultSize={0}
+          minSize={200}
+          onResize={(size) => {
+            setHistoryOpen(size.inPixels > 0);
+          }}
+        >
+          <RunHistoryList />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

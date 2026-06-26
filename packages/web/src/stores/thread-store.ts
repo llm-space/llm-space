@@ -23,10 +23,12 @@ import { useShallow } from "zustand/shallow";
 
 import {
   createInitialHistory,
+  recordRun,
   recordSnapshot,
   redo as redoHistory,
   undo as undoHistory,
   type ChangeHistory,
+  type RunSnapshot,
 } from "./thread-history";
 
 const toolValidator = Compile(ToolSchema);
@@ -39,10 +41,13 @@ export interface ThreadState {
   abortController: AbortController | null;
   collapsedMessageIds: string[];
   changeHistory: ChangeHistory;
+  /** Thread snapshot + completion time after each run; most recent last. */
+  runHistory: RunSnapshot[];
 
   run(fromMessageId?: string): Promise<void>;
   undo(): void;
   redo(): void;
+  restoreThread(thread: Thread): void;
   appendMessage(): void;
   insertMessageBefore(beforeMessageId: string): void;
   moveMessage(fromIndex: number, toIndex: number): void;
@@ -161,6 +166,7 @@ export function createThreadStore(initialThread: Thread): ThreadStore {
         abortController: null,
         collapsedMessageIds: [],
         changeHistory: createInitialHistory(initialThread),
+        runHistory: [],
 
         appendMessage() {
           const message = createUserMessage();
@@ -413,9 +419,12 @@ export function createThreadStore(initialThread: Thread): ThreadStore {
               abortController: null,
             });
             // Fold the whole run (truncation + generated messages) into one
-            // undo step. No-op if the thread is unchanged.
+            // undo step, and record a run snapshot. No-op for undo if the
+            // thread is unchanged.
+            const finalThread = get().thread;
             set({
-              changeHistory: recordSnapshot(get().changeHistory, get().thread),
+              changeHistory: recordSnapshot(get().changeHistory, finalThread),
+              runHistory: recordRun(get().runHistory, finalThread, Date.now()),
             });
           }
         },
@@ -438,6 +447,19 @@ export function createThreadStore(initialThread: Thread): ThreadStore {
             return;
           }
           set({ thread: result.thread, changeHistory: result.history });
+        },
+        restoreThread(thread: Thread) {
+          if (get().status === "running") {
+            return;
+          }
+          if (thread === get().thread) {
+            return;
+          }
+          // Replace the whole thread; recorded as a single undoable step.
+          set({
+            thread,
+            changeHistory: recordSnapshot(get().changeHistory, thread),
+          });
         },
         abort() {
           const { status, abortController } = get();
@@ -472,6 +494,7 @@ const selectActions = (s: ThreadState) => ({
   abort: s.abort,
   undo: s.undo,
   redo: s.redo,
+  restoreThread: s.restoreThread,
 
   appendMessage: s.appendMessage,
   insertMessageBefore: s.insertMessageBefore,
