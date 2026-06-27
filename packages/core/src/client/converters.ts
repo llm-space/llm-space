@@ -4,21 +4,16 @@ import type { Message } from "../types/messages";
 import type { ThreadContext } from "../types/threads";
 import type { Tool } from "../types/tools";
 
-export function convertToPiContext(
-  context: ThreadContext,
-  model: pi.Model<pi.Api>
-) {
+export function convertToPiContext(context: ThreadContext) {
   const result = {
     systemPrompt: context.systemPrompt,
-    messages: context.messages
-      ? _convertToPiMessages(context.messages, model)
-      : [],
+    messages: context.messages ? _convertToPiMessages(context.messages) : [],
     tools: context.tools ? _convertToPiTools(context.tools) : [],
   };
   return result;
 }
 
-function _convertToPiMessages(messages: Message[], model: pi.Model<pi.Api>) {
+function _convertToPiMessages(messages: Message[]) {
   const result: pi.Message[] = [];
   for (const message of messages) {
     if (message.role === "user") {
@@ -39,9 +34,9 @@ function _convertToPiMessages(messages: Message[], model: pi.Model<pi.Api>) {
           | pi.ThinkingContent
           | pi.ToolCall
         )[],
-        api: model.api,
-        model: model.id,
-        provider: model.provider,
+        api: "",
+        model: "",
+        provider: "",
         stopReason: "stop",
         timestamp: Date.now(),
         usage: {

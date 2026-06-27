@@ -1,21 +1,19 @@
 "use client";
 
-import { resolveModel } from "@llm-space/core";
-import { TriangleAlertIcon } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useState } from "react";
 
-import { cn } from "@/lib/utils";
-import { useThreadStore } from "@/stores/thread-store";
-
-import { Tooltip } from "../../tooltip";
+import { useModel } from "@/components/model-provider";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../../ui/hover-card";
+} from "@/components/ui/hover-card";
+import { cn } from "@/lib/utils";
+import { useThreadStore } from "@/stores/thread-store";
 
 import { ModelCard } from "./model-card";
 import { ModelParamsPopover } from "./model-params-popover";
+import { ModelSelector } from "./model-selector";
 
 export function ModelConfigEditor({
   className,
@@ -25,9 +23,18 @@ export function ModelConfigEditor({
   readonly?: boolean;
 }) {
   const model = useThreadStore((s) => s.thread.model);
-  const resolvedModel = useMemo(() => {
-    return resolveModel(model);
-  }, [model]);
+  const resolvedModel = useModel({
+    id: model.id,
+    provider: model.provider,
+  });
+
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+  const handleModelSelectorOpen = useCallback(
+    (open: boolean) => {
+      setModelSelectorOpen(open);
+    },
+    [setModelSelectorOpen]
+  );
 
   const paramSummary: { label: string; value: string | number }[] = [];
   if (model.params?.temperature !== undefined) {
@@ -47,39 +54,38 @@ export function ModelConfigEditor({
     <div className={cn("group flex w-full", className)}>
       <div className="flex min-w-0 grow flex-col gap-2">
         <div className="flex cursor-default items-center text-sm">
-          {resolvedModel ? (
-            <HoverCard openDelay={10} closeDelay={100}>
-              <HoverCardTrigger asChild>
-                <div className="truncate">{resolvedModel.name}</div>
-              </HoverCardTrigger>
-              <HoverCardContent align="start" className="w-96">
-                <ModelCard model={resolvedModel} />
-              </HoverCardContent>
-            </HoverCard>
-          ) : (
-            <Tooltip
-              content={`The "${model.provider}/${model.id}" is not resolved`}
-            >
-              <div className="flex items-center gap-1">
-                <TriangleAlertIcon className="size-3 text-amber-400" />
-                <span className="text-amber-400">{model.id}</span>
-              </div>
-            </Tooltip>
-          )}
+          <HoverCard
+            openDelay={1000}
+            open={modelSelectorOpen ? false : undefined}
+          >
+            <HoverCardTrigger>
+              <ModelSelector
+                value={model}
+                readonly={readonly}
+                onOpenChange={handleModelSelectorOpen}
+              />
+            </HoverCardTrigger>
+            <HoverCardContent>
+              {resolvedModel && <ModelCard model={resolvedModel} />}
+            </HoverCardContent>
+          </HoverCard>
         </div>
         {paramSummary.length > 0 ? (
-          <div className="text-muted-foreground font-mono text-sm">
+          <div className="text-muted-foreground pl-2 text-xs">
             {paramSummary.map((item, index) => (
-              <span key={item.label}>
+              <span key={item.label} className="font-mono">
                 {index > 0 ? ", " : null}
-                {item.label.charAt(0).toUpperCase() + item.label.slice(1)}:{" "}
+                {item.label}:{" "}
                 <span className="text-[#98ecac]">{item.value}</span>
               </span>
             ))}
           </div>
         ) : null}
       </div>
-      <ModelParamsPopover readonly={readonly} />
+      <ModelParamsPopover
+        readonly={readonly}
+        maxTokens={resolvedModel?.maxTokens}
+      />
     </div>
   );
 }

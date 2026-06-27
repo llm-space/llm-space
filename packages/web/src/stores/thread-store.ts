@@ -9,6 +9,7 @@ import {
   uuid,
   type FunctionTool,
   type MessageContent,
+  type ModelConfig,
   type ModelConfigParams,
   type ReducedMessageContent,
   type Thread,
@@ -55,6 +56,7 @@ export interface ThreadState {
   updateSystemPrompt(systemPrompt: string): void;
   updateTitle(title: string | undefined): void;
   updateModelParams(params: Partial<ModelConfigParams>): void;
+  updateModel(model: Pick<ModelConfig, "id" | "provider">): void;
   updateMessageTextContent(id: string, text: string): void;
   addMessageImageContent(id: string, mimeType: string, data: string): void;
   removeMessageImageContent(id: string, contentIndex: number): void;
@@ -228,6 +230,11 @@ export function createThreadStore(initialThread: Thread): ThreadStore {
           const { model } = get().thread;
           patchThread({
             model: { ...model, params: { ...model.params, ...params } },
+          });
+        },
+        updateModel(model: Pick<ModelConfig, "id" | "provider">) {
+          patchThread({
+            model: { provider: model.provider, id: model.id },
           });
         },
         updateMessageTextContent(id: string, text: string) {
@@ -508,6 +515,7 @@ const selectActions = (s: ThreadState) => ({
   updateSystemPrompt: s.updateSystemPrompt,
   updateTitle: s.updateTitle,
   updateModelParams: s.updateModelParams,
+  updateModel: s.updateModel,
   updateMessageTextContent: s.updateMessageTextContent,
   addMessageImageContent: s.addMessageImageContent,
   removeMessageImageContent: s.removeMessageImageContent,

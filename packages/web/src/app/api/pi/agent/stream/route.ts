@@ -4,8 +4,10 @@ import {
   type AgentTool,
 } from "@earendil-works/pi-agent-core";
 import type { Model, Message, Api, Tool } from "@earendil-works/pi-ai";
-import type { ModelConfigParams } from "@llm-space/core";
+import type { ModelConfig, ModelConfigParams } from "@llm-space/core";
 import type { NextRequest } from "next/server";
+
+import { availableModels } from "@/lib/models";
 
 function convertToLlm(messages: AgentMessage[]): Message[] {
   return messages.filter(
@@ -26,7 +28,7 @@ export async function POST(request: NextRequest) {
       messages: Message[];
       tools: Tool[];
     };
-    model: Model<Api>;
+    model: Pick<ModelConfig, "id" | "provider">;
     config?: {
       model: ModelConfigParams;
     };
@@ -41,13 +43,25 @@ export async function POST(request: NextRequest) {
       );
     }
   }
+
+  const model = availableModels.getModel(
+    args.model.provider,
+    args.model.id
+  ) as Model<Api> | null;
+  if (!model) {
+    return new Response(
+      `Model "${args.model.provider}/${args.model.id}" not found`,
+      { status: 500 }
+    );
+  }
+
   const agentStream = agentLoopContinue(
     {
       ...args.context,
       tools: _convertToAgentTools(args.context.tools, { stepByStep: true }),
     },
     {
-      model: args.model,
+      model,
       convertToLlm,
       maxTokens: args.config?.model?.maxTokens,
       temperature: args.config?.model?.temperature,
@@ -55,8 +69,16 @@ export async function POST(request: NextRequest) {
         args.config?.model?.reasoning === "off"
           ? undefined
           : (args.config?.model?.reasoning ?? undefined),
-    }
+    },
+    undefined,
+    // Stream through the `Models` collection so auth is resolved by each
+    // provider's own `auth` config (e.g. `envApiKeyAuth`). The default
+    // streamFn is the legacy compat layer, which only knows a hardcoded
+    // builtin provider→env-var map and ignores custom providers' auth.
+    (streamModel, streamContext, streamOptions) =>
+      availableModels.streamSimple(streamModel, streamContext, streamOptions)
   );
+
   const responseStream = new ReadableStream({
     async start(controller) {
       const send = (data: unknown) => {

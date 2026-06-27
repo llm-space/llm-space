@@ -1,6 +1,4 @@
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
-import type { Api, KnownProvider, Model } from "@earendil-works/pi-ai";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { parseServerSentEvents, type ServerSentEvent } from "parse-sse";
 
 import type { ModelConfig } from "../types/models";
@@ -12,8 +10,7 @@ export async function* streamThread(
   args: { context: ThreadContext; model: ModelConfig },
   config: { signal?: AbortSignal; endpoint?: string } = {}
 ) {
-  const model = _resolveModel(args.model);
-  const context = convertToPiContext(args.context, model);
+  const context = convertToPiContext(args.context);
   if (context.messages.length > 0) {
     const lastMessage = context.messages[context.messages.length - 1]!;
     // 最后一条消息必须是 userMessage
@@ -24,7 +21,10 @@ export async function* streamThread(
     }
   }
   const body = {
-    model,
+    model: {
+      provider: args.model.provider,
+      id: args.model.id,
+    },
     config: {
       model: args.model.params,
     },
@@ -52,15 +52,4 @@ export async function* streamThread(
       yield event;
     }
   }
-}
-
-function _resolveModel(config: ModelConfig) {
-  const model = getBuiltinModel(
-    config.provider as KnownProvider,
-    config.id as never
-  );
-  if (!model) {
-    throw new Error(`Model ${config.provider}/${config.id} not found`);
-  }
-  return model as Model<Api>;
 }

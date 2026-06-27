@@ -1,8 +1,14 @@
 "use client";
 
-import { resolveModel, type ReasoningLevel } from "@llm-space/core";
+import { type ReasoningLevel } from "@llm-space/core";
 import { SlidersHorizontal } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { cn } from "@/lib/utils";
 import { useThreadStore, useThreadStoreActions } from "@/stores/thread-store";
@@ -38,7 +44,7 @@ const REASONING_LEVELS: { value: ReasoningLevel; label: string }[] = [
 
 const DEFAULT_TEMPERATURE = 1;
 const DEFAULT_MAX_TOKENS = 4096;
-const DEFAULT_REASONING: ReasoningLevel = "off";
+const DEFAULT_REASONING: ReasoningLevel = "medium";
 
 function ParamField({
   className,
@@ -74,12 +80,15 @@ function ParamField({
   );
 }
 
-export function ModelParamsPopover({ readonly }: { readonly?: boolean }) {
+export function ModelParamsPopover({
+  readonly,
+  maxTokens: maxTokensFromProps,
+}: {
+  readonly?: boolean;
+  maxTokens?: number;
+}) {
   const model = useThreadStore((s) => s.thread.model);
   const { updateModelParams } = useThreadStoreActions();
-  const resolvedModel = useMemo(() => {
-    return resolveModel(model);
-  }, [model]);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -109,12 +118,10 @@ export function ModelParamsPopover({ readonly }: { readonly?: boolean }) {
   }, [maxTokens]);
 
   const commitMaxTokens = useCallback(() => {
-    const committed =
-      maxTokens !== undefined ? String(maxTokens) : "";
+    const committed = maxTokens !== undefined ? String(maxTokens) : "";
     if (draftMaxTokens !== committed) {
       updateModelParams({
-        maxTokens:
-          draftMaxTokens === "" ? undefined : Number(draftMaxTokens),
+        maxTokens: draftMaxTokens === "" ? undefined : Number(draftMaxTokens),
       });
     }
   }, [draftMaxTokens, maxTokens, updateModelParams]);
@@ -153,7 +160,7 @@ export function ModelParamsPopover({ readonly }: { readonly?: boolean }) {
           >
             <div className="space-y-2 pt-2">
               <div className="flex justify-end">
-                <span className="text-muted-foreground tabular-nums">
+                <span className="text-muted-foreground font-mono tabular-nums">
                   {temperature}
                 </span>
               </div>
@@ -183,10 +190,10 @@ export function ModelParamsPopover({ readonly }: { readonly?: boolean }) {
             }}
           >
             <Input
-              className="mt-2 w-full"
+              className="mt-2 w-full font-mono"
               type="number"
               min={1}
-              max={resolvedModel?.maxTokens}
+              max={maxTokensFromProps}
               value={draftMaxTokens}
               disabled={readonly}
               onChange={(event) => {
@@ -227,7 +234,7 @@ export function ModelParamsPopover({ readonly }: { readonly?: boolean }) {
               <SelectTrigger size="sm" className="mt-2 w-full">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="font-mono">
                 {REASONING_LEVELS.map(({ value, label }) => (
                   <SelectItem key={value} value={value}>
                     {label}

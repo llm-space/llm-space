@@ -2,7 +2,9 @@ import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
 
+import { ModelProvider } from "@/components/model-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThreadPlaygroundSkeleton } from "@/components/thread-playground/misc/skeleton";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -42,7 +44,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Toaster theme="dark" position="top-center" />
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider delayDuration={1000}>
+            <ModelProvider models={null}>{children}</ModelProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
