@@ -1,7 +1,7 @@
 import type { ModelConfig } from "@llm-space/core";
 import type { ReactNode } from "react";
 
-import { useModel } from "@/components/model-provider";
+import { useModel, useModels } from "@/components/model-provider";
 import { cn } from "@/lib/utils";
 
 function formatTokenCount(value: number) {
@@ -49,6 +49,7 @@ export function ModelCard({
   model: ModelConfig;
   className?: string;
 }) {
+  const providers = useModels();
   const resolvedModel = useModel({
     id: model.id,
     provider: model.provider,
@@ -56,12 +57,15 @@ export function ModelCard({
   if (!resolvedModel) {
     return null;
   }
+  const providerName =
+    providers.find((group) => group.id === resolvedModel.provider)?.name ??
+    resolvedModel.provider;
   const supportsImageInput = resolvedModel.input.includes("image");
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <main className="flex flex-col">
         <ModelCardField label="Model" value={resolvedModel.id} />
-        <ModelCardField label="Provider" value={resolvedModel.provider} />
+        <ModelCardField label="Provider" value={providerName} />
         <ModelCardField label="API type" value={resolvedModel?.api} />
         <ModelCardField
           label="Base URL"
