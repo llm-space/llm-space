@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
   if (args.context.messages.length > 0) {
     const lastMessage =
       args.context.messages[args.context.messages.length - 1]!;
-    // 最后一条消息必须是 userMessage
     if (lastMessage.role === "assistant") {
       throw new Error(
         "The last message must be a user message or a tool call result."
@@ -55,6 +54,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const abortController = new AbortController();
   const agentStream = agentLoopContinue(
     {
       ...args.context,
@@ -69,8 +69,18 @@ export async function POST(request: NextRequest) {
         args.config?.model?.reasoning === "off"
           ? undefined
           : (args.config?.model?.reasoning ?? undefined),
+      onPayload: (payload, model) => {
+        if (model.reasoning && args.config?.model?.reasoning === "off") {
+          return {
+            ...((payload ?? {}) as Record<string, unknown>),
+            thinking: {
+              type: "disabled",
+            },
+          };
+        }
+      },
     },
-    undefined,
+    abortController.signal,
     // Stream through the `Models` collection so auth is resolved by each
     // provider's own `auth` config (e.g. `envApiKeyAuth`). The default
     // streamFn is the legacy compat layer, which only knows a hardcoded
@@ -86,7 +96,6 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(payload));
       };
 
-      const abortController = new AbortController();
       request.signal.addEventListener("abort", () => {
         try {
           abortController.abort();
