@@ -32,10 +32,16 @@ import {
 export function FileSystemTreeView({
   className,
   onSelectFile,
+  onRemove,
+  onMove,
 }: {
   className?: string;
   /** Fired with a file's path when it is selected (folders aren't selectable). */
   onSelectFile?: (path: string) => void;
+  /** Fired with a path after it (file or directory) is successfully deleted. */
+  onRemove?: (path: string) => void;
+  /** Fired after a path changes via rename or move (`from` → `to`). */
+  onMove?: (from: string, to: string) => void;
 }) {
   const {
     nodesByPath,
@@ -155,7 +161,9 @@ export function FileSystemTreeView({
   function onDocumentDrag(source: TreeDataItem, target: TreeDataItem) {
     // Only directories and the root drop-zone are droppable, so the target is
     // always a directory ("" = root).
-    void move(source.id, target.id);
+    void move(source.id, target.id).then((to) => {
+      if (to) onMove?.(source.id, to);
+    });
   }
 
   function renderItem(p: TreeRenderItemParams) {
@@ -176,7 +184,10 @@ export function FileSystemTreeView({
               if (base && base !== p.item.name) {
                 // `Icon` is only set on files, so it distinguishes file vs
                 // folder even while the row is rendered as a leaf for renaming.
-                void rename(p.item.id, Icon ? ensureJson(base) : base);
+                const from = p.item.id;
+                void rename(from, Icon ? ensureJson(base) : base).then((to) => {
+                  if (to) onMove?.(from, to);
+                });
               }
             }}
           />
@@ -260,7 +271,10 @@ export function FileSystemTreeView({
               onClick={() => {
                 const path = deleting;
                 setDeleting(null);
-                if (path) void remove(path);
+                if (path)
+                  void remove(path).then((ok) => {
+                    if (ok) onRemove?.(path);
+                  });
               }}
             >
               Delete

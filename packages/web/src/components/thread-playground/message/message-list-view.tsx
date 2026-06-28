@@ -67,9 +67,10 @@ export function MessageListView({
       <StreamingMessageListItem streaming={status === "running"} />
       <Button
         className={cn(
-          "text-muted-foreground hover:text-accent-foreground mt-3.5 w-full justify-start rounded-lg py-5",
+          "text-muted-foreground hover:text-accent-foreground w-full justify-start rounded-lg py-5",
           dragging && "invisible",
-          readonly && "hidden"
+          readonly && "hidden",
+          !messages || messages?.length === 0 ? "" : "mt-3.5"
         )}
         disabled={readonly}
         variant="secondary"

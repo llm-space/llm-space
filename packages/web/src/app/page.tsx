@@ -1,7 +1,7 @@
 "use client";
 
 import type { Thread } from "@llm-space/core";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { localFs } from "@/client";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/resizable";
 
 export default function HomePage() {
+  const qc = useQueryClient();
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   // Read the selected thread from storage.
@@ -49,6 +50,29 @@ export default function HomePage() {
         <FileSystemTreeView
           className="size-full"
           onSelectFile={setSelectedPath}
+          onRemove={(removed) => {
+            // Close the open thread if it (or a containing folder) was deleted.
+            setSelectedPath((current) =>
+              current !== null &&
+              (current === removed || current.startsWith(`${removed}/`))
+                ? null
+                : current
+            );
+          }}
+          onMove={(from, to) => {
+            // Follow the open thread if it (or a containing folder) was renamed
+            // or moved.
+            if (selectedPath === null) return;
+            let next: string | null = null;
+            if (selectedPath === from) next = to;
+            else if (selectedPath.startsWith(`${from}/`))
+              next = to + selectedPath.slice(from.length);
+            if (next === null) return;
+            // Carry the read cache to the new key so the playground doesn't reload.
+            const cached = qc.getQueryData<Thread>(["thread", selectedPath]);
+            if (cached !== undefined) qc.setQueryData(["thread", next], cached);
+            setSelectedPath(next);
+          }}
         />
       </ResizablePanel>
       <ResizableHandle />

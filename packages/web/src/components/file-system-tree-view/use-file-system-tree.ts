@@ -78,10 +78,12 @@ export interface FileSystemTree {
   createFolder: (parent: string) => Promise<string | null>;
   /** Create an auto-named `untitled.json` thread under `parent`; returns its path. */
   createFile: (parent: string) => Promise<string | null>;
-  remove: (path: string) => Promise<void>;
-  move: (src: string, destDir: string) => Promise<void>;
-  /** Rename within the same directory (`newBase` is the full new base name). */
-  rename: (path: string, newBase: string) => Promise<void>;
+  /** Delete a file or directory; resolves to whether it succeeded. */
+  remove: (path: string) => Promise<boolean>;
+  /** Move into `destDir`; resolves to the new path, or null on no-op/error. */
+  move: (src: string, destDir: string) => Promise<string | null>;
+  /** Rename within the same directory; resolves to the new path, or null. */
+  rename: (path: string, newBase: string) => Promise<string | null>;
 }
 
 /**
@@ -178,12 +180,12 @@ export function useFileSystemTree(): FileSystemTree {
   );
 
   const remove = useCallback(
-    async (path: string) => {
+    async (path: string): Promise<boolean> => {
       try {
         await localFs.rm(path);
       } catch (err) {
         toast.error((err as Error).message);
-        return;
+        return false;
       }
       // Prune the removed subtree from the expanded set.
       setExpanded((prev) => {
@@ -194,19 +196,20 @@ export function useFileSystemTree(): FileSystemTree {
         return next;
       });
       void qc.invalidateQueries({ queryKey: fsKeys.ls(parentOf(path)) });
+      return true;
     },
     [qc]
   );
 
   const move = useCallback(
-    async (src: string, destDir: string) => {
-      if (!src) return;
+    async (src: string, destDir: string): Promise<string | null> => {
+      if (!src) return null;
       if (isSelfOrDescendant(src, destDir)) {
         toast.error("Cannot move a folder into itself.");
-        return;
+        return null;
       }
       const srcParent = parentOf(src);
-      if (srcParent === destDir) return; // no-op
+      if (srcParent === destDir) return null; // no-op
 
       const name = basename(src);
       const dest = joinPath(destDir, name);
@@ -235,6 +238,7 @@ export function useFileSystemTree(): FileSystemTree {
         );
       }
 
+      let ok = true;
       try {
         await localFs.mv(src, dest);
       } catch (err) {
@@ -242,23 +246,35 @@ export function useFileSystemTree(): FileSystemTree {
         if (prevSrc) qc.setQueryData(srcKey, prevSrc);
         if (prevDest) qc.setQueryData(destKey, prevDest);
         toast.error((err as Error).message);
+        ok = false;
       } finally {
         void qc.invalidateQueries({ queryKey: srcKey });
         void qc.invalidateQueries({ queryKey: destKey });
       }
+      // Moving a subtree invalidates the expanded paths under it.
+      if (ok) {
+        setExpanded((prev) => {
+          const next = new Set(prev);
+          for (const p of prev) {
+            if (isSelfOrDescendant(src, p)) next.delete(p);
+          }
+          return next;
+        });
+      }
+      return ok ? dest : null;
     },
     [qc]
   );
 
   const rename = useCallback(
-    async (path: string, newBase: string) => {
+    async (path: string, newBase: string): Promise<string | null> => {
       const dest = joinPath(parentOf(path), newBase);
-      if (dest === path) return;
+      if (dest === path) return null;
       try {
         await localFs.mv(path, dest);
       } catch (err) {
         toast.error((err as Error).message);
-        return;
+        return null;
       }
       // The renamed subtree's old paths are no longer valid query keys; collapse
       // it so its children reload under the new path on next expand.
@@ -270,6 +286,7 @@ export function useFileSystemTree(): FileSystemTree {
         return next;
       });
       void qc.invalidateQueries({ queryKey: fsKeys.ls(parentOf(path)) });
+      return dest;
     },
     [qc]
   );
