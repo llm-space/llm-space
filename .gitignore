@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# local home for testing
+.llm-space
+
 # output
 out
 dist

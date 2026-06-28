@@ -6,8 +6,8 @@ import { LocalFileSystem } from "@llm-space/core/server";
 
 import { env } from "@/env";
 
-const root =
-  env.STORAGE_ROOT ?? path.join(os.homedir(), ".llm-space", "workspace");
+const home = env.LLM_SPACE_HOME ?? path.join(os.homedir(), ".llm-space");
+const root = path.join(home, "workspace");
 
 // Ensure the storage root exists so a fresh install works out of the box.
 mkdirSync(root, { recursive: true });

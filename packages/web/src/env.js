@@ -9,11 +9,11 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "test", "production"]),
     /**
-     * Root directory for the local storage backend (`/api/fs/local/*`). All
-     * reads and writes are confined within it. Defaults to
-     * `~/.llm-space/workspace` when unset.
+     * Home directory for llm-space data. The local storage backend
+     * (`/api/fs/local/*`) uses `${LLM_SPACE_HOME}/workspace`. Defaults to
+     * `~/.llm-space` when unset.
      */
-    STORAGE_ROOT: z.string().optional(),
+    LLM_SPACE_HOME: z.string().optional(),
   },
 
   /**
@@ -31,7 +31,7 @@ export const env = createEnv({
    */
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
-    STORAGE_ROOT: process.env.STORAGE_ROOT,
+    LLM_SPACE_HOME: process.env.LLM_SPACE_HOME,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
