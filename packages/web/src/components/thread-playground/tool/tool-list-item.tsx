@@ -16,9 +16,9 @@ function _ToolListItem({
 }: {
   tool: FunctionTool;
   readonly?: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   onEdit: (tool: FunctionTool) => void;
-  // eslint-disable-next-line no-unused-vars
+   
   onRemove: (tool: FunctionTool) => void;
 }) {
   const keys = useMemo(

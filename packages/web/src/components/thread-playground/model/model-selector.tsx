@@ -40,7 +40,7 @@ export function ModelSelector({
 }: {
   value: ModelConfig;
   readonly?: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   onOpenChange?: (open: boolean) => void;
 }) {
   const providers = useModels();

@@ -38,7 +38,7 @@ export interface ThreadPlaygroundProps {
   className?: string;
   initialValue: Thread;
   readonly?: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   onChange?: (thread: Thread) => void;
   onStreamingStart?: () => void;
   onStreamingEnd?: () => void;

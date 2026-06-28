@@ -38,7 +38,7 @@ export function ToolEditorDialog({
   tool,
 }: {
   open: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   onOpenChange: (open: boolean) => void;
   tool: FunctionTool | null;
 }) {

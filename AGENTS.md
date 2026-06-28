@@ -48,4 +48,5 @@ State is **in-memory only** (no DB/persistence) — a reload resets everything.
 ## Conventions
 
 - **TypeScript**: strict, ESNext, `moduleResolution: bundler`. In `web`, `@/*` maps to `./src/*`.
+- **Layering**: `@llm-space/core` holds the shared **types/utils** (`./types`, root `.`) plus **server-side implementations** under `src/server/` exported via the `./server` entrypoint (e.g. the local-filesystem storage backend in `server/storage/local/`). `web` consumes these: `app/api/` route handlers wrap the core server implementations to expose them over HTTP, and client-side HTTP callers live under `packages/web/src/client/`.
 - **Prettier**: 2-space indent, double quotes, semicolons, es5 trailing commas, tailwind class sorting (`prettier-plugin-tailwindcss`).

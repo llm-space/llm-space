@@ -54,11 +54,11 @@ function _CodeEditor(
     streaming?: boolean;
     value: string;
     readonly?: boolean;
-    // eslint-disable-next-line no-unused-vars
+     
     onChange?: (value: string) => void;
-    // eslint-disable-next-line no-unused-vars
+     
     onKeyDown?: (e: KeyboardEvent) => void;
-    // eslint-disable-next-line no-unused-vars
+     
     onPaste?: (e: ClipboardEvent) => void;
   },
   ref: React.ForwardedRef<CodeEditorHandle>

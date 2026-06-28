@@ -14,7 +14,7 @@ import type { ModelProviderGroup } from "@/lib/model-types";
 
 interface ModelContextValue {
   providers: ModelProviderGroup[];
-  // eslint-disable-next-line no-unused-vars
+   
   getModel: (ref: { id: string; provider: string }) => pi.Model<pi.Api> | null;
 }
 

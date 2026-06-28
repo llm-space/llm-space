@@ -16,7 +16,7 @@ import {
 
 function readImageFile(
   file: File,
-  // eslint-disable-next-line no-unused-vars
+   
   onSuccess: (mimeType: string, data: string) => void
 ) {
   const reader = new FileReader();
