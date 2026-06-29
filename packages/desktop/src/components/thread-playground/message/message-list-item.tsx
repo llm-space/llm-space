@@ -127,7 +127,7 @@ function _MessageListItem({
         )}
       >
         <div className="insert-line absolute top-1.5 right-2 left-0 border-b border-dashed opacity-0 transition-[opacity,border-color,border-style] group-hover:opacity-100"></div>
-        <Tooltip content="Insert message here">
+        <Tooltip content="Insert Message Here">
           <Button
             className="text-muted-foreground hover:border-primary hover:bg-primary! hover:text-primary-foreground absolute -top-0.5 -right-3 z-10 size-4 rounded-full opacity-0 transition-[opacity,background-color,color,border-color] group-hover:opacity-100"
             variant="outline"

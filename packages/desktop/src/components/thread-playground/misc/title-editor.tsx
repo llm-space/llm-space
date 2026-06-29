@@ -97,7 +97,7 @@ function _TitleEditor({
         </Tooltip>
       </div>
       <div className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
-        <Tooltip content="Edit title">
+        <Tooltip content="Edit Title">
           <Button variant="ghost" size="icon-xs" onClick={startEditing}>
             <PencilIcon className="size-3" />
           </Button>

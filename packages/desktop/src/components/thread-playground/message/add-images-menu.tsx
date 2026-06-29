@@ -102,14 +102,14 @@ export function AddImagesMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Add images</DropdownMenuLabel>
+          <DropdownMenuLabel>Add Images</DropdownMenuLabel>
           <DropdownMenuItem onSelect={handleFromFiles}>
             <FileIcon />
-            From files
+            From Files
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={handleFromClipboard}>
             <ClipboardPasteIcon />
-            From clipboard
+            From Clipboard
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -41,7 +41,7 @@ function _RunHistoryListView() {
   return (
     <div className="flex size-full flex-col">
       <div className="text-muted-foreground flex h-12 shrink-0 items-center border-b px-3 text-sm">
-        Run history
+        Run History
       </div>
       <ItemGroup
         ref={containerRef}

@@ -75,7 +75,7 @@ export function NodeActions({
     <span className="flex items-center gap-0.5">
       {isDir && (
         <>
-          <IconAction label="New file" onClick={() => onNewFile(node)}>
+          <IconAction label="New File" onClick={() => onNewFile(node)}>
             <FilePlus className="h-3.5 w-3.5" />
           </IconAction>
           <IconAction label="New folder" onClick={() => onNewFolder(node)}>
@@ -105,10 +105,10 @@ export function RootActions({
 }) {
   return (
     <span className="flex items-center gap-0.5">
-      <IconAction label="New file" onClick={onNewFile}>
+      <IconAction label="New File" onClick={onNewFile}>
         <FilePlus className="h-3.5 w-3.5" />
       </IconAction>
-      <IconAction label="New folder" onClick={onNewFolder}>
+      <IconAction label="New Folder" onClick={onNewFolder}>
         <FolderPlus className="h-3.5 w-3.5" />
       </IconAction>
       <IconAction label="Refresh" onClick={onRefresh}>

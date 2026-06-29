@@ -78,7 +78,7 @@ export function MessageListView({
         onClick={appendMessage}
       >
         <PlusIcon className="size-4" />
-        Add message
+        Add Message
       </Button>
     </div>
   );

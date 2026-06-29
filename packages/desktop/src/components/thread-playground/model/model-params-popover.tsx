@@ -154,7 +154,7 @@ export function ModelParamsPopover({
         </HoverCardContent>
       </HoverCard>
       <Popover onOpenChange={handleOpenChange}>
-        <Tooltip content="Configure model settings">
+        <Tooltip content="Configure Model Settings">
           <PopoverTrigger asChild>
             <Button variant="ghost" disabled={readonly} size="icon-xs">
               <SlidersHorizontal className="size-4" />
@@ -163,7 +163,7 @@ export function ModelParamsPopover({
         </Tooltip>
         <PopoverContent align="end" className="flex w-72 flex-col p-4">
           <PopoverHeader>
-            <PopoverTitle>Model settings</PopoverTitle>
+            <PopoverTitle>Model Settings</PopoverTitle>
           </PopoverHeader>
           <ParamField
             label="Temperature"

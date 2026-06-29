@@ -305,7 +305,7 @@ export function FileSystemTreeView({
         ) : data.length === 0 ? (
           <Empty className="h-full">
             <EmptyHeader>
-              <EmptyTitle>No threads yet</EmptyTitle>
+              <EmptyTitle>No Threads Yet</EmptyTitle>
               <EmptyDescription>
                 Create a thread to get started.
               </EmptyDescription>

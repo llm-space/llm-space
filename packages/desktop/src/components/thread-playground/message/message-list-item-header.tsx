@@ -53,7 +53,7 @@ function _MessageListItemHeader({
   }, [toggleMessageCollapsed, message.id]);
   return (
     <header className="flex w-full shrink-0 items-center px-3 pt-2">
-      <Tooltip content="Drag to reorder">
+      <Tooltip content="Drag to Reorder">
         <div
           {...dragHandleProps}
           className={cn(
@@ -65,7 +65,7 @@ function _MessageListItemHeader({
         </div>
       </Tooltip>
       <div className="flex shrink-0 items-center">
-        <Tooltip content="Click to toggle role">
+        <Tooltip content="Toggle Role">
           <Button
             className="-translate-x-0.5 px-2"
             variant="outline"
@@ -105,7 +105,7 @@ function _MessageListItemHeader({
           <AddImagesMenu messageId={message.id} disabled={readonly} />
         )}
         <Tooltip
-          content={runnable ? "Run from this message" : "No runnable content"}
+          content={runnable ? "Run From This Message" : "No runnable content"}
         >
           <Button
             variant="ghost"
@@ -116,7 +116,7 @@ function _MessageListItemHeader({
             <PlayCircleIcon className="size-4" />
           </Button>
         </Tooltip>
-        <Tooltip content="Remove message">
+        <Tooltip content="Remove Message">
           <Button
             variant="ghost"
             size="icon-sm"

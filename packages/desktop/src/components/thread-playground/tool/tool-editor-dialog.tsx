@@ -81,7 +81,7 @@ export function ToolEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] w-full flex-col gap-4 sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{originalName ? "Edit tool" : "Add tool"}</DialogTitle>
+          <DialogTitle>{originalName ? "Edit Tool" : "Add Tool"}</DialogTitle>
           <DialogDescription>
             The model will intelligently decide to call functions based on input
             it receives from the user.

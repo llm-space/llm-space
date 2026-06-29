@@ -49,7 +49,7 @@ export function ThreadPlaygroundSkeleton({
             </div>
             <div className="flex min-h-0 w-full grow flex-col">
               <div className="text-muted-foreground shrink-0 py-2 text-sm">
-                System prompt
+                System Prompt
               </div>
               <div className="flex min-h-0 grow flex-col gap-2 rounded-md border bg-(--textarea) px-3 py-3">
                 <Skeleton className="h-3.5 w-full rounded" />

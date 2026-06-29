@@ -155,7 +155,7 @@ function ThreadPlaygroundContent({
                 readonlyFromProps && "hidden"
               )}
             >
-              <Tooltip content="Undo last edit">
+              <Tooltip content="Undo Last Edit">
                 <Button
                   variant="ghost"
                   size="icon-lg"
@@ -165,7 +165,7 @@ function ThreadPlaygroundContent({
                   <Undo2Icon className="size-4" />
                 </Button>
               </Tooltip>
-              <Tooltip content="Redo last edit">
+              <Tooltip content="Redo Last Edit">
                 <Button
                   variant="ghost"
                   size="icon-lg"
@@ -175,7 +175,7 @@ function ThreadPlaygroundContent({
                   <Redo2Icon className="size-4" />
                 </Button>
               </Tooltip>
-              <Tooltip content="Run history">
+              <Tooltip content="View Run History">
                 <Button
                   variant="ghost"
                   size="icon-lg"
@@ -190,11 +190,9 @@ function ThreadPlaygroundContent({
               <Tooltip
                 content={
                   <div>
-                    {status === "running"
-                      ? "Stop the running thread "
-                      : "Run the thread "}
+                    {status === "running" ? "Stop Running " : "Run Thread"}
                     <KbdGroup>
-                      <Kbd>⌘ Enter</Kbd>
+                      <Kbd className="text-foreground!">⌘ Enter</Kbd>
                     </KbdGroup>
                   </div>
                 }
@@ -245,7 +243,7 @@ function ThreadPlaygroundContent({
                 </div>
                 <div className="flex min-h-0 w-full grow flex-col">
                   <div className="text-muted-foreground shrink-0 py-2 text-sm">
-                    System prompt
+                    System Prompt
                   </div>
                   <SystemPromptEditor
                     className="min-h-0 grow"

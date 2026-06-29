@@ -108,7 +108,7 @@ export function ThreadTabs({
         }))}
         pinnedRight={
           <div className="flex h-full items-center pt-0.5 pl-1.5">
-            <Tooltip content="New file">
+            <Tooltip content="New File">
               <Button
                 className="hover:bg-primary! rounded-full"
                 size="icon-sm"
