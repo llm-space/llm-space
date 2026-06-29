@@ -60,9 +60,6 @@ export function FileSystemTreeView({
 
   const [renaming, setRenaming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  // Root actions appear only while the pointer is within the tree list (and
-  // stay visible until it leaves the whole panel, so they remain clickable).
-  const [showRootActions, setShowRootActions] = useState(false);
   // Path of a just-created node we want to expand-to, scroll to, and rename
   // once its parent's listing has loaded.
   const [pendingReveal, setPendingReveal] = useState<string | null>(null);
@@ -206,18 +203,10 @@ export function FileSystemTreeView({
   }
 
   return (
-    <div
-      className={cn("flex h-full flex-col", className)}
-      onMouseLeave={() => setShowRootActions(false)}
-    >
+    <div className={cn("flex h-full flex-col", className)}>
       <div className="text-muted-foreground flex items-center justify-between px-3 py-1.5 text-xs font-medium">
         <span>Workspace</span>
-        <span
-          className={cn(
-            "transition-opacity",
-            showRootActions ? "opacity-100" : "pointer-events-none opacity-0"
-          )}
-        >
+        <span>
           <RootActions
             onNewFile={() => void create("", "file")}
             onNewFolder={() => void create("", "folder")}
@@ -226,10 +215,7 @@ export function FileSystemTreeView({
         </span>
       </div>
 
-      <div
-        className="min-h-0 flex-1 overflow-auto"
-        onMouseEnter={() => setShowRootActions(true)}
-      >
+      <div className="min-h-0 flex-1 overflow-auto">
         {isRootLoading ? (
           <div className="flex items-center justify-center p-4">
             <Spinner />

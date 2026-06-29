@@ -241,11 +241,43 @@ function setupModels() {
     ],
     api: openAICompletionsApi(),
   });
+  const arkForAuroraProvider = createProvider({
+    id: "ark",
+    name: "VolcEngine Ark",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    auth: {
+      apiKey: envApiKeyAuth("AURORA_ARK_API_KEY", ["AURORA_ARK_API_KEY"]),
+    },
+    models: [
+      {
+        id: "ep-20260615220137-zw7qb",
+        provider: "ark",
+        name: "Oneloop-1.0",
+        api: "openai-completions",
+        baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+        reasoning: true,
+        input: ["text", "image"],
+        contextWindow: 262144,
+        maxTokens: 262144,
+        compat: {
+          supportsDeveloperRole: false,
+        },
+        cost: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+      },
+    ],
+    api: openAICompletionsApi(),
+  });
 
   const models = createModels();
   models.setProvider(deepseekProvider());
   models.setProvider(openaiCodexProvider());
   models.setProvider(arkProvider);
   models.setProvider(arkCodingPlanProvider);
+  models.setProvider(arkForAuroraProvider);
   return models;
 }
