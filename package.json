@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "check": "eslint .",
-    "dev": "cd packages/ && bun run dev",
+    "dev": "cd packages/desktop && bun run dev:hmr",
     "lint": "eslint --fix",
     "lint:check": "eslint .",
     "prepare": "husky"
