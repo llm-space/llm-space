@@ -15,7 +15,7 @@ export default defineConfig([
       "**/.next/**",
       "**/.turbo/**",
       "packages/web/.next/**",
-      "packages/web/src/components/ui/**",
+      "packages/*/src/components/ui/**",
       "packages/web/next-env.d.ts",
     ],
   },
