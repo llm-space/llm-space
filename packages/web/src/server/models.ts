@@ -250,6 +250,26 @@ function setupModels() {
     },
     models: [
       {
+        id: "ep-20260519195127-5w5bl",
+        provider: "ark",
+        name: "Doubao-Seed-2.0-pro",
+        api: "openai-completions",
+        baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+        reasoning: true,
+        input: ["text", "image"],
+        contextWindow: 262144,
+        maxTokens: 262144,
+        compat: {
+          supportsDeveloperRole: false,
+        },
+        cost: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+      },
+      {
         id: "ep-20260615220137-zw7qb",
         provider: "ark",
         name: "Oneloop-1.0",
