@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 
 import { FileSystemTreeView } from "@/components/file-system-tree-view";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { ThreadTabs, useThreadTabs } from "@/components/thread-tabs";
 import {
   ResizableHandle,
@@ -72,6 +73,16 @@ export function Page() {
 
   const fullScreen = useFullScreen();
 
+  // The app-menu "Settings..." command opens the Settings dialog over RPC.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  useEffect(() => {
+    const rpc = electrobun.rpc;
+    if (!rpc) return;
+    const onOpenSettings = () => setSettingsOpen(true);
+    rpc.addMessageListener("openSettings", onOpenSettings);
+    return () => rpc.removeMessageListener("openSettings", onOpenSettings);
+  }, []);
+
   return (
     <div className="flex size-full flex-col">
       <main className="min-h-0 grow">
@@ -86,10 +97,11 @@ export function Page() {
           >
             <FileSystemTreeView
               className="size-full"
+              registerNewThread={registerNewThread}
               onSelectFile={tabs.open}
               onRemove={tabs.handleRemove}
               onMove={tabs.handleMove}
-              registerNewThread={registerNewThread}
+              onSettings={() => setSettingsOpen(true)}
             />
           </ResizablePanel>
           <ResizableHandle />
@@ -112,6 +124,7 @@ export function Page() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </main>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

@@ -10,6 +10,12 @@ ApplicationMenu.setApplicationMenu([
       { label: "About LLM Space", role: "about" },
       { type: "divider" },
       {
+        label: "Settings...",
+        action: "settings",
+        accelerator: "CommandOrControl+,",
+      },
+      { type: "divider" },
+      {
         role: "hide",
         accelerator: "CommandOrControl+H",
       },
@@ -37,7 +43,7 @@ ApplicationMenu.setApplicationMenu([
         accelerator: "CommandOrControl+N",
       },
       {
-        type: "separator",
+        type: "divider",
       },
       {
         label: "Close Tab",
@@ -53,7 +59,7 @@ ApplicationMenu.setApplicationMenu([
         action: "closeAllTabs",
       },
       {
-        type: "separator",
+        type: "divider",
       },
       {
         label: "Reopen Closed Tabs",
@@ -67,7 +73,7 @@ ApplicationMenu.setApplicationMenu([
     submenu: [
       { role: "undo" },
       { role: "redo" },
-      { type: "separator" },
+      { type: "divider" },
       { role: "cut" },
       { role: "copy" },
       { role: "paste" },
@@ -84,13 +90,13 @@ ApplicationMenu.setApplicationMenu([
         action: "toggleSidebar",
         accelerator: "CommandOrControl+B",
       },
-      { type: "separator" },
+      { type: "divider" },
       {
         label: "Reload",
         action: "reload",
         accelerator: "CommandOrControl+Shift+R",
       },
-      { type: "separator" },
+      { type: "divider" },
       {
         label: "Zoom In",
         action: "zoomIn",
@@ -119,7 +125,7 @@ ApplicationMenu.setApplicationMenu([
         role: "bringAllToFront",
       },
       {
-        type: "separator",
+        type: "divider",
       },
       {
         role: "toggleFullScreen",
@@ -134,7 +140,7 @@ ApplicationMenu.setApplicationMenu([
         label: "Report Bug",
       },
       {
-        type: "separator",
+        type: "divider",
       },
       {
         label: "View Documentation",
@@ -181,6 +187,10 @@ export function registerMenuActions(window: BrowserWindow) {
       }
       case "toggleSidebar": {
         mainWindowRPC.send.toggleSidebar({});
+        return;
+      }
+      case "settings": {
+        mainWindowRPC.send.openSettings({});
         return;
       }
       case "newThread": {

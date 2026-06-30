@@ -8,6 +8,7 @@ import {
   FolderPlus,
   MoreHorizontal,
   RefreshCw,
+  SettingsIcon,
   TextCursorInput,
   Trash2,
 } from "lucide-react";
@@ -184,10 +185,12 @@ export function RootActions({
   onNewFile,
   onNewFolder,
   onReveal,
+  onSettings,
   onRefresh,
 }: {
   onNewFile: () => void;
   onNewFolder: () => void;
+  onSettings: () => void;
   onReveal: () => void;
   onRefresh: () => void;
 }) {
@@ -198,6 +201,9 @@ export function RootActions({
       </IconAction>
       <IconAction label="New folder" onClick={onNewFolder}>
         <FolderPlus className="size-4" />
+      </IconAction>
+      <IconAction label="Settings" onClick={onSettings}>
+        <SettingsIcon className="size-4" />
       </IconAction>
       <DropdownMenu>
         <MoreActionsTrigger />

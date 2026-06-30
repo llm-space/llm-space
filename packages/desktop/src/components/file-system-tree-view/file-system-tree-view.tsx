@@ -48,6 +48,7 @@ export function FileSystemTreeView({
   onSelectFile,
   onRemove,
   onMove,
+  onSettings = () => void 0,
   registerNewThread,
 }: {
   className?: string;
@@ -57,6 +58,7 @@ export function FileSystemTreeView({
   onRemove?: (path: string) => void;
   /** Fired after a path changes via rename or move (`from` → `to`). */
   onMove?: (from: string, to: string) => void;
+  onSettings?: () => void;
   /** Hand the parent the "new thread at root" trigger (e.g. for a toolbar button). */
   registerNewThread?: (fn: () => void) => void;
 }) {
@@ -332,6 +334,7 @@ export function FileSystemTreeView({
           <RootActions
             onNewFile={() => void create("", "file")}
             onNewFolder={() => void create("", "folder")}
+            onSettings={onSettings}
             onReveal={() => void reveal("")}
             onRefresh={refresh}
           />

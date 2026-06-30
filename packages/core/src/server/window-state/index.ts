@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 
-import { getLlmSpaceRoot, getWindowStatePath } from "../paths";
+import { getSettingsDir, getWindowStatePath } from "../paths";
 
 export interface WindowFrame {
   x: number;
@@ -9,7 +9,7 @@ export interface WindowFrame {
   height: number;
 }
 
-/** Persisted desktop window state (`window-state.json`). */
+/** Persisted desktop window state (`settings/window.json`). */
 export interface WindowState {
   frame?: WindowFrame;
   /** Whether the main window was maximized when last closed. */
@@ -68,7 +68,7 @@ export async function loadWindowState(): Promise<WindowState> {
 }
 
 async function writeWindowState(next: WindowState): Promise<void> {
-  await fs.mkdir(getLlmSpaceRoot(), { recursive: true });
+  await fs.mkdir(getSettingsDir(), { recursive: true });
   await fs.writeFile(
     getWindowStatePath(),
     `${JSON.stringify(next, null, 2)}\n`,

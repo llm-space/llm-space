@@ -66,6 +66,8 @@ export interface DesktopRPCType {
       fullScreenChanged: { fullScreen: boolean };
       // Toggle the left side panel.
       toggleSidebar: Record<string, never>;
+      // Open the Settings dialog (from the app menu).
+      openSettings: Record<string, never>;
       // Native File-menu commands, forwarded into the webview.
       newThread: Record<string, never>;
       closeActiveTab: Record<string, never>;

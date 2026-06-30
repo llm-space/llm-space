@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 
-/** Root directory for llm-space user data (`window-state.json`, `workspace/`, etc.). */
+/** Root directory for llm-space user data (`settings/`, `workspace/`, etc.). */
 export function getLlmSpaceRoot(): string {
   return (
     process.env.LLM_SPACE_ROOT ??
@@ -10,6 +10,11 @@ export function getLlmSpaceRoot(): string {
   );
 }
 
+/** Directory holding persisted settings (`window.json`, etc.). */
+export function getSettingsDir(): string {
+  return path.join(getLlmSpaceRoot(), "settings");
+}
+
 export function getWindowStatePath(): string {
-  return path.join(getLlmSpaceRoot(), "window-state.json");
+  return path.join(getSettingsDir(), "window.json");
 }
