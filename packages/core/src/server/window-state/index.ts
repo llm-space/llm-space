@@ -21,8 +21,8 @@ export interface WindowState {
 export const DEFAULT_WINDOW_FRAME: WindowFrame = {
   x: 200,
   y: 200,
-  width: 1024,
-  height: 720,
+  width: 1280,
+  height: 800,
 };
 
 function isWindowFrame(value: unknown): value is WindowFrame {
