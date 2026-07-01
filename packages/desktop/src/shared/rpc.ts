@@ -31,6 +31,10 @@ export interface DesktopRPCType {
         params: Record<string, never>;
         response: ModelProviderGroup[];
       };
+      removeProvider: {
+        params: { providerId: string };
+        response: ModelProviderGroup[];
+      };
       toggleMaximized: {
         params: Record<string, never>;
         response: { maximized: boolean };

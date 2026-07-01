@@ -4,20 +4,12 @@ import type { FileNode } from "@llm-space/core";
 import { MessagesSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   TreeView,
   type TreeDataItem,
   type TreeRenderItemParams,
 } from "@/components/tree-view";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Empty,
   EmptyDescription,
@@ -369,43 +361,30 @@ export function FileSystemTreeView({
         )}
       </div>
 
-      <Dialog
+      <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => {
           if (!open) setDeleting(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Move &ldquo;
-              {deleting ? basename(deleting).replace(/\.json$/, "") : ""}
-              &rdquo; to the {TRASH_NAME}?
-            </DialogTitle>
-            <DialogDescription>
-              You can restore it from the {TRASH_NAME} later.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleting(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                const path = deleting;
-                setDeleting(null);
-                if (path)
-                  void remove(path).then((ok) => {
-                    if (ok) onRemove?.(path);
-                  });
-              }}
-            >
-              Move to {TRASH_NAME}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={
+          <>
+            Move &ldquo;
+            {deleting ? basename(deleting).replace(/\.json$/, "") : ""}
+            &rdquo; to the {TRASH_NAME}?
+          </>
+        }
+        description={`You can restore it from the ${TRASH_NAME} later.`}
+        confirmLabel={`Move to ${TRASH_NAME}`}
+        onConfirm={() => {
+          const path = deleting;
+          setDeleting(null);
+          if (path) {
+            void remove(path).then((ok) => {
+              if (ok) onRemove?.(path);
+            });
+          }
+        }}
+      />
     </div>
   );
 }

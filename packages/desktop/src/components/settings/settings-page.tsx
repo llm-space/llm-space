@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,9 +21,9 @@ export function SettingsPage({
       <header className="flex h-12 shrink-0 items-center px-6">
         <h2 className="font-heading text-base font-medium">{title}</h2>
       </header>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className={cn("px-6 pb-6", className)}>{children}</div>
-      </ScrollArea>
+      <div className={cn("min-h-0 flex-1 px-6 pb-6", className)}>
+        {children}
+      </div>
     </div>
   );
 }

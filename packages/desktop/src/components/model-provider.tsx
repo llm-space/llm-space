@@ -4,6 +4,7 @@ import type * as pi from "@earendil-works/pi-ai";
 import type { ModelProviderGroup } from "@llm-space/core";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -11,9 +12,11 @@ import {
   type ReactNode,
 } from "react";
 
+import { electrobun } from "@/lib/electrobun";
+
 interface ModelContextValue {
   providers: ModelProviderGroup[];
-
+  removeProvider: (providerId: string) => Promise<void>;
   getModel: (ref: { id: string; provider: string }) => pi.Model<pi.Api> | null;
 }
 
@@ -40,6 +43,14 @@ export function ModelProvider({
 }) {
   const [providers, setProviders] = useState<ModelProviderGroup[] | null>(null);
 
+  const removeProvider = useCallback(async (providerId: string) => {
+    if (!electrobun.rpc) {
+      throw new Error("Electrobun RPC is not initialized");
+    }
+    const updated = await electrobun.rpc.request.removeProvider({ providerId });
+    setProviders(updated);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -65,9 +76,10 @@ export function ModelProvider({
     const index = buildModelIndex(providers);
     return {
       providers,
+      removeProvider,
       getModel: (ref) => index.get(`${ref.provider}:${ref.id}`) ?? null,
     };
-  }, [providers]);
+  }, [providers, removeProvider]);
 
   if (!contextValue) {
     return fallback;
@@ -90,6 +102,10 @@ function useModelProvider() {
 
 export function useModels(): ModelProviderGroup[] {
   return useModelProvider().providers;
+}
+
+export function useRemoveProvider(): (providerId: string) => Promise<void> {
+  return useModelProvider().removeProvider;
 }
 
 export function useModel(ref: {

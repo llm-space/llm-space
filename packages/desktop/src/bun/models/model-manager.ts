@@ -48,6 +48,45 @@ export class ModelManager {
     }));
   }
 
+  /** Add a builtin provider to `settings/models.json`. */
+  addBuiltInProvider({
+    id,
+    apiKey,
+  }: {
+    id: string;
+    apiKey?: string;
+  }): void {
+    if (!(id in BUILTIN_PROVIDERS)) {
+      throw new Error(`Unknown builtin provider: ${id}`);
+    }
+
+    if (this._config.providers.some((entry) => entry.id === id)) {
+      throw new Error(`Provider already configured: ${id}`);
+    }
+
+    this._config.providers.push({
+      id,
+      builtin: true,
+      ...(apiKey !== undefined ? { apiKey } : {}),
+    });
+
+    this._models = null;
+    this._saveConfig();
+  }
+
+  /** Remove a provider from `settings/models.json`. No-op when not configured. */
+  removeProvider(providerId: string): void {
+    const index = this._config.providers.findIndex(
+      (entry) => entry.id === providerId
+    );
+    if (index === -1) {
+      return;
+    }
+    this._config.providers.splice(index, 1);
+    this._models = null;
+    this._saveConfig();
+  }
+
   /**
    * Resolve the configured API key for a provider. A value starting with `$` is
    * read from the matching environment variable (`$DEEPSEEK_API_KEY` →
@@ -100,6 +139,15 @@ export class ModelManager {
 
   private get _configPath(): string {
     return path.join(getSettingsDir(), "models.json");
+  }
+
+  private _saveConfig(): void {
+    mkdirSync(getSettingsDir(), { recursive: true });
+    writeFileSync(
+      this._configPath,
+      `${JSON.stringify(this._config, null, 2)}\n`,
+      "utf8"
+    );
   }
 
   /**

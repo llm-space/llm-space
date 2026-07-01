@@ -6,6 +6,15 @@ import { modelManager } from "../models";
 import { localFs } from "../storage";
 import { abortStreamThread, runStreamThread } from "../streaming";
 
+async function getModelProviderGroups() {
+  const models = await modelManager.getAvailableModels();
+  return models.getProviders().map((provider) => ({
+    id: provider.id,
+    name: provider.name,
+    models: provider.getModels(),
+  }));
+}
+
 /**
  * The handler for `sendStreamThreadRequest` references `mainWindowRPC` inside
  * its own initializer, so an explicit annotation is required — otherwise TS
@@ -18,13 +27,10 @@ export const mainWindowRPC: MainWindowRPC =
     maxRequestTime: 10_000,
     handlers: {
       requests: {
-        availableModels: async () => {
-          const models = await modelManager.getAvailableModels();
-          return models.getProviders().map((provider) => ({
-            id: provider.id,
-            name: provider.name,
-            models: provider.getModels(),
-          }));
+        availableModels: async () => getModelProviderGroups(),
+        removeProvider: async ({ providerId }) => {
+          modelManager.removeProvider(providerId);
+          return getModelProviderGroups();
         },
         toggleMaximized: async () => {
           const { mainWindow } = await import("../app/window");
