@@ -1,7 +1,96 @@
-# LLM Space
+# LLM Space 4
 
 > A workbench for prompt and agent development — build, trace, debug, evaluate, and manage, all in one place.
 
-LLM Space brings the whole prompt, context and harness engineering development loop into a single place: author and version your prompts, run them against real models, trace every model call and tool execution inside the agent loop, and debug by replaying history step by step.
+**LLM Space** v4 is a desktop tool made for people who build agents. Try out new agent ideas, watch what your agent does step by step, debug it, and measure how well it works — all in one app.
 
-It comes as a **local-first desktop app** and a **web app**. The desktop app keeps your files and keys on your machine, iterates faster, and plugs into local sandboxes; the web app makes it easy to share traces, access from anywhere, and collaborate.
+The first version of LLM Space was born in March 2023, and this is its fourth major version.
+
+LLM Space is a side project of our honored open source project [DeerFlow](https://github.com/bytedance/deer-flow). And every version of DeerFlow is built with LLM Space.
+
+## Contents
+
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Project layout](#project-layout)
+- [Install](#install)
+- [Run the app](#run-the-app)
+- [User guide](#user-guide)
+- [Contributing](#contributing)
+- [Donate](#donate)
+- [License](#license)
+
+## Features
+
+- **Build** — write and version your prompts, system messages, tools, and model settings.
+- **Trace** — see every model call and tool run inside the agent loop as it happens.
+- **Debug** — replay a run from history and step through it to find what went wrong.
+- **Evaluate** — measure how your agent performs across runs.
+- **Manage** — keep your threads organized as files on your own machine.
+
+Your files and API keys stay on your local computer.
+
+## Tech stack
+
+- **Language & tooling** — TypeScript, built and managed with [Bun](https://bun.com).
+- **Desktop shell** — [Electrobun](https://electrobun.dev), a lightweight way to ship a native app.
+- **UI** — React with Tailwind CSS.
+
+## Project layout
+
+LLM Space is a Bun monorepo:
+
+```
+packages/
+  core/       # Shared logic: types, the agent loop, thread storage
+apps/
+  desktop/    # The desktop app (Electrobun shell + React UI)
+```
+
+## Install
+
+You need [Bun](https://bun.com) first. Bun is a fast, all-in-one runtime and package manager for JavaScript — think of it as a drop-in replacement for Node.js and npm. Follow the [official install guide](https://bun.com/docs/installation).
+
+Once Bun is ready, install the project from the repo root:
+
+```bash
+bun install
+```
+
+## Run the app
+
+Start the desktop app for local development:
+
+```bash
+bun dev
+```
+
+Build a canary release:
+
+```bash
+bun run build:canary
+```
+
+## User guide
+
+The full user manual lives here:
+
+**[LLM Space User Guide →](https://my.feishu.cn/wiki/QnGGwGkoti8nwok2cEOc2oMvnrd)**
+
+## Contributing
+
+For now, we only merge pull requests from the [DeerFlow](https://github.com/bytedance/deer-flow) core team members.
+
+Everyone else is very welcome to help by [opening an issue](https://github.com/llm-space/llm-space/issues) — bug reports, ideas, and feedback all make the project better.
+
+## Donate
+
+If LLM Space is useful to you and you would like to support its development, you can donate here:
+
+**[Support LLM Space →](https://my.feishu.cn/wiki/OvLBwVuSkiCR1ik5wGEcBXZfnye)**
+
+Thank you.
+
+## License
+
+LLM Space is released under the [MIT License](LICENSE).
