@@ -1,6 +1,6 @@
 # LLM Space 4
 
-> A workbench for prompt and agent development — build, trace, debug, evaluate, and manage, all in one place.
+![LLM Space 4](./docs/images/screenshot-01.png)
 
 **LLM Space** v4 is a desktop tool made for people who build agents. Try out new agent ideas, watch what your agent does step by step, debug it, and measure how well it works — all in one app.
 
