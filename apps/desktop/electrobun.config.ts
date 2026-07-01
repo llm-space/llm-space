@@ -1,5 +1,9 @@
 import type { ElectrobunConfig } from "electrobun";
 
+const desktopRenderer = Bun.env.LLM_SPACE_DESKTOP_RENDERER;
+const useCefRenderer = desktopRenderer === "cef";
+const cdpPort = Bun.env.LLM_SPACE_DESKTOP_CDP_PORT ?? "9333";
+
 export default {
   app: {
     name: "LLM Space",
@@ -19,7 +23,15 @@ export default {
     // Ignore Vite output in watch mode — HMR handles view rebuilds separately
     watchIgnore: ["dist/**"],
     mac: {
-      bundleCEF: false,
+      bundleCEF: useCefRenderer,
+      ...(useCefRenderer
+        ? {
+            defaultRenderer: "cef" as const,
+            chromiumFlags: {
+              "remote-debugging-port": cdpPort,
+            },
+          }
+        : {}),
       icons: "icon.iconset",
     },
     linux: {

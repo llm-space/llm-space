@@ -9,7 +9,8 @@ Use **bun** for everything (`packageManager: bun`, pinned to `bun 1.3` in `mise.
 | Task | Command | Notes |
 |---|---|---|
 | Install deps | `bun install` | from repo root |
-| Run the app | `bun dev` | root script → `cd apps/desktop && bun run dev:hmr` (Vite HMR on :5173 + `electrobun dev --watch`) |
+| Run desktop app | `bun dev` | root script → `cd apps/desktop && bun run dev:hmr` (Vite HMR on :5173 + `electrobun dev --watch`) |
+| Run desktop app with CEF/CDP debugging | `bun run dev:cef` | root script → `cd apps/desktop && bun run dev:cef`; exposes CDP on `127.0.0.1:9333` by default |
 | Build (canary) | `bun run build:canary` | in `apps/desktop` → `vite build && electrobun build --env=canary` |
 | Lint | `bun lint` / `bun run lint:check` | `lint` = `eslint --fix`, `lint:check` / `check` = `eslint .`; flat config at repo root |
 | Add a dependency | `bun add <pkg>` | run inside the target package (`apps/desktop` or `packages/core`) |
@@ -19,6 +20,15 @@ Use **bun** for everything (`packageManager: bun`, pinned to `bun 1.3` in `mise.
 There is **no test framework** and **no root typecheck script**; each package uses `tsc` via `tsconfig.json`.
 
 Shared dependency versions live in the root `package.json` `catalog` (referenced as `"catalog:"`) — bump them there, not per-package. The catalog currently pins `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core`, `react`, `react-dom`, and `typebox`.
+
+### Electrobun page debugging
+
+When you need to inspect or debug the real desktop renderer, use the project
+skill at `./.agents/skills/electrobun-cdp-debug/SKILL.md`. Do **not** mock
+`electrobun.rpc` in a browser.
+
+Start with `bun run dev:cef`; normal `bun dev` keeps the native WebView renderer
+and does not expose CDP.
 
 ## Architecture
 
