@@ -1,9 +1,8 @@
 "use client";
 
-import { Boxes, SlidersHorizontal, XIcon } from "lucide-react";
+import { Boxes, SlidersHorizontal } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SettingsTab } from "@/shared/commands";
 

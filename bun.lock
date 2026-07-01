@@ -33,18 +33,7 @@
         "typescript-eslint": "^8.61.0",
       },
     },
-    "packages/core": {
-      "name": "@llm-space/core",
-      "version": "0.1.0",
-      "dependencies": {
-        "@earendil-works/pi-agent-core": "catalog:",
-        "@earendil-works/pi-ai": "catalog:",
-        "best-effort-json-parser": "^1.4.1",
-        "parse-sse": "^0.1.0",
-        "typebox": "catalog:",
-      },
-    },
-    "packages/desktop": {
+    "apps/desktop": {
       "name": "@llm-space/desktop",
       "version": "1.0.0",
       "dependencies": {
@@ -84,6 +73,17 @@
         "tailwindcss": "^4.0.15",
         "typescript": "^5.7.2",
         "vite": "^6.0.3",
+      },
+    },
+    "packages/core": {
+      "name": "@llm-space/core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@earendil-works/pi-agent-core": "catalog:",
+        "@earendil-works/pi-ai": "catalog:",
+        "best-effort-json-parser": "^1.4.1",
+        "parse-sse": "^0.1.0",
+        "typebox": "catalog:",
       },
     },
   },
@@ -441,7 +441,7 @@
 
     "@llm-space/core": ["@llm-space/core@workspace:packages/core"],
 
-    "@llm-space/desktop": ["@llm-space/desktop@workspace:packages/desktop"],
+    "@llm-space/desktop": ["@llm-space/desktop@workspace:apps/desktop"],
 
     "@malept/cross-spawn-promise": ["@malept/cross-spawn-promise@1.1.1", "https://registry.npmmirror.com/@malept/cross-spawn-promise/-/cross-spawn-promise-1.1.1.tgz", { "dependencies": { "cross-spawn": "^7.0.1" } }, "sha512-RTBGWL5FWQcg9orDOCcp4LvItNzUPcyEU9bwaeJX0rJ1IQxzucC48Y0/sQLp/g6t99IQgAlGIaesJS+gTn7tVQ=="],
 

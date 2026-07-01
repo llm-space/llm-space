@@ -30,13 +30,6 @@ function SettingsRow({
 }
 
 export function GeneralPage() {
-  // Simple reset: wipe persisted UI state (open tabs, active tab, …) and reload
-  // so the app comes back in a first-launch state.
-  const handleReset = () => {
-    window.localStorage.clear();
-    window.location.reload();
-  };
-
   return (
     <SettingsPage title="General">
       <SettingsRow label="Appearance">
