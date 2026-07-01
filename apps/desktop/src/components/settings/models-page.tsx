@@ -33,6 +33,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Switch } from "@/components/ui/switch";
+import { useAutoAnimation } from "@/lib/use-auto-animation";
 import { cn } from "@/lib/utils";
 
 import { ConfirmDialog } from "../confirm-dialog";
@@ -68,6 +69,7 @@ export function ModelsPage() {
         providers={providers}
         selectedId={selectedId}
         onSelect={setSelectedId}
+        onAdd={setSelectedId}
       />
       <ProviderEditor key={selected?.id} provider={selected} />
     </SettingsPage>
@@ -78,12 +80,15 @@ function ProviderList({
   providers,
   selectedId,
   onSelect,
+  onAdd,
 }: {
   providers: ModelProviderGroup[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onAdd: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [listRef] = useAutoAnimation<HTMLDivElement>();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -116,7 +121,7 @@ function ProviderList({
             No provider matches &quot;{query.trim()}&quot;.
           </div>
         ) : (
-          <div className="flex flex-col gap-1 pr-2">
+          <div ref={listRef} className="flex flex-col gap-1 pr-2">
             {filtered.map((provider) => (
               <ProviderListItem
                 key={provider.id}
@@ -129,7 +134,7 @@ function ProviderList({
         )}
       </ScrollArea>
 
-      <AddProviderMenu />
+      <AddProviderMenu onAdd={onAdd} />
     </div>
   );
 }
@@ -154,7 +159,7 @@ const RECOMMENDED_PROVIDER_IDS = new Set([
  * qualifies for; empty groups are omitted. Already-configured providers are
  * checked.
  */
-function AddProviderMenu() {
+function AddProviderMenu({ onAdd }: { onAdd: (id: string) => void }) {
   const configured = useModels();
   const addProvider = useAddProvider();
   const fetchBuiltins = useFetchBuiltinProviders();
@@ -252,7 +257,11 @@ function AddProviderMenu() {
               {group.items.map((provider) => (
                 <DropdownMenuItem
                   key={provider.id}
-                  onSelect={() => void addProvider(provider.id)}
+                  onSelect={() =>
+                    void addProvider(provider.id).then(() =>
+                      onAdd(provider.id)
+                    )
+                  }
                 >
                   <ProviderAvatar id={provider.id} name={provider.name} />
                   <span className="line-clamp-1 grow">{provider.name}</span>
@@ -365,6 +374,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
   const [modelView, setModelView] = useState<"all" | "enabled" | "disabled">(
     "all"
   );
+  const [modelListRef] = useAutoAnimation<HTMLDivElement>();
 
   const disabledModels = useMemo(
     () => new Set(provider?.disabledModels ?? []),
@@ -559,7 +569,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div ref={modelListRef} className="flex flex-col gap-1.5">
               {visibleModels.length === 0 ? (
                 <div className="text-muted-foreground px-1 py-2 text-xs">
                   No models to show.
