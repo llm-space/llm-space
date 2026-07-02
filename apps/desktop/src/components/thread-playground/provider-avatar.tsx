@@ -1,31 +1,41 @@
-import { extractInitials } from "@llm-space/core";
+import { memo, useMemo } from "react";
 
-import { cn } from "@/lib/utils";
+import { PROVIDER_ICON_ALIASES, resolveProviderIcon } from "@/lib/brand-icons";
 
-export function ProviderAvatar({
+import { BrandAvatar } from "./brand-avatar";
+
+function _ProviderAvatar({
   id,
   name,
+  icon,
   size = 18,
   className,
 }: {
   id: string;
   name: string;
+  /** A `@lobehub/icons` keyword overriding the auto-resolved brand icon. */
+  icon?: string;
   size?: number;
   className?: string;
 }) {
+  // An explicit `icon` wins; otherwise fall back to a known builtin alias, then
+  // auto-resolving from the id and display name.
+  const brand = useMemo(
+    () => resolveProviderIcon(icon, PROVIDER_ICON_ALIASES[id], id, name),
+    [icon, id, name]
+  );
+
   return (
-    <div
-      className={cn(
-        "text-foreground/80 flex shrink-0 items-center justify-center rounded-md border-b bg-cover bg-no-repeat pt-0.5 text-[9px] text-shadow-2xs",
-        className
-      )}
-      style={{
-        width: size,
-        height: size,
-        backgroundImage: `url(https://avatar.vercel.sh/${encodeURIComponent(id)}?size=${size})`,
-      }}
-    >
-      {extractInitials(name)}
-    </div>
+    <BrandAvatar
+      brand={brand}
+      id={id}
+      name={name}
+      size={size}
+      colorClassName="text-foreground/80"
+      fallbackClassName="rounded-md text-[9px]"
+      className={className}
+    />
   );
 }
+
+export const ProviderAvatar = memo(_ProviderAvatar);

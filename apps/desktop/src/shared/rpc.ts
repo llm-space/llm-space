@@ -71,6 +71,7 @@ export interface DesktopRPCType {
             | "openai-completions"
             | "openai-responses"
             | null;
+          icon?: string | null;
         };
         response: ModelProviderGroup[];
       };

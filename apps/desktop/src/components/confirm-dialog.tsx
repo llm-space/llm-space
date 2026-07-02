@@ -21,6 +21,7 @@ export function ConfirmDialog({
   confirmLabel,
   confirmVariant = "destructive",
   onConfirm,
+  dimBackground = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,10 +31,17 @@ export function ConfirmDialog({
   confirmLabel: string;
   confirmVariant?: "default" | "destructive";
   onConfirm: () => void;
+  /**
+   * Render the dimming/blur overlay behind the dialog. Set to `false` when the
+   * dialog opens on top of another dialog (e.g. inside Settings) so the
+   * backdrop isn't darkened a second time. Radix still blocks interaction and
+   * closes on outside click without an overlay.
+   */
+  dimBackground?: boolean;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent showOverlay={dimBackground}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? (

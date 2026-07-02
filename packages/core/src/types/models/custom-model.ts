@@ -9,4 +9,9 @@ import * as pi from "@earendil-works/pi-ai";
 export type CustomModel = Omit<pi.Model<pi.Api>, "provider" | "baseUrl"> & {
   provider?: string;
   baseUrl?: string;
+  /**
+   * A `@lobehub/icons` keyword overriding the brand icon shown for this model.
+   * Absent ⇒ the icon is auto-resolved from the model id/name.
+   */
+  icon?: string;
 };

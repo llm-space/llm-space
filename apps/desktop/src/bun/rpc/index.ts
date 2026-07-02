@@ -21,6 +21,7 @@ async function getModelProviderGroups() {
       disabledModels: modelManager.getDisabledModels(provider.id),
       customModels: modelManager.getCustomModels(provider.id),
       websiteLink: modelManager.getWebsiteLink(provider.id),
+      icon: modelManager.getProviderIcon(provider.id),
     }))
   ) as Promise<ModelProviderGroup[]>;
 }
@@ -51,12 +52,20 @@ export const mainWindowRPC: MainWindowRPC =
           modelManager.addCustomProvider({ id, name, baseUrl, api });
           return getModelProviderGroups();
         },
-        updateProvider: async ({ providerId, apiKey, baseUrl, name, api }) => {
+        updateProvider: async ({
+          providerId,
+          apiKey,
+          baseUrl,
+          name,
+          api,
+          icon,
+        }) => {
           modelManager.updateProvider(providerId, {
             apiKey,
             baseUrl,
             name,
             api,
+            icon,
           });
           return getModelProviderGroups();
         },

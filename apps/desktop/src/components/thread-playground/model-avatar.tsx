@@ -1,31 +1,41 @@
-import { extractInitials } from "@llm-space/core";
+import { memo, useMemo } from "react";
 
-import { cn } from "@/lib/utils";
+import { resolveModelIcon } from "@/lib/brand-icons";
 
-export function ModelAvatar({
+import { BrandAvatar } from "./brand-avatar";
+
+function _ModelAvatar({
   id,
   name,
+  icon,
   size = 24,
   className,
 }: {
   id: string;
   name: string;
+  /** A `@lobehub/icons` keyword overriding the auto-resolved brand icon. */
+  icon?: string;
   size?: number;
   className?: string;
 }) {
+  // An explicit `icon` wins; otherwise fall back to auto-resolving from the id
+  // and display name.
+  const brand = useMemo(
+    () => resolveModelIcon(icon, id, name),
+    [icon, id, name]
+  );
+
   return (
-    <div
-      className={cn(
-        "text-foreground/90 flex items-center justify-center rounded-full border-b bg-cover bg-no-repeat pt-0.5 text-xs text-shadow-2xs",
-        className
-      )}
-      style={{
-        width: size,
-        height: size,
-        backgroundImage: `url(https://avatar.vercel.sh/${encodeURIComponent(id)}?size=${size})`,
-      }}
-    >
-      {extractInitials(name)}
-    </div>
+    <BrandAvatar
+      brand={brand}
+      id={id}
+      name={name}
+      size={size}
+      colorClassName="text-foreground/90"
+      fallbackClassName="rounded-full text-xs"
+      className={className}
+    />
   );
 }
+
+export const ModelAvatar = memo(_ModelAvatar);

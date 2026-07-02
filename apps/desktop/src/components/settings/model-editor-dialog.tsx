@@ -24,6 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 import { useUpdateProvider, useUpsertCustomModel } from "../model-provider";
+import { ModelAvatar } from "../thread-playground/model-avatar";
 
 /** The selectable API types, ordered alphabetically by label. */
 const API_TYPES: { value: Api; label: string }[] = [
@@ -39,6 +40,7 @@ const DEFAULT_MAX_TOKENS = 262144;
 interface FormState {
   id: string;
   name: string;
+  icon: string;
   api: Api;
   reasoning: boolean;
   deepseekThinking: boolean;
@@ -55,6 +57,7 @@ function initialState(
     return {
       id: "",
       name: "",
+      icon: "",
       api,
       reasoning: false,
       deepseekThinking: false,
@@ -66,6 +69,7 @@ function initialState(
   return {
     id: model.id,
     name: model.name,
+    icon: model.icon ?? "",
     api: model.api,
     reasoning: model.reasoning,
     deepseekThinking:
@@ -127,9 +131,11 @@ export function ModelEditorDialog({
 
   const handleSave = () => {
     if (!canSave) return;
+    const trimmedIcon = form.icon.trim();
     const built: CustomModel = {
       id: trimmedId,
       name: form.name.trim() || trimmedId,
+      ...(trimmedIcon ? { icon: trimmedIcon } : {}),
       api: form.api,
       reasoning: form.reasoning,
       input: form.image ? ["text", "image"] : ["text"],
@@ -187,6 +193,35 @@ export function ModelEditorDialog({
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
             />
+          </Field>
+
+          <Field label="Icon">
+            <div className="flex items-center gap-2">
+              <ModelAvatar
+                id={form.id.trim() || "model"}
+                name={form.name.trim() || form.id.trim() || "Model"}
+                icon={form.icon.trim() || undefined}
+              />
+              <Input
+                value={form.icon}
+                placeholder="Auto (e.g. openai, claude, deepseek)"
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, icon: e.target.value }))
+                }
+              />
+            </div>
+            <p className="text-muted-foreground mt-1.5 text-xs">
+              A{" "}
+              <a
+                href="https://icons.lobehub.com"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                @lobehub/icons
+              </a>{" "}
+              keyword. Leave blank to auto-resolve from the model ID.
+            </p>
           </Field>
 
           <Field label="API type">

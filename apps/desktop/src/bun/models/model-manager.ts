@@ -123,11 +123,13 @@ export class ModelManager {
       baseUrl,
       name,
       api,
+      icon,
     }: {
       apiKey?: string | null;
       baseUrl?: string | null;
       name?: string | null;
       api?: CustomProviderApi | null;
+      icon?: string | null;
     }
   ): void {
     const entry = this._config.providers.find(
@@ -151,6 +153,10 @@ export class ModelManager {
     if (api !== undefined) {
       if (api === null) delete entry.api;
       else entry.api = api;
+    }
+    if (icon !== undefined) {
+      if (icon === null) delete entry.icon;
+      else entry.icon = icon;
     }
     // Rebuild the registry so a cleared baseUrl restores the model's default
     // (the cached model instance would otherwise keep the mutated value).
@@ -181,6 +187,16 @@ export class ModelManager {
       this._config.providers.find((entry) => entry.id === providerId)
         ?.disabledModels ?? []
     );
+  }
+
+  /**
+   * The `@lobehub/icons` keyword overriding a provider's brand icon, if the user
+   * set one. Absent ⇒ the renderer auto-resolves the icon from the provider
+   * id/name.
+   */
+  getProviderIcon(providerId: string): string | undefined {
+    return this._config.providers.find((entry) => entry.id === providerId)
+      ?.icon;
   }
 
   /** The ids of the user-added models for a provider (empty by default). */

@@ -19,10 +19,18 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -34,6 +42,11 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -276,66 +289,72 @@ function AddProviderMenu({ onAdd }: { onAdd: (id: string) => void }) {
   }, [builtins, configuredIds]);
 
   return (
-    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
+    <Popover open={open} onOpenChange={handleOpenChange} modal>
+      <PopoverTrigger asChild>
         <Button variant="outline" className="w-full">
           <Plus />
           Add provider
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        side="top"
-        align="start"
-        className="max-h-80 w-72 overflow-y-auto"
-      >
-        <DropdownMenuItem
-          onSelect={() =>
-            void addCustomProvider("Custom provider", "").then(onAdd)
-          }
-        >
-          <ProviderAvatar id="custom-provider" name="Custom provider" />
-          <span className="line-clamp-1 grow">User custom provider</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {builtins && groups.length === 0 ? (
-          <div className="text-muted-foreground px-2 py-1.5 text-xs">
-            No providers available
-          </div>
-        ) : (
-          groups.map((group, index) => (
-            <Fragment key={group.id}>
-              {index > 0 && <DropdownMenuSeparator />}
-              <DropdownMenuLabel className="flex items-center gap-1">
-                {group.label}
-              </DropdownMenuLabel>
-              {group.items.map((provider) => (
-                <DropdownMenuItem
-                  key={provider.id}
-                  onSelect={() =>
-                    void addProvider(provider.id).then(() => onAdd(provider.id))
-                  }
-                >
-                  <ProviderAvatar id={provider.id} name={provider.name} />
-                  <span className="line-clamp-1 grow">{provider.name}</span>
-                  {provider.websiteURL && (
-                    <Link
-                      href={provider.websiteURL}
-                      aria-label={`Open ${provider.name} website`}
-                      className="text-muted-foreground/80 hover:text-foreground shrink-0"
-                      onClick={(event) => event.stopPropagation()}
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onPointerDown={(event) => event.stopPropagation()}
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-72 p-0">
+        <Command>
+          <CommandInput placeholder="Search providers..." />
+          <CommandList className="max-h-72">
+            <CommandEmpty>No providers found.</CommandEmpty>
+            <CommandGroup heading="User custom provider">
+              <CommandItem
+                value="User custom provider"
+                onSelect={() => {
+                  setOpen(false);
+                  void addCustomProvider("Custom provider", "").then(onAdd);
+                }}
+              >
+                <ProviderAvatar id="custom-provider" name="Custom provider" />
+                <span className="line-clamp-1 grow">User custom provider</span>
+              </CommandItem>
+            </CommandGroup>
+            {groups.map((group) => (
+              <Fragment key={group.id}>
+                <CommandSeparator />
+                <CommandGroup heading={group.label}>
+                  {group.items.map((provider) => (
+                    <CommandItem
+                      key={provider.id}
+                      value={`${provider.name} ${provider.id}`}
+                      onSelect={() => {
+                        setOpen(false);
+                        void addProvider(provider.id).then(() =>
+                          onAdd(provider.id)
+                        );
+                      }}
                     >
-                      <ExternalLink className="size-2.5" />
-                    </Link>
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </Fragment>
-          ))
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+                      <ProviderAvatar
+                        id={provider.id}
+                        name={provider.name}
+                        icon={provider.icon}
+                      />
+                      <span className="line-clamp-1 grow">{provider.name}</span>
+                      {provider.websiteURL && (
+                        <Link
+                          href={provider.websiteURL}
+                          aria-label={`Open ${provider.name} website`}
+                          className="text-muted-foreground/80 hover:text-foreground shrink-0"
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
+                        >
+                          <ExternalLink className="size-2.5" />
+                        </Link>
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Fragment>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -369,7 +388,11 @@ function ProviderListItem({
         selected ? "bg-muted font-medium" : "hover:bg-muted/50"
       )}
     >
-      <ProviderAvatar id={provider.id} name={provider.name} />
+      <ProviderAvatar
+        id={provider.id}
+        name={provider.name}
+        icon={provider.icon}
+      />
       <span className="line-clamp-1 grow">{provider.name}</span>
 
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -407,6 +430,7 @@ function ProviderListItem({
         title={`Remove ${provider.name}?`}
         description={`This removes ${provider.name} from your configured providers. You can add it back later.`}
         confirmLabel="Remove"
+        dimBackground={false}
         onConfirm={() => {
           setConfirmOpen(false);
           void removeProvider(provider.id);
@@ -421,6 +445,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
   const setModelEnabled = useSetModelEnabled();
   const setAllModelsEnabled = useSetAllModelsEnabled();
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const [iconDraft, setIconDraft] = useState(provider?.icon ?? "");
   const [baseUrlEnabled, setBaseUrlEnabled] = useState(
     Boolean(provider?.baseUrl)
   );
@@ -496,6 +521,17 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
           error instanceof Error ? error.message : "Please try again.",
       });
     });
+  };
+
+  // Persist the icon override on blur when changed. Empty ⇒ auto-resolve.
+  const handleIconBlur = () => {
+    if (!provider) return;
+    const value = iconDraft.trim();
+    const next = value === "" ? null : value;
+    const current = provider.icon ?? null;
+    if (next !== current) {
+      void updateProvider(provider.id, { icon: next });
+    }
   };
 
   // Persist the custom base URL on blur when changed. Empty ⇒ use the default.
@@ -595,6 +631,34 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
               </div>
             </>
           )}
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Icon</label>
+            <div className="flex items-center gap-2">
+              <ProviderAvatar
+                id={provider.id}
+                name={provider.name}
+                icon={iconDraft.trim() || undefined}
+              />
+              <Input
+                value={iconDraft}
+                placeholder="Auto (e.g. openai, anthropic, google)"
+                aria-label={`${provider.name} icon`}
+                onChange={(e) => setIconDraft(e.target.value)}
+                onBlur={handleIconBlur}
+              />
+            </div>
+            <div className="text-muted-foreground text-xs">
+              A{" "}
+              <Link
+                href="https://icons.lobehub.com"
+                className="underline underline-offset-2"
+              >
+                @lobehub/icons
+              </Link>{" "}
+              keyword. Leave blank to auto-resolve from the provider name.
+            </div>
+          </div>
 
           {provider.id !== "openai-codex" && (
             <div className="flex flex-col gap-2">
@@ -812,7 +876,12 @@ function ModelListItem({
   return (
     <Item variant="muted" size="sm" className="group">
       <ItemMedia>
-        <ModelAvatar id={model.id} name={model.name} />
+        <ModelAvatar
+          id={model.id}
+          name={model.name}
+          icon={model.icon}
+          size={20}
+        />
       </ItemMedia>
       <ItemContent className={cn(!enabled && "opacity-50")}>
         <ItemTitle className="font-mono">{model.name}</ItemTitle>
@@ -854,6 +923,7 @@ function ModelListItem({
           title={`Delete ${model.name}?`}
           description={`This permanently removes the custom model "${model.name}" from ${providerName}.`}
           confirmLabel="Delete"
+          dimBackground={false}
           onConfirm={() => {
             setConfirmOpen(false);
             void removeCustomModel(providerId, model.id);

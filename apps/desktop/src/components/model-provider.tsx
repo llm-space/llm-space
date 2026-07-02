@@ -35,6 +35,7 @@ interface ModelContextValue {
         | "openai-completions"
         | "openai-responses"
         | null;
+      icon?: string | null;
     }
   ) => Promise<void>;
   setModelEnabled: (
@@ -141,6 +142,7 @@ export function ModelProvider({
           | "openai-completions"
           | "openai-responses"
           | null;
+        icon?: string | null;
       }
     ) => {
       if (!electrobun.rpc) {
@@ -326,6 +328,7 @@ export function useUpdateProvider(): (
       | "openai-completions"
       | "openai-responses"
       | null;
+    icon?: string | null;
   }
 ) => Promise<void> {
   return useModelProvider().updateProvider;

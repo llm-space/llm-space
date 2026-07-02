@@ -29,6 +29,11 @@ export interface ProviderConfig {
   /** API compatibility mode for a custom provider. */
   api?: CustomProviderApi;
   /**
+   * A `@lobehub/icons` keyword overriding the brand icon shown for this
+   * provider. Absent means the icon is auto-resolved from the provider id/name.
+   */
+  icon?: string;
+  /**
    * Model ids the user has disabled for this provider. Absent/empty means every
    * model is enabled (the default).
    */

@@ -20,6 +20,8 @@ import {
   ComboboxList,
   ComboboxSeparator,
 } from "../../ui/combobox";
+import { ModelAvatar } from "../model-avatar";
+import { ProviderAvatar } from "../provider-avatar";
 import { useThreadStoreActions } from "../stores";
 
 function toModelKey(model: Pick<ModelConfig, "id" | "provider">) {
@@ -60,7 +62,9 @@ export function ModelSelector({
         .map((group) => {
           const disabled = new Set(group.disabledModels ?? []);
           return {
+            id: group.id,
             name: group.name,
+            icon: group.icon,
             items: group.models
               .filter((model) => !disabled.has(model.id))
               .map((model) => toModelKey(model)),
@@ -70,14 +74,18 @@ export function ModelSelector({
     [providers]
   );
 
-  const modelLabels = useMemo(() => {
-    const labels = new Map<string, string>();
+  const modelMeta = useMemo(() => {
+    const meta = new Map<string, { id: string; name: string; icon?: string }>();
     for (const group of providers) {
       for (const model of group.models) {
-        labels.set(toModelKey(model), model.name);
+        meta.set(toModelKey(model), {
+          id: model.id,
+          name: model.name,
+          icon: model.icon,
+        });
       }
     }
-    return labels;
+    return meta;
   }, [providers]);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,10 +110,10 @@ export function ModelSelector({
 
   const filterItems = useCallback(
     (itemValue: string, query: string) => {
-      const label = modelLabels.get(itemValue) ?? itemValue;
+      const label = modelMeta.get(itemValue)?.name ?? itemValue;
       return label.toLocaleLowerCase().includes(query.toLocaleLowerCase());
     },
-    [modelLabels]
+    [modelMeta]
   );
 
   const selectedValue = value ? toModelKey(value) : "";
@@ -122,7 +130,9 @@ export function ModelSelector({
       items={items}
       value={selectedValue}
       disabled={readonly}
-      itemToStringLabel={(itemValue) => modelLabels.get(itemValue) ?? itemValue}
+      itemToStringLabel={(itemValue) =>
+        modelMeta.get(itemValue)?.name ?? itemValue
+      }
       filter={filterItems}
       open={open}
       onOpenChange={handleOpenChange}
@@ -151,23 +161,45 @@ export function ModelSelector({
       <ComboboxContent className="w-96">
         <ComboboxEmpty>No models found.</ComboboxEmpty>
         <ComboboxList>
-          {(provider: { name: string; items: string[] }) => (
+          {(provider: {
+            id: string;
+            name: string;
+            icon?: string;
+            items: string[];
+          }) => (
             <ComboboxGroup
               className="mb-2"
               key={provider.name}
               items={provider.items}
             >
-              <ComboboxLabel>{provider.name}</ComboboxLabel>
+              <ComboboxLabel className="flex items-center gap-1.5">
+                <ProviderAvatar
+                  id={provider.id}
+                  name={provider.name}
+                  icon={provider.icon}
+                  size={14}
+                />
+                {provider.name}
+              </ComboboxLabel>
               <ComboboxCollection>
-                {(modelKey: string) => (
-                  <ComboboxItem
-                    className="pl-4"
-                    key={modelKey}
-                    value={modelKey}
-                  >
-                    {modelLabels.get(modelKey) ?? modelKey}
-                  </ComboboxItem>
-                )}
+                {(modelKey: string) => {
+                  const meta = modelMeta.get(modelKey);
+                  return (
+                    <ComboboxItem
+                      className="flex items-center gap-2 pl-4"
+                      key={modelKey}
+                      value={modelKey}
+                    >
+                      <ModelAvatar
+                        id={meta?.id ?? modelKey}
+                        name={meta?.name ?? modelKey}
+                        icon={meta?.icon}
+                        size={16}
+                      />
+                      {meta?.name ?? modelKey}
+                    </ComboboxItem>
+                  );
+                }}
               </ComboboxCollection>
             </ComboboxGroup>
           )}
