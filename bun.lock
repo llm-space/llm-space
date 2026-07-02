@@ -42,6 +42,7 @@
         "@formkit/auto-animate": "^0.9.0",
         "@hello-pangea/dnd": "^18.0.1",
         "@llm-space/core": "workspace:*",
+        "@radix-ui/react-slot": "^1.3.0",
         "@sinm/react-chrome-tabs": "^2.6.3",
         "@tanstack/react-query": "^5.101.2",
         "@uiw/codemirror-theme-basic": "^4.25.10",

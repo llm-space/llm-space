@@ -1,12 +1,14 @@
 "use client";
 
-import { ArrowRightIcon, SettingsIcon } from "lucide-react";
+import { ArrowRightIcon, SettingsIcon, XIcon } from "lucide-react";
 import { useCallback } from "react";
 
 import { useCommands } from "@/commands";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 
+import { useModels } from "./model-provider";
 import { Button } from "./ui/button";
+import { RainbowButton } from "./ui/rainbow-button";
 
 /**
  * First-run onboarding dialog. Shown automatically when no models are configured
@@ -21,6 +23,7 @@ export function OnboardDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const models = useModels();
   const { executeCommand } = useCommands();
   const handleConfigureModels = useCallback(() => {
     executeCommand({ type: "openSettings", args: { tab: "models" } });
@@ -33,6 +36,12 @@ export function OnboardDialog({
       <DialogContent
         className="w-full max-w-[760px]! overflow-hidden p-0"
         showCloseButton={false}
+        onInteractOutside={(event) => {
+          event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          event.preventDefault();
+        }}
       >
         <div className="relative">
           <img
@@ -40,24 +49,45 @@ export function OnboardDialog({
             alt="Onboard"
             className="w-full rounded-lg"
           />
-          <div className="absolute bottom-0 left-0 flex gap-4 pb-12 pl-12">
+          <DialogClose className="absolute top-2 right-2">
             <Button
-              variant="outline"
-              className="rounded-2xl border border-white/20 bg-white/10! px-5 py-5 backdrop-blur-xs"
-              size="lg"
-              onClick={handleConfigureModels}
+              className="bg-muted/75 hover:bg-muted/85! text-foreground/80 rounded-full"
+              variant="ghost"
+              size="icon-sm"
             >
-              <SettingsIcon className="size-3" />
-              Configure models
+              <XIcon className="size-3" />
             </Button>
+          </DialogClose>
+          <div className="absolute bottom-0 left-0 flex items-center gap-4 pb-12 pl-12">
+            {models.length === 0 ? (
+              <Button
+                className="border-ring/75 h-11 rounded-2xl border bg-white/10! px-6 backdrop-blur-xs"
+                variant="outline"
+                size="lg"
+                onClick={handleConfigureModels}
+              >
+                <SettingsIcon className="size-3" />
+                Configure models
+              </Button>
+            ) : (
+              <DialogClose>
+                <RainbowButton
+                  variant="outline"
+                  className="dark:bg-[red]!"
+                  size="lg"
+                >
+                  Get started
+                  <ArrowRightIcon className="size-3.5" />
+                </RainbowButton>
+              </DialogClose>
+            )}
             <Button
+              className="h-11 rounded-2xl border border-white/20 bg-white/10! px-8 backdrop-blur-xs"
               variant="outline"
-              className="rounded-2xl border border-white/20 bg-white/10! px-5 py-5 backdrop-blur-xs"
               size="lg"
               onClick={handleLearnMore}
             >
               Learn more
-              <ArrowRightIcon className="size-3" />
             </Button>
           </div>
         </div>
