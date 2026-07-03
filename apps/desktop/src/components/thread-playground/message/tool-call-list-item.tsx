@@ -41,6 +41,7 @@ function _ToolCallListItem({
           className="max-h-96 min-h-9.5 px-0!"
           hideBorder
           hideFocusRing
+          scrollOnFocus
           placeholder={`Enter the response of ${toolCall.input.name}()`}
           value={toolCall.output?.content?.map((c) => c.text).join("\n") ?? ""}
           onChange={handleOutputChange}
