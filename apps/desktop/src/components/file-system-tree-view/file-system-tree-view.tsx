@@ -26,7 +26,6 @@ import {
 } from "@/lib/thread-file";
 import { useFullScreen } from "@/lib/use-full-screen";
 import { cn } from "@/lib/utils";
-import type { ThreadTemplate } from "@/shared/thread-starters";
 
 import { NodeActions, RootActions } from "./node-actions";
 import { useFileSystemTree } from "./use-file-system-tree";
@@ -62,6 +61,7 @@ export function FileSystemTreeView({
     refresh,
     createFolder,
     createFile,
+    createFileFromPromptExample,
     remove,
     duplicate,
     reveal,
@@ -96,11 +96,22 @@ export function FileSystemTreeView({
   // Quick thread flow (⌘N/menu/tab-bar/welcome): create an auto-named thread in
   // `parent` (root by default), no in-place rename, then open it.
   const createThread = useCallback(
-    async (parent = "", template: ThreadTemplate = "blank") => {
-      const path = await createFile(parent, { template });
+    async (parent = "") => {
+      const path = await createFile(parent);
       if (path) setPendingThread(path);
     },
     [createFile]
+  );
+
+  const createThreadFromPromptExample = useCallback(
+    async (parent: string, fileStem: string, systemPrompt: string) => {
+      const path = await createFileFromPromptExample(parent, {
+        fileStem,
+        systemPrompt,
+      });
+      if (path) setPendingThread(path);
+    },
+    [createFileFromPromptExample]
   );
 
   // The file-tree commands, backed by this component's state. The ⌘N menu /
@@ -108,9 +119,12 @@ export function FileSystemTreeView({
   // auto-named flow; the tree/root "New file" icons pass `rename: true` for the
   // in-place rename flow.
   useRegisterCommands({
-    newFile: ({ parent = "", rename, template = "blank" }) => {
+    newFile: ({ parent = "", rename }) => {
       if (rename) void create(parent, "file");
-      else void createThread(parent, template);
+      else void createThread(parent);
+    },
+    newFileFromPromptExample: ({ parent = "", fileStem, systemPrompt }) => {
+      void createThreadFromPromptExample(parent, fileStem, systemPrompt);
     },
     newFolder: ({ parent = "" }) => void create(parent, "folder"),
     renameFile: ({ path }) => startRenameByPath(path),

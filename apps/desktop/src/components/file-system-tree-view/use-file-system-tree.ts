@@ -1,6 +1,6 @@
 "use client";
 
-import type { FileNode } from "@llm-space/core";
+import { uuid, type FileNode, type Thread } from "@llm-space/core";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -12,13 +12,8 @@ import {
   normalizeThreadForPath,
   parentOf,
   threadTitleFromPath,
+  uniqueThreadFileName,
 } from "@/lib/thread-file";
-import {
-  createBlankThread,
-  createStarterThread,
-  STARTER_THREAD_STEM,
-  type ThreadTemplate,
-} from "@/shared/thread-starters";
 
 /** Query-key factory for a directory listing. */
 export const fsKeys = {
@@ -84,28 +79,6 @@ function uniqueUntitled(
 }
 
 /**
- * Pick an unused name for a preferred file stem, preserving a predictable first
- * name (`agent-starter.json`) while avoiding collisions beside existing files.
- */
-function _uniquePreferredName(
-  names: Set<string>,
-  stem: string,
-  ext: string
-): string {
-  const preferred = `${stem}${ext}`;
-  if (!names.has(preferred)) {
-    return preferred;
-  }
-  let n = 1;
-  let candidate = `${stem}-${n}${ext}`;
-  while (names.has(candidate)) {
-    n += 1;
-    candidate = `${stem}-${n}${ext}`;
-  }
-  return candidate;
-}
-
-/**
  * The collision-free `_copy` name for duplicating `name` in a directory:
  * `foo_copy`, then `foo_copy_2`, `foo_copy_3`, … A `.json` extension (the only
  * file kind shown in the tree) is preserved on the stem.
@@ -131,6 +104,42 @@ function sortNodes(nodes: FileNode[]): FileNode[] {
   });
 }
 
+/**
+ * Create a blank thread for users who want an empty canvas. The title must come
+ * from the destination path so the on-disk file name and thread title stay in
+ * sync from the first write.
+ */
+function _createBlankThread(title: string): Thread {
+  return {
+    title,
+    context: {
+      messages: [
+        { id: uuid(), role: "user", content: [{ type: "text", text: "" }] },
+      ],
+    },
+  };
+}
+
+/**
+ * Create a user-owned copy of a prompt example. The prompt becomes the system
+ * prompt, while the user message stays empty so the example behaves as a ready
+ * starting point rather than a pre-run transcript.
+ */
+function _createThreadFromPromptExample(
+  title: string,
+  systemPrompt: string
+): Thread {
+  return {
+    title,
+    context: {
+      systemPrompt,
+      messages: [
+        { id: uuid(), role: "user", content: [{ type: "text", text: "" }] },
+      ],
+    },
+  };
+}
+
 export interface FileSystemTree {
   /** Cached listing for each loaded directory path. */
   nodesByPath: Map<string, FileNode[]>;
@@ -148,9 +157,11 @@ export interface FileSystemTree {
   /** Create an auto-named `untitled` folder under `parent`; returns its path. */
   createFolder: (parent: string) => Promise<string | null>;
   /** Create an auto-named thread under `parent`; returns its path. */
-  createFile: (
+  createFile: (parent: string) => Promise<string | null>;
+  /** Create a thread from a built-in prompt example; returns its path. */
+  createFileFromPromptExample: (
     parent: string,
-    options?: { template?: ThreadTemplate }
+    example: { fileStem: string; systemPrompt: string }
   ) => Promise<string | null>;
   /** Delete a file or directory; resolves to whether it succeeded. */
   remove: (path: string) => Promise<boolean>;
@@ -281,26 +292,39 @@ export function useFileSystemTree(): FileSystemTree {
   );
 
   const createFile = useCallback(
+    async (parent: string): Promise<string | null> => {
+      let path: string;
+      try {
+        const names = new Set((await localFs.ls(parent)).map((n) => n.name));
+        const name = uniqueUntitled(names, ".json").name;
+        path = joinPath(parent, name);
+        const title = threadTitleFromPath(path);
+        // Model-less by default; the UI resolves a fallback model at run time.
+        await localFs.write(path, _createBlankThread(title));
+      } catch (err) {
+        toast.error((err as Error).message);
+        return null;
+      }
+      void qc.invalidateQueries({ queryKey: fsKeys.ls(parent) });
+      return path;
+    },
+    [qc]
+  );
+
+  const createFileFromPromptExample = useCallback(
     async (
       parent: string,
-      options: { template?: ThreadTemplate } = {}
+      example: { fileStem: string; systemPrompt: string }
     ): Promise<string | null> => {
       let path: string;
       try {
         const names = new Set((await localFs.ls(parent)).map((n) => n.name));
-        const template = options.template ?? "blank";
-        const name =
-          template === "starter"
-            ? _uniquePreferredName(names, STARTER_THREAD_STEM, ".json")
-            : uniqueUntitled(names, ".json").name;
+        const name = uniqueThreadFileName(names, example.fileStem);
         path = joinPath(parent, name);
         const title = threadTitleFromPath(path);
-        // Model-less by default; the UI resolves a fallback model at run time.
         await localFs.write(
           path,
-          template === "starter"
-            ? createStarterThread(title)
-            : createBlankThread(title)
+          _createThreadFromPromptExample(title, example.systemPrompt)
         );
       } catch (err) {
         toast.error((err as Error).message);
@@ -468,6 +492,7 @@ export function useFileSystemTree(): FileSystemTree {
     refresh,
     createFolder,
     createFile,
+    createFileFromPromptExample,
     remove,
     duplicate,
     reveal,

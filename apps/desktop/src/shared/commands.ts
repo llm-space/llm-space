@@ -20,12 +20,25 @@ export interface GenericCommand<T extends string, A = Record<string, never>> {
  * `rename` is true the tree starts an in-place rename on the new file (used by
  * the tree/root "New file" icons); otherwise it is auto-named and opened
  * immediately (used by the ⌘N menu, the tab-bar "+", and the welcome screen).
- * `template` defaults to `"blank"`; `"starter"` creates the first-use example
- * thread used by the empty workspace welcome state.
  */
 export interface NewFileCommand extends GenericCommand<
   "newFile",
-  { parent?: string; rename?: boolean; template?: "blank" | "starter" }
+  { parent?: string; rename?: boolean }
+> {}
+
+/**
+ * Create a new thread from a built-in prompt example. The command carries a
+ * snapshot of the selected prompt so file creation stays decoupled from the
+ * UI-only example catalog.
+ */
+export interface NewFileFromPromptExampleCommand extends GenericCommand<
+  "newFileFromPromptExample",
+  {
+    parent?: string;
+    exampleId: string;
+    fileStem: string;
+    systemPrompt: string;
+  }
 > {}
 
 /** Create a new folder (with in-place rename). `parent` defaults to the root. */
@@ -149,6 +162,7 @@ export interface ReportBugsCommand extends GenericCommand<"reportBugs"> {}
 /** The discriminated union of every command. */
 export type Command =
   | NewFileCommand
+  | NewFileFromPromptExampleCommand
   | NewFolderCommand
   | RenameFileCommand
   | DuplicateFileCommand
@@ -194,6 +208,10 @@ export const COMMAND_META: Record<
   { label: string; target: "webview" | "bun" }
 > = {
   newFile: { label: "New File", target: "webview" },
+  newFileFromPromptExample: {
+    label: "Start from Example",
+    target: "webview",
+  },
   newFolder: { label: "New Folder", target: "webview" },
   renameFile: { label: "Rename", target: "webview" },
   duplicateFile: { label: "Duplicate", target: "webview" },
