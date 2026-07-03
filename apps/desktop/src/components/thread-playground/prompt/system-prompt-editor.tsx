@@ -1,9 +1,13 @@
-import { memo, useCallback } from "react";
+import { uuid, type Message } from "@llm-space/core";
+import { memo, useCallback, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 
 import { CodeEditor } from "../../code-editor";
+import { GeneratePopoverButton } from "../generate-popover-button";
+import metaPrompt from "../prompts/meta-prompt.md?raw";
 import { useThreadStore, useThreadStoreActions } from "../stores";
+import { useStreamText } from "../use-stream-text";
 
 function _SystemPromptEditor({
   className,
@@ -15,6 +19,7 @@ function _SystemPromptEditor({
   const systemPrompt = useThreadStore(
     (s) => s.thread.context?.systemPrompt ?? ""
   );
+  const tools = useThreadStore((s) => s.thread.context?.tools);
   const { updateSystemPrompt } = useThreadStoreActions();
   const handleChange = useCallback(
     (value: string) => {
@@ -22,18 +27,72 @@ function _SystemPromptEditor({
     },
     [updateSystemPrompt]
   );
+
+  const {
+    text: generated,
+    streaming,
+    run: generate,
+  } = useStreamText({ systemPrompt: metaPrompt });
+
+  // Stream the generated prompt straight into the editor.
+  useEffect(() => {
+    if (generated) {
+      updateSystemPrompt(generated);
+    }
+  }, [generated, updateSystemPrompt]);
+
+  const handleGenerate = useCallback(
+    (prompt: string) => {
+      // Feed the current prompt and tools (if any) as a prior assistant turn,
+      // so the model refines them in response to the user's request.
+      const trimmed = systemPrompt.trim();
+      const parts: string[] = [];
+      if (trimmed) {
+        parts.push(`<system-prompt>\n${trimmed}\n</system-prompt>`);
+      }
+      if (tools && tools.length > 0) {
+        parts.push(`<tools>\n${JSON.stringify(tools, null, 2)}\n</tools>`);
+      }
+      const messages: Message[] = parts.length
+        ? [
+            {
+              id: uuid(),
+              role: "assistant",
+              content: [
+                {
+                  type: "text",
+                  text: `<original>\n${parts.join("\n")}\n</original>`,
+                },
+              ],
+            },
+          ]
+        : [];
+      void generate({
+        messages,
+        userPrompt: `<user-input>\n${prompt}\n</user-input>`,
+      });
+    },
+    [generate, systemPrompt, tools]
+  );
+
   return (
-    <CodeEditor
-      className={cn(
-        "hover:border-accent-foreground/20 transition-[border-color]",
-        className
-      )}
-      value={systemPrompt ?? ""}
-      language="markdown"
-      readonly={readonly}
-      placeholder="Enter system prompt here"
-      onChange={handleChange}
-    />
+    <div className={cn("flex size-full flex-col", className)}>
+      <div className="flex shrink-0 items-center justify-between py-2">
+        <div className="text-muted-foreground text-sm">System prompt</div>
+        <GeneratePopoverButton
+          placeholder="Describe the assistant you want (its role, tone, and rules), and we'll generate a system prompt."
+          onGenerate={handleGenerate}
+        />
+      </div>
+      <CodeEditor
+        className="hover:border-accent-foreground/20 grow transition-[border-color]"
+        value={systemPrompt ?? ""}
+        language="markdown"
+        readonly={readonly || streaming}
+        placeholder="Enter system prompt here"
+        onChange={handleChange}
+      />
+    </div>
   );
 }
 

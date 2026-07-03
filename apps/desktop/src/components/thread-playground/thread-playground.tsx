@@ -335,9 +335,6 @@ function ThreadPlaygroundContent({
                   </div>
                 </div>
                 <div className="flex min-h-0 w-full grow flex-col">
-                  <div className="text-muted-foreground shrink-0 py-2 text-sm">
-                    System prompt
-                  </div>
                   <SystemPromptEditor
                     className="min-h-0 grow"
                     readonly={readonly}

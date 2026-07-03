@@ -20,6 +20,8 @@ const FunctionTool = Type.Object({
    * A JSON schema represents the parameters of the function tool.
    */
   parameters: JSONSchema,
+
+  strict: Type.Optional(Type.Boolean()),
 });
 export type FunctionTool = Static<typeof FunctionTool>;
 

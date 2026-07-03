@@ -1,11 +1,19 @@
 "use client";
 
-import { parseJSON, type FunctionTool } from "@llm-space/core";
+import {
+  parseJSON,
+  uuid,
+  type FunctionTool,
+  type Message,
+} from "@llm-space/core";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { CodeEditor } from "@/components/code-editor";
+import { GeneratePopoverButton } from "@/components/thread-playground/generate-popover-button";
 import { useThreadStoreActions } from "@/components/thread-playground/stores/thread-store";
+import { useStreamText } from "@/components/thread-playground/use-stream-text";
 
 import { Button } from "../../ui/button";
 import {
@@ -16,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../ui/dropdown-menu";
+import metaToolPrompt from "../prompts/meta-tool.md?raw";
 
 const DEFAULT_TOOL: FunctionTool = {
   name: "weather_report",
@@ -32,6 +47,29 @@ const DEFAULT_TOOL: FunctionTool = {
   },
 };
 
+const SEARCH_WEB_TOOL: FunctionTool = {
+  name: "web_search",
+  description:
+    "Searches the web for a given query and returns relevant results. Use when you need to find information, verify facts, or gather data from online sources. Do not use for queries requiring real-time personal or sensitive information.",
+  strict: true,
+  parameters: {
+    type: "object",
+    required: ["query"],
+    properties: {
+      query: {
+        type: "string",
+        description: "The search query string to look up on the web",
+      },
+    },
+    additionalProperties: false,
+  },
+};
+
+const TOOL_EXAMPLES = [
+  { label: "search_web()", tool: SEARCH_WEB_TOOL },
+  { label: "get_weather()", tool: DEFAULT_TOOL },
+];
+
 export function ToolEditorDialog({
   open,
   onOpenChange,
@@ -45,6 +83,44 @@ export function ToolEditorDialog({
   const { addTool, updateTool } = useThreadStoreActions();
   const [text, setText] = useState("");
   const [originalName, setOriginalName] = useState<string | null>(null);
+
+  const {
+    text: generated,
+    streaming,
+    run: generate,
+  } = useStreamText({ systemPrompt: metaToolPrompt });
+
+  // Stream the generated definition straight into the editor.
+  useEffect(() => {
+    if (generated) {
+      setText(generated);
+    }
+  }, [generated]);
+
+  const handleExampleSelect = (example: FunctionTool) => {
+    setText(JSON.stringify(example, null, 2));
+  };
+
+  const handleGenerate = (prompt: string) => {
+    // Feed the current definition (if any) as a prior assistant turn, so the
+    // model refines it in response to the user's request.
+    const original = text.trim();
+    const messages: Message[] = original
+      ? [
+          {
+            id: uuid(),
+            role: "assistant",
+            content: [
+              { type: "text", text: `<original>\n${original}\n</original>` },
+            ],
+          },
+        ]
+      : [];
+    void generate({
+      messages,
+      userPrompt: `<user-input>\n${prompt}\n</user-input>`,
+    });
+  };
 
   useEffect(() => {
     if (!open) {
@@ -79,22 +155,53 @@ export function ToolEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-4 sm:max-w-2xl">
+      <DialogContent
+        className="flex h-[75vh]! w-full flex-col gap-4 sm:max-w-4xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{originalName ? "Edit tool" : "Add tool"}</DialogTitle>
           <DialogDescription>
-            The model will intelligently decide to call functions based on input
-            it receives from the user.
+            A function tool consists of a name, description, and parameters.
+            Parameters are defined using JSON Schema.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="text-sm font-medium">Definition</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-medium">Definition</div>
+            <div className="flex items-center gap-2">
+              <GeneratePopoverButton
+                placeholder="Describe what your function does (or paste your function declaration code), and we'll generate a definition."
+                onGenerate={handleGenerate}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    Examples
+                    <ChevronDown data-icon="inline-end" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {TOOL_EXAMPLES.map((example) => (
+                    <DropdownMenuItem
+                      key={example.label}
+                      onSelect={() => handleExampleSelect(example.tool)}
+                    >
+                      {example.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
           <CodeEditor
             className="min-h-80 flex-1 font-mono text-sm"
             language="json"
             value={text}
             autoFocus
+            readonly={streaming}
             onChange={setText}
           />
         </div>

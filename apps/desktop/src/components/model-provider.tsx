@@ -290,6 +290,11 @@ export function useFirstAvailableModel(): ModelConfig | null {
   return useMemo(() => firstAvailableModel(providers), [providers]);
 }
 
+/** The model used for ad-hoc text generation (e.g. `useStreamText`). */
+export function useDefaultTextGenerationModel(): ModelConfig | null {
+  return useFirstAvailableModel();
+}
+
 export function useRemoveProvider(): (providerId: string) => Promise<void> {
   return useModelProvider().removeProvider;
 }
