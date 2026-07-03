@@ -23,6 +23,8 @@ interface ThreadTabPaneProps {
    */
   refreshNonce?: number;
   onMove?: (from: string, to: string) => void;
+  /** Close this pane's tab, e.g. after its thread fails to load. */
+  onClose?: (path: string) => void;
 }
 
 /**
@@ -35,9 +37,10 @@ export function ThreadTabPane({
   active,
   refreshNonce = 0,
   onMove,
+  onClose,
 }: ThreadTabPaneProps) {
   const qc = useQueryClient();
-  const { data: thread, isLoading } = useQuery({
+  const { data: thread, isLoading, isError, error } = useQuery({
     queryKey: ["thread", path],
     queryFn: () => localFs.read(path),
     // A workspace file can change on disk outside the app, so never serve a
@@ -45,7 +48,20 @@ export function ThreadTabPane({
     // tab closes. (The global 30s staleTime still covers models / directory ls.)
     staleTime: 0,
     gcTime: 0,
+    retry: false,
   });
+
+  // The tab is opened optimistically (see `useThreadTabs.open`) without
+  // pre-checking the file exists, so a since-deleted (or otherwise unreadable)
+  // file surfaces here instead: report it and close the tab it was given.
+  useEffect(() => {
+    if (!isError) return;
+    toast.error("Error", {
+      description:
+        error instanceof Error ? error.message : `File not found: ${path}`,
+    });
+    onClose?.(path);
+  }, [isError, error, path, onClose]);
 
   // Persist edits back to the same path, debounced so we don't write per keystroke.
   // `pending` holds the latest unsaved thread so we can flush it on unmount.

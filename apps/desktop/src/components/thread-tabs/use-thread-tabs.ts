@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { localFs } from "@/client";
 import { threadTitleFromPath } from "@/lib/thread-file";
@@ -24,8 +23,9 @@ export interface ThreadTabs {
   /** Currently focused tab, or `null` when no tabs are open. */
   activePath: string | null;
   /**
-   * Open `path` as a tab (adding it if absent) and focus it. Verifies the file
-   * exists first; if it doesn't, surfaces an error and opens nothing.
+   * Open `path` as a tab (adding it if absent) and focus it. Assumes the
+   * caller already knows the file exists; a since-deleted file surfaces as a
+   * read error in the newly opened pane instead.
    */
   open: (path: string) => void;
   /** Close `path`; if it was active, focus its left (else right) neighbor. */
@@ -188,19 +188,16 @@ export function useThreadTabs(): ThreadTabs {
     };
   }, []);
 
-  const open = useCallback(async (path: string) => {
+  const open = useCallback((path: string) => {
     // Re-focusing an already-open tab needs no existence check.
     if (tabsRef.current.some((tab) => tab.path === path)) {
       setActivePath(path);
       return;
     }
-    // Verify the file exists before opening a tab for it; a stale tree (or a
-    // race with an external delete) would otherwise open a pane whose read
-    // fails.
-    if (!(await _fileExists(path))) {
-      toast.error("Error", { description: `File not found: ${path}` });
-      return;
-    }
+    // Every current caller already knows `path` exists (it came from the
+    // tree's own listing, or a file we just wrote), so open the tab straight
+    // away instead of paying for a redundant `fsLs` round trip first. If the
+    // file is somehow gone, the pane's own read will fail and report it.
     setTabs((prev) =>
       prev.some((tab) => tab.path === path) ? prev : [...prev, _createTab(path)]
     );

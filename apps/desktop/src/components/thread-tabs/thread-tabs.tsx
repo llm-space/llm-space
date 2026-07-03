@@ -293,6 +293,7 @@ export function ThreadTabs({
             active={tab.path === activePath}
             refreshNonce={tab.refreshNonce ?? 0}
             onMove={onMove}
+            onClose={close}
           />
         ))}
       </div>
