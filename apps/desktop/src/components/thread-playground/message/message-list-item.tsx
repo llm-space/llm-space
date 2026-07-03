@@ -1,5 +1,9 @@
 import type { DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
-import { getMessageText, type ImageDataContent, type Message } from "@llm-space/core";
+import {
+  getMessageText,
+  type ImageDataContent,
+  type Message,
+} from "@llm-space/core";
 import { PlusIcon } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 
@@ -145,7 +149,7 @@ function _MessageListItem({
         dragHandleProps={dragHandleProps}
       />
       <CollapsibleContent collapsed={collapsed}>
-        <main className="flex w-full flex-col pb-2">
+        <main className="flex w-full flex-col">
           {message.role === "assistant" &&
             streaming &&
             !message.thinking &&
