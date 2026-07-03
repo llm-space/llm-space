@@ -174,6 +174,7 @@ function _MessageListItem({
               autoFocus={autoFocus}
               hideFocusRing
               hideBorder
+              scrollOnFocus
               placeholder={
                 placeholder ??
                 `Enter ${message.role === "user" ? "user" : "assistant"} message here`

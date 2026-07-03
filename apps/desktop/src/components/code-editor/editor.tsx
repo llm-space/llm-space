@@ -40,6 +40,12 @@ export interface CodeEditorProps {
   placeholder?: string;
   hideBorder?: boolean;
   hideFocusRing?: boolean;
+  /**
+   * Clip overflowing content at rest and only scroll (and show a scrollbar)
+   * once the editor is focused. Suits dense, stacked list items (message list);
+   * standalone editors should stay always-scrollable and leave this off.
+   */
+  scrollOnFocus?: boolean;
   language?: "markdown" | "json";
   streaming?: boolean;
   value: string;
@@ -56,6 +62,7 @@ function _CodeEditor(
     placeholder,
     hideBorder,
     hideFocusRing,
+    scrollOnFocus,
     language,
     value,
     streaming,
@@ -175,6 +182,12 @@ function _CodeEditor(
         ref={cmRef}
         className={cn(
           "h-full overflow-auto font-mono [&_.cm-editor]:h-full [&_.cm-focused]:outline-none!",
+          // scrollOnFocus: clip at rest, scroll (and show a scrollbar) only once
+          // focused. overflow-auto (not scroll) means a focused editor whose
+          // content already fits still shows no bar. .cm-scroller is CodeMirror's
+          // scroll element, so gating it alone is enough.
+          scrollOnFocus &&
+            "[&_.cm-scroller]:overflow-hidden focus-within:[&_.cm-scroller]:overflow-auto",
           // Horizontal padding lives on .cm-content (inside the scroller) so
           // the caret at column 0 is not clipped by the scroller's overflow.
           "p-0 py-1 [&_.cm-content]:px-2! [&_.cm-line]:p-0!"
