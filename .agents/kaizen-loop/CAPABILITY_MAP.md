@@ -1,7 +1,7 @@
 # LLM Space Capability Map
 
 - Last updated: 2026-07-04
-- Map status: updated after Remote MCP Diagnostics V1; first-thread editing is stable, MCP remains intentionally tools-only, and remote Streamable HTTP/SSE setup now has redacted per-step diagnostics.
+- Map status: updated after Manual Tool Continuation V1; first-thread editing is stable, MCP remains intentionally tools-only with remote diagnostics, and manual paused tool-step continuation is now a first-class renderer workflow.
 - Evidence rule: entries marked `confirmed` cite current rendered-product or current-code evidence. Entries marked `stale` rely on previous logs or code paths not fully re-inspected in this loop. Entries marked `unknown` need a future product-surface check before they can drive a recommendation.
 
 ## First-Run Model Setup
@@ -78,22 +78,27 @@
   - `apps/desktop/src/components/thread-tabs/thread-tab-pane.tsx` wires a single Electrobun RPC transport into the active thread.
 - Boundary: one thread can run against its selected or fallback model, stream assistant/tool output, abort, and persist completed state.
 - Explicit non-goals: batch runs, scheduled runs, provider health validation.
-- Visible gaps: the general run control is not specialized for paused tool calls; users must infer continuation from message-level run controls.
+- Visible gaps: live-provider continuation after a real paid/provider tool-call turn still needs a bounded smoke check; the global run control remains generic while the message-level continuation flow is specialized.
 
 ## Tool Step Orchestration
 
-- Status: partial manual loop
+- Status: shipped V1 manual loop
 - Freshness: confirmed
 - Last checked: 2026-07-04
 - Evidence:
   - Current discovery screenshot `audits/2026-07-04-110944-core-capability-discovery/03-general-agent-open.png` shows the General Agent example ships with tool definitions such as `web_search`, `web_fetch`, `bash`, `read`, `write`, and `edit`.
   - Current fixture screenshot `audits/2026-07-04-110944-core-capability-discovery/04-tool-step-fixture-after-run.png` shows a thread with an assistant tool call and editable `Response` field, but no product-level pending-tool state or explicit `Continue` action tied to completed tool outputs.
+  - Current discovery screenshot `audits/2026-07-04-224500-different-feature-discovery/04-tool-step-response-filled.png` shows a real CEF thread with a pending `web_search` tool call, a manually filled `Response`, and no visible `Continue`/pending-tool workflow beyond generic run controls.
+  - Current CEF button/text inspection on 2026-07-04 showed `Run from this message` remains available on the assistant tool-call message, while no `Continue`, `Approve`, `Reject`, or all-tools-ready state appears after the tool response is supplied.
   - `packages/core/src/server/agent/stream.ts` converts all configured tools into step-by-step agent tools whose `execute()` returns an empty text result and `terminate: true`, so the app intentionally stops at tool calls rather than executing web, shell, or filesystem operations.
   - `packages/core/src/client/converters.ts` can lower assistant `toolCalls` plus their outputs into pi `toolResult` messages, so the underlying continuation path exists once a tool output is filled.
-  - `apps/desktop/src/components/thread-playground/message/tool-call-list-item.tsx` lets users edit a tool response and invoke run from the assistant message, but the UI labels this as generic rerun rather than a safe, guided tool-result continuation.
-- Boundary: users can define tool schemas, receive model tool calls as assistant messages, manually edit tool-call outputs, and technically continue by rerunning from that assistant message.
+  - Manual Tool Continuation V1 screenshots `audits/2026-07-04-231420-manual-tool-continuation-v1/01-pending-needs-response.png`, `02-ready-continue-enabled.png`, `04-multi-one-missing.png`, and `05-error-result-ready.png` show pending, ready, multi-tool, and error-result continuation states in the real CEF renderer.
+  - `apps/desktop/src/components/thread-playground/message/tool-call-status.ts` derives pending/ready/error summary state from existing `toolCall.output` data without changing the thread schema.
+  - `apps/desktop/src/components/thread-playground/message/message-list-item.tsx` shows `Waiting for Tools` / `Tool Results Ready` and a message-level `Continue` CTA that calls the existing `run(message.id)` path.
+  - `apps/desktop/src/components/thread-playground/message/tool-call-list-item.tsx` lets users mark or clear error results with the existing `isError` flag and keeps Cmd+Enter continuation gated until all tool calls have text output.
+- Boundary: users can define tool schemas, receive model tool calls as assistant messages, manually edit tool-call outputs, mark failed/rejected results as error text, see all-tools-ready status, and continue from the assistant tool-call message once every visible tool call has output.
 - Explicit non-goals: no automatic web/search/shell/filesystem execution, no MCP runtime, no permission system, no background tool queue, no multi-agent runtime orchestration.
-- Visible gaps: no first-class pending-tool status, no clear instruction that the app is waiting for tool output, no `Continue` CTA after outputs are supplied, no validation that all visible tool calls have non-empty outputs before continuing, and no safe local execution sandbox.
+- Visible gaps: live paid/provider continuation was not exercised in this loop; no automatic local execution sandbox, permission system, background queue, or rich multi-step trace timeline; error marking is a compact text toggle rather than a dedicated reject dialog.
 
 ## MCP Server Integration
 

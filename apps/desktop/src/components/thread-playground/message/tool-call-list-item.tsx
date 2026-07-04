@@ -6,7 +6,7 @@ import {
   Clock4,
   Loader2,
 } from "lucide-react";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { callMcpTool } from "@/client/mcp";
@@ -16,16 +16,22 @@ import { CodeEditor } from "../../code-editor";
 import { Button } from "../../ui/button";
 import { useThreadStore, useThreadStoreActions } from "../stores";
 
+import { getToolCallOutputText, getToolCallStatus } from "./tool-call-status";
+
 function _ToolCallListItem({
   messageId,
   toolCall,
+  canContinue,
+  onContinue,
   readonly = false,
 }: {
   messageId: string;
   toolCall: ToolCall;
+  canContinue: boolean;
+  onContinue: () => void;
   readonly?: boolean;
 }) {
-  const { run, updateToolCallOutputText } = useThreadStoreActions();
+  const { updateToolCallOutputText } = useThreadStoreActions();
   const mcpSource = useThreadStore((state) => {
     const tool = state.thread.context?.tools?.find(
       (item) => item.name === toolCall.input.name
@@ -33,9 +39,9 @@ function _ToolCallListItem({
     return tool?.source?.type === "mcp" ? tool.source : null;
   });
   const [callingMcp, setCallingMcp] = useState(false);
-  const [callStatus, setCallStatus] = useState<"waiting" | "success" | "error">(
-    "waiting"
-  );
+  const outputText = useMemo(() => getToolCallOutputText(toolCall), [toolCall]);
+  const toolCallStatus = useMemo(() => getToolCallStatus(toolCall), [toolCall]);
+  const isError = toolCall.output?.isError ?? false;
   const handleOutputChange = useCallback(
     (value: string) => {
       if (readonly) {
@@ -45,21 +51,32 @@ function _ToolCallListItem({
     },
     [messageId, readonly, toolCall.id, updateToolCallOutputText]
   );
-  const handleRun = useCallback(async () => {
+  const toggleError = useCallback(() => {
     if (readonly) {
       return;
     }
-    await run(messageId);
-  }, [messageId, readonly, run]);
+    updateToolCallOutputText(messageId, toolCall.id, outputText, !isError);
+  }, [
+    isError,
+    messageId,
+    outputText,
+    readonly,
+    toolCall.id,
+    updateToolCallOutputText,
+  ]);
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && e.metaKey) {
-        void handleRun();
         e.preventDefault();
         e.stopPropagation();
+        if (canContinue) {
+          onContinue();
+        } else {
+          toast.error("Add tool responses before continuing");
+        }
       }
     },
-    [handleRun]
+    [canContinue, onContinue]
   );
   const handleCallMcpTool = useCallback(async () => {
     if (readonly || !mcpSource) {
@@ -78,11 +95,6 @@ function _ToolCallListItem({
         result.contentText,
         result.isError ?? false
       );
-      if (result.isError) {
-        setCallStatus("error");
-      } else {
-        setCallStatus("success");
-      }
     } catch (error) {
       toast.error("Failed to call MCP tool", {
         description:
@@ -118,19 +130,38 @@ function _ToolCallListItem({
       </div>
       <hr />
       <div className="flex w-full flex-col gap-1">
-        <div className="text-muted-foreground text-xs font-medium">
+        <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs font-medium">
           <Marker role="status">
             <MarkerIcon>
-              {callStatus === "waiting" && <Clock4 />}
-              {callStatus === "success" && (
+              {toolCallStatus === "needsResponse" && <Clock4 />}
+              {toolCallStatus === "ready" && (
                 <CheckCircle2 className="text-green-500" />
               )}
-              {callStatus === "error" && (
+              {toolCallStatus === "error" && (
                 <AlertCircleIcon className="text-red-500" />
               )}
             </MarkerIcon>
-            <MarkerContent>Response</MarkerContent>
+            <MarkerContent>
+              Response ·{" "}
+              {toolCallStatus === "needsResponse"
+                ? isError
+                  ? "Needs Error Text"
+                  : "Needs Response"
+                : toolCallStatus === "error"
+                  ? "Error Result"
+                  : "Ready"}
+            </MarkerContent>
           </Marker>
+          <Button
+            className="shrink-0"
+            size="xs"
+            variant={isError ? "destructive" : "ghost"}
+            disabled={readonly}
+            onClick={toggleError}
+          >
+            <AlertCircleIcon />
+            {isError ? "Clear Error" : "Mark Error"}
+          </Button>
         </div>
         <CodeEditor
           className="max-h-96 min-h-9.5 px-0!"
@@ -139,7 +170,7 @@ function _ToolCallListItem({
           scrollOnFocus
           placeholder={`Enter the response of ${toolCall.input.name}()`}
           readonly={readonly}
-          value={toolCall.output?.content?.map((c) => c.text).join("\n") ?? ""}
+          value={outputText}
           onChange={handleOutputChange}
           onKeyDown={handleKeyDown}
         />

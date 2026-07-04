@@ -3,8 +3,15 @@ import {
   getMessageText,
   type ImageDataContent,
   type Message,
+  type ToolCall,
 } from "@llm-space/core";
-import { PlusIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckCircle2,
+  Clock4,
+  PlayCircleIcon,
+  PlusIcon,
+} from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
@@ -13,14 +20,16 @@ import { CodeEditor } from "../../code-editor";
 import { Tooltip } from "../../tooltip";
 import { Button } from "../../ui/button";
 import { CollapsibleContent } from "../../ui/collapsible-content";
+import { Marker, MarkerContent, MarkerIcon } from "../../ui/marker";
 import { ShineBorder } from "../../ui/shine-border";
 import { Skeleton } from "../../ui/skeleton";
-import { useThreadStoreActions } from "../stores";
+import { useThreadStore, useThreadStoreActions } from "../stores";
 
 import { ImageContentList } from "./image-content-view";
 import { MessageListItemHeader } from "./message-list-item-header";
 import { ThinkingView } from "./thinking-view";
 import { ToolCallListItem } from "./tool-call-list-item";
+import { summarizeToolCalls } from "./tool-call-status";
 
 function _MessageListItem({
   className,
@@ -52,6 +61,13 @@ function _MessageListItem({
     });
     return result;
   }, [message.content]);
+  const toolCallSummary = useMemo(
+    () =>
+      message.role === "assistant" && message.toolCalls?.length
+        ? summarizeToolCalls(message.toolCalls)
+        : null,
+    [message]
+  );
   const {
     addMessageImageContent,
     insertMessageBefore,
@@ -64,6 +80,9 @@ function _MessageListItem({
     }
     await run(message.id);
   }, [message.id, readonly, run]);
+  const handleContinue = useCallback(() => {
+    void handleRun();
+  }, [handleRun]);
   const handleTextContentChange = useCallback(
     (value: string) => {
       updateMessageTextContent(message.id, value);
@@ -190,23 +209,96 @@ function _MessageListItem({
               onPaste={handlePaste}
             />
           )}
-          {message.role === "assistant" && message.toolCalls && (
-            <div className="flex w-full flex-col gap-3 px-2 pb-2">
-              {message.toolCalls.map((toolCall) => (
-                <ToolCallListItem
-                  key={toolCall.id}
-                  messageId={message.id}
+          {message.role === "assistant" &&
+            message.toolCalls &&
+            message.toolCalls.length > 0 && (
+              <div className="flex w-full flex-col gap-3 px-2 pb-2">
+                {message.toolCalls.map((toolCall) => (
+                  <ToolCallListItem
+                    key={toolCall.id}
+                    messageId={message.id}
+                    canContinue={toolCallSummary?.canContinue ?? false}
+                    onContinue={handleContinue}
+                    readonly={readonly}
+                    toolCall={toolCall}
+                  />
+                ))}
+                <ToolStepContinuation
                   readonly={readonly}
-                  toolCall={toolCall}
+                  toolCalls={message.toolCalls}
+                  onContinue={handleContinue}
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            )}
         </main>
       </CollapsibleContent>
     </div>
   );
 }
+
+function _ToolStepContinuation({
+  toolCalls,
+  readonly,
+  onContinue,
+}: {
+  toolCalls: ToolCall[];
+  readonly?: boolean;
+  onContinue: () => void;
+}) {
+  const status = useThreadStore((state) => state.status);
+  const summary = useMemo(() => summarizeToolCalls(toolCalls), [toolCalls]);
+  const disabled = readonly || status === "running" || !summary.canContinue;
+  const readyCount = summary.readyCount + summary.errorCount;
+  const missingLabel =
+    summary.needsResponseCount === 1
+      ? "1 needs response"
+      : `${summary.needsResponseCount} need responses`;
+  const statusLabel = summary.canContinue
+    ? summary.errorCount > 0
+      ? `${readyCount}/${summary.totalCount} supplied · ${summary.errorCount} ${
+          summary.errorCount === 1 ? "error" : "errors"
+        }`
+      : `${readyCount}/${summary.totalCount} supplied`
+    : missingLabel;
+
+  return (
+    <div className="bg-foreground/4 flex min-w-0 items-center justify-between gap-3 rounded-md px-3 py-2">
+      <Marker role="status" className="min-w-0">
+        <MarkerIcon>
+          {summary.canContinue ? (
+            summary.errorCount > 0 ? (
+              <AlertCircleIcon className="text-red-500" />
+            ) : (
+              <CheckCircle2 className="text-green-500" />
+            )
+          ) : (
+            <Clock4 />
+          )}
+        </MarkerIcon>
+        <MarkerContent className="truncate">
+          {summary.canContinue ? "Tool Results Ready" : "Waiting for Tools"} ·{" "}
+          {statusLabel}
+        </MarkerContent>
+      </Marker>
+      <Button
+        className="shrink-0"
+        size="sm"
+        variant={summary.canContinue ? "default" : "secondary"}
+        disabled={disabled}
+        aria-label={
+          summary.canContinue
+            ? "Continue from tool results"
+            : "Continue after tool responses are filled"
+        }
+        onClick={onContinue}
+      >
+        <PlayCircleIcon />
+        Continue
+      </Button>
+    </div>
+  );
+}
+const ToolStepContinuation = memo(_ToolStepContinuation);
 
 function StreamingMessageSkeleton({ className }: { className?: string }) {
   return (

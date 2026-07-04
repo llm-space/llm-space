@@ -31,14 +31,13 @@ function _MessageListItemHeader({
 }) {
   const { run, removeMessage, toggleMessageRole, toggleMessageCollapsed } =
     useThreadStoreActions();
-  const runnable = useMemo(
-    () =>
-      message.role === "user" ||
-      (message.role === "assistant" &&
-        message.toolCalls &&
-        message.toolCalls.length > 0),
-    [message]
-  );
+  const hasToolCalls =
+    message.role === "assistant" && Boolean(message.toolCalls?.length);
+  const runnable = message.role === "user";
+  const runTooltip = runnable ? "Run from this message" : "No runnable content";
+  const runAriaLabel = runnable
+    ? "Run from this message"
+    : "Cannot run from this message";
   // A one-line preview shown beside the role tag while collapsed: the text
   // content, or a summary of tool calls when there is no text. Only computed
   // while collapsed — an expanded message re-renders on every streamed token.
@@ -140,23 +139,19 @@ function _MessageListItemHeader({
         {message.role === "user" && (
           <AddImagesMenu messageId={message.id} disabled={readonly} />
         )}
-        <Tooltip
-          content={runnable ? "Run from this message" : "No runnable content"}
-        >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={
-              runnable
-                ? "Run from this message"
-                : "Cannot run from this message"
-            }
-            disabled={readonly || !runnable}
-            onClick={handleRun}
-          >
-            <PlayCircleIcon className="size-4" />
-          </Button>
-        </Tooltip>
+        {!hasToolCalls && (
+          <Tooltip content={runTooltip}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={runAriaLabel}
+              disabled={readonly || !runnable}
+              onClick={handleRun}
+            >
+              <PlayCircleIcon className="size-4" />
+            </Button>
+          </Tooltip>
+        )}
         <Tooltip content="Remove message">
           <Button
             variant="ghost"
