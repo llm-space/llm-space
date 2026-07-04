@@ -9,6 +9,12 @@ import type {
 import type { RPCSchema } from "electrobun";
 
 import type { Command } from "./commands";
+import type {
+  McpCallToolResponse,
+  McpServerDraft,
+  McpServerToolsResponse,
+  McpServerView,
+} from "./mcp";
 
 /** A webview→bun request to start streaming an agent run. */
 export interface StreamThreadRequestPayload {
@@ -117,6 +123,34 @@ export interface DesktopRPCType {
       fsWrite: { params: { path: string; thread: Thread }; response: null };
       // Reveal a file/directory in the OS file manager (Finder/Explorer).
       fsReveal: { params: { path: string }; response: null };
+      mcpListServers: {
+        params: Record<string, never>;
+        response: McpServerView[];
+      };
+      mcpAddServer: {
+        params: { server: McpServerDraft };
+        response: McpServerView[];
+      };
+      mcpUpdateServer: {
+        params: { serverId: string; server: McpServerDraft };
+        response: McpServerView[];
+      };
+      mcpRemoveServer: {
+        params: { serverId: string };
+        response: McpServerView[];
+      };
+      mcpListTools: {
+        params: { serverId: string };
+        response: McpServerToolsResponse;
+      };
+      mcpCallTool: {
+        params: {
+          serverId: string;
+          toolName: string;
+          arguments: Record<string, unknown>;
+        };
+        response: McpCallToolResponse;
+      };
     };
     // Messages the webview SENDS and the bun side handles.
     messages: {

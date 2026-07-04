@@ -25,6 +25,11 @@ export type ToolCallInput = Static<typeof ToolCallInput>;
  */
 export const ToolCallOutput = Type.Object({
   content: Type.Array(TextContent),
+  /**
+   * Whether the tool runtime reported a failed call. This is forwarded back to
+   * model providers that distinguish failed tool results from observations.
+   */
+  isError: Type.Optional(Type.Boolean()),
 });
 export type ToolCallOutput = Static<typeof ToolCallOutput>;
 

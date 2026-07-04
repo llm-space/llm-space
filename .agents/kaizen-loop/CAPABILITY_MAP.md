@@ -1,7 +1,7 @@
 # LLM Space Capability Map
 
-- Last updated: 2026-07-03
-- Map status: updated after Trace Inspector V1 implementation, CEF verification, and local product-design audit.
+- Last updated: 2026-07-04
+- Map status: updated after current product discovery for MCP integration planning; Trace Inspector V1 remains the latest shipped product-code loop.
 - Evidence rule: entries marked `confirmed` cite current rendered-product or current-code evidence. Entries marked `stale` rely on previous logs or code paths not fully re-inspected in this loop. Entries marked `unknown` need a future product-surface check before they can drive a recommendation.
 
 ## First-Run Model Setup
@@ -50,14 +50,48 @@
 
 - Status: shipped core loop
 - Freshness: confirmed
-- Last checked: 2026-07-03
+- Last checked: 2026-07-04
 - Evidence:
   - Current screenshots `03-example-thread-opened.png` and `06-restored-run-message-view.png` show `Run` enabled once a fallback model exists.
+  - Current discovery screenshot `audits/2026-07-04-110944-core-capability-discovery/03-general-agent-open.png` shows the General Agent example ready to run with model, messages, and tool definitions.
   - `apps/desktop/src/components/thread-playground/stores/thread-store.ts` streams through `streamThread()`, folds reducer events into messages, and records completed runs.
   - `apps/desktop/src/components/thread-tabs/thread-tab-pane.tsx` wires a single Electrobun RPC transport into the active thread.
 - Boundary: one thread can run against its selected or fallback model, stream assistant/tool output, abort, and persist completed state.
 - Explicit non-goals: batch runs, scheduled runs, provider health validation.
-- Visible gaps: no live run was executed in this discovery because the recommendation does not require API quota use.
+- Visible gaps: the general run control is not specialized for paused tool calls; users must infer continuation from message-level run controls.
+
+## Tool Step Orchestration
+
+- Status: partial manual loop
+- Freshness: confirmed
+- Last checked: 2026-07-04
+- Evidence:
+  - Current discovery screenshot `audits/2026-07-04-110944-core-capability-discovery/03-general-agent-open.png` shows the General Agent example ships with tool definitions such as `web_search`, `web_fetch`, `bash`, `read`, `write`, and `edit`.
+  - Current fixture screenshot `audits/2026-07-04-110944-core-capability-discovery/04-tool-step-fixture-after-run.png` shows a thread with an assistant tool call and editable `Response` field, but no product-level pending-tool state or explicit `Continue` action tied to completed tool outputs.
+  - `packages/core/src/server/agent/stream.ts` converts all configured tools into step-by-step agent tools whose `execute()` returns an empty text result and `terminate: true`, so the app intentionally stops at tool calls rather than executing web, shell, or filesystem operations.
+  - `packages/core/src/client/converters.ts` can lower assistant `toolCalls` plus their outputs into pi `toolResult` messages, so the underlying continuation path exists once a tool output is filled.
+  - `apps/desktop/src/components/thread-playground/message/tool-call-list-item.tsx` lets users edit a tool response and invoke run from the assistant message, but the UI labels this as generic rerun rather than a safe, guided tool-result continuation.
+- Boundary: users can define tool schemas, receive model tool calls as assistant messages, manually edit tool-call outputs, and technically continue by rerunning from that assistant message.
+- Explicit non-goals: no automatic web/search/shell/filesystem execution, no MCP runtime, no permission system, no background tool queue, no multi-agent runtime orchestration.
+- Visible gaps: no first-class pending-tool status, no clear instruction that the app is waiting for tool output, no `Continue` CTA after outputs are supplied, no validation that all visible tool calls have non-empty outputs before continuing, and no safe local execution sandbox.
+
+## MCP Server Integration
+
+- Status: shipped V1
+- Freshness: confirmed
+- Last checked: 2026-07-04
+- Evidence:
+  - Implementation screenshot `audits/2026-07-04-122756-mcp-integration-v1/01-settings-mcp-empty.png` shows Settings now has an `MCP` page and empty server state.
+  - Implementation screenshot `audits/2026-07-04-122756-mcp-integration-v1/02-settings-mcp-fixture-tools.png` shows a configured stdio fixture server tested through Settings with one discovered tool, `mcp__fixture__echo`.
+  - Implementation screenshot `audits/2026-07-04-122756-mcp-integration-v1/03-thread-mcp-tool-added.png` shows the thread Tools area can add `mcp__fixture__echo` from the configured MCP server.
+  - Implementation screenshot `audits/2026-07-04-122756-mcp-integration-v1/04-call-mcp-tool-result.png` shows an assistant MCP tool call exposes `Call MCP Tool` and fills the response with `fixture:cef`.
+  - `apps/desktop/src/bun/mcp/mcp-manager.ts` persists `settings/mcp.json`, manages MCP clients in the Bun process, supports `StdioClientTransport`, `StreamableHTTPClientTransport`, and `SSEClientTransport`, lists tools, calls tools, normalizes direct names, and flattens tool results to text.
+  - `apps/desktop/src/shared/rpc.ts` and `apps/desktop/src/bun/rpc/index.ts` expose typed MCP server/tool/call requests across the renderer/Bun boundary.
+  - `packages/core/src/types/tools/index.ts` stores optional MCP provenance on function tools while preserving plain function tools.
+  - Manager fixture verification discovered `mcp__fixture__echo` and returned `fixture:ok`; rendered CEF verification returned `fixture:cef`.
+- Boundary: users can configure MCP servers in local settings, with stdio, Streamable HTTP, or SSE transport fields; discover MCP tools; explicitly add selected tools to a thread as `mcp__{server_name}__{tool_name}` direct tools; and explicitly execute visible assistant MCP tool calls after a click, writing flattened text output into the existing tool-response field.
+- Explicit non-goals: no full built-in OAuth authorization-code callback, token refresh, revoke, or account-management flow; no resources browser; no prompts browser; no sampling, elicitation, or tasks; no automatic MCP execution during agent streaming; no MCP registry browsing; no global permission policy beyond explicit per-call user action.
+- Visible gaps: Streamable HTTP/SSE code paths and settings fields are implemented but were not audited against a real authenticated remote MCP service; MCP outputs are flattened to text rather than preserving rich resource/blob payloads; threads must add MCP tools explicitly one by one; direct tool names are disabled rather than auto-suffixed when normalized MCP tool names collide.
 
 ## Debug Timeline
 

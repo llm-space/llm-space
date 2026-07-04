@@ -64,7 +64,7 @@ function _convertToPiMessages(messages: Message[]) {
           toolCallId: toolCall.id,
           toolName: toolCall.input.name,
           content: toolCall.output?.content ?? [{ type: "text", text: "" }],
-          isError: false,
+          isError: toolCall.output?.isError ?? false,
           timestamp: Date.now(),
         });
       }

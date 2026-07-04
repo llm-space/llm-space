@@ -455,9 +455,29 @@ function _resolveTools(tools: unknown): Tool[] {
     if (typeof src.strict === "boolean") {
       tool.strict = src.strict;
     }
+    const source = _resolveToolSource(src.source);
+    if (source) {
+      tool.source = source;
+    }
     result.push(tool);
   }
   return result;
+}
+
+function _resolveToolSource(source: unknown): Tool["source"] | undefined {
+  const raw = _asRecord(source);
+  if (raw?.type !== "mcp") {
+    return undefined;
+  }
+  const { serverId, serverName, toolName } = raw;
+  if (
+    typeof serverId !== "string" ||
+    typeof serverName !== "string" ||
+    typeof toolName !== "string"
+  ) {
+    return undefined;
+  }
+  return { type: "mcp", serverId, serverName, toolName };
 }
 
 /** Anthropic image block: only base64 sources can be inlined. */

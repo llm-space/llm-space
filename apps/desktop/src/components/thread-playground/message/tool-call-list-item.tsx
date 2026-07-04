@@ -1,8 +1,13 @@
 import type { ToolCall, ToolCallInput } from "@llm-space/core";
-import { memo, useCallback } from "react";
+import { Cable, Loader2 } from "lucide-react";
+import { memo, useCallback, useState } from "react";
+import { toast } from "sonner";
+
+import { callMcpTool } from "@/client/mcp";
 
 import { CodeEditor } from "../../code-editor";
-import { useThreadStoreActions } from "../stores";
+import { Button } from "../../ui/button";
+import { useThreadStore, useThreadStoreActions } from "../stores";
 
 function _ToolCallListItem({
   messageId,
@@ -14,6 +19,13 @@ function _ToolCallListItem({
   readonly?: boolean;
 }) {
   const { run, updateToolCallOutputText } = useThreadStoreActions();
+  const mcpSource = useThreadStore((state) => {
+    const tool = state.thread.context?.tools?.find(
+      (item) => item.name === toolCall.input.name
+    );
+    return tool?.source?.type === "mcp" ? tool.source : null;
+  });
+  const [callingMcp, setCallingMcp] = useState(false);
   const handleOutputChange = useCallback(
     (value: string) => {
       if (readonly) {
@@ -39,9 +51,64 @@ function _ToolCallListItem({
     },
     [handleRun]
   );
+  const handleCallMcpTool = useCallback(async () => {
+    if (readonly || !mcpSource) {
+      return;
+    }
+    setCallingMcp(true);
+    try {
+      const result = await callMcpTool({
+        serverId: mcpSource.serverId,
+        toolName: mcpSource.toolName,
+        arguments: toolCall.input.arguments,
+      });
+      updateToolCallOutputText(
+        messageId,
+        toolCall.id,
+        result.contentText,
+        result.isError ?? false
+      );
+      if (result.isError) {
+        toast.error("MCP tool returned an error");
+      } else {
+        toast.success("MCP tool called");
+      }
+    } catch (error) {
+      toast.error("Failed to call MCP tool", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setCallingMcp(false);
+    }
+  }, [
+    messageId,
+    mcpSource,
+    readonly,
+    toolCall.id,
+    toolCall.input.arguments,
+    updateToolCallOutputText,
+  ]);
   return (
     <div className="bg-foreground/4 flex w-full flex-col gap-2 rounded-md px-3 pt-2 pb-3">
-      <ToolCallInputView input={toolCall.input} />
+      <div className="flex min-w-0 items-start gap-2">
+        <ToolCallInputView input={toolCall.input} />
+        {mcpSource ? (
+          <Button
+            className="shrink-0"
+            size="sm"
+            variant="secondary"
+            disabled={readonly || callingMcp}
+            onClick={() => void handleCallMcpTool()}
+          >
+            {callingMcp ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Cable />
+            )}
+            Call MCP Tool
+          </Button>
+        ) : null}
+      </div>
       <hr />
       <div className="flex w-full flex-col gap-1">
         <div className="text-muted-foreground text-xs font-medium">Response</div>

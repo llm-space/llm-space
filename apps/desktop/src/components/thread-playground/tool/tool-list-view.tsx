@@ -2,7 +2,7 @@
 
 import { type FunctionTool } from "@llm-space/core";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import {
   useThreadStore,
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "../../ui/button";
 
+import { McpToolImportPopover } from "./mcp-tool-import-popover";
 import { ToolEditorDialog } from "./tool-editor-dialog";
 import { ToolListItem } from "./tool-list-item";
 
@@ -24,9 +25,13 @@ export function ToolListView({
   readonly?: boolean;
 }) {
   const tools = useThreadStore((s) => s.thread.context?.tools);
-  const { removeTool } = useThreadStoreActions();
+  const { addTool, removeTool } = useThreadStoreActions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTool, setEditingTool] = useState<FunctionTool | null>(null);
+  const existingToolNames = useMemo(
+    () => new Set((tools ?? []).map((tool) => tool.name)),
+    [tools]
+  );
 
   const [animationContainerRef] = useAutoAnimation({ duration: 150 });
 
@@ -75,6 +80,11 @@ export function ToolListView({
           <PlusIcon className="size-3" />
           Add tool
         </Button>
+        <McpToolImportPopover
+          disabled={readonly}
+          existingToolNames={existingToolNames}
+          onAdd={addTool}
+        />
       </div>
       <ToolEditorDialog
         open={dialogOpen}

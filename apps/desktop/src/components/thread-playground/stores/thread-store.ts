@@ -85,7 +85,8 @@ export interface ThreadState {
   updateToolCallOutputTextContent(
     messageId: string,
     toolCallId: string,
-    text: string
+    text: string,
+    isError?: boolean
   ): void;
   addTool(tool: FunctionTool): boolean;
   updateTool(name: string, tool: FunctionTool): boolean;
@@ -382,7 +383,7 @@ export function createThreadStore(
             tools: get().thread.context?.tools?.filter((t) => t.name !== name),
           });
         },
-        updateToolCallOutputTextContent(messageId, toolCallId, text) {
+        updateToolCallOutputTextContent(messageId, toolCallId, text, isError) {
           const message = getMessage(messageId);
           if (message?.role !== "assistant") {
             return;
@@ -398,7 +399,10 @@ export function createThreadStore(
                 toolCall.id === toolCallId
                   ? {
                       ...toolCall,
-                      output: { content: [{ type: "text", text }] },
+                      output: {
+                        content: [{ type: "text", text }],
+                        isError: isError ?? toolCall.output?.isError,
+                      },
                     }
                   : toolCall
               ),

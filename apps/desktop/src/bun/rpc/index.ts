@@ -3,6 +3,7 @@ import { BrowserView } from "electrobun/bun";
 
 import type { DesktopRPCType } from "../../shared/rpc";
 import { moveToTrash, revealInFileManager } from "../fs";
+import { mcpManager } from "../mcp";
 import { modelManager } from "../models";
 import { localFs } from "../storage";
 import { abortStreamThread, runStreamThread } from "../streaming";
@@ -34,9 +35,11 @@ async function getModelProviderGroups() {
  */
 type MainWindowRPC = ReturnType<typeof BrowserView.defineRPC<DesktopRPCType>>;
 
+const MAX_REQUEST_TIME_MS = 70_000;
+
 export const mainWindowRPC: MainWindowRPC =
   BrowserView.defineRPC<DesktopRPCType>({
-    maxRequestTime: 10_000,
+    maxRequestTime: MAX_REQUEST_TIME_MS,
     handlers: {
       requests: {
         availableModels: async () => getModelProviderGroups(),
@@ -132,6 +135,15 @@ export const mainWindowRPC: MainWindowRPC =
           await revealInFileManager(localFs.realpath(path));
           return null;
         },
+        mcpListServers: () => mcpManager.listServers(),
+        mcpAddServer: ({ server }) => mcpManager.addServer(server),
+        mcpUpdateServer: async ({ serverId, server }) =>
+          mcpManager.updateServer(serverId, server),
+        mcpRemoveServer: async ({ serverId }) =>
+          mcpManager.removeServer(serverId),
+        mcpListTools: async ({ serverId }) => mcpManager.listTools(serverId),
+        mcpCallTool: async ({ serverId, toolName, arguments: args }) =>
+          mcpManager.callTool({ serverId, toolName, arguments: args }),
       },
       messages: {
         sendStreamThreadRequest: (payload) => {
