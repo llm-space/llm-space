@@ -1,6 +1,6 @@
 ---
 name: kaizen-loop
-description: Run one 0-1 product kaizen loop. Use when the user asks to inspect a product, decide what to build next, plan or implement the next coherent capability, audit a workflow, or advance beyond maintenance. Ground the loop in current product evidence, capability-map freshness, one north-star metric, one main recommendation plus two alternatives, and an approval gate before product-code changes.
+description: Run one 0-1 product kaizen loop. Use when the user asks to inspect a product, decide what to build next, plan or implement the next coherent capability, audit a workflow, or advance beyond maintenance. Ground the loop in current product evidence, external market scan when proposing new product functionality, capability-map freshness, one north-star metric, one main recommendation plus two alternatives, and an approval gate before product-code changes.
 ---
 
 # Kaizen Loop
@@ -67,6 +67,7 @@ Minimum evidence:
 - Relevant product/code paths for the workflow under consideration.
 - Current git status.
 - Current rendered product state when the recommendation touches UX, onboarding, navigation, or workflow.
+- External market scan when the loop proposes new product functionality, changes product positioning, or judges what capability is truly missing.
 
 For UX or product-flow recommendations:
 
@@ -75,6 +76,20 @@ For UX or product-flow recommendations:
 - Pair screenshot review with text, console/log, interaction, layout, and overflow checks when UI behavior can be affected.
 
 The evidence gate is complete only when the main recommendation can cite concrete observations, relevant capability-map entries have `confirmed`/`stale`/`unknown` freshness, and the alternatives can be deferred for explicit reasons.
+
+## External Market Scan
+
+Run a current internet search before recommending any new user-facing capability or workflow. The scan prevents local-only product thinking from mistaking "not present here" for "actually missing."
+
+The scan is complete only when the recommendation can cite:
+
+- Current public evidence from comparable products, docs, changelogs, issue discussions, community workflows, standards, or research relevant to the workflow.
+- The expected table-stakes behavior users already get elsewhere.
+- One or more real gaps, unmet jobs, confusing tradeoffs, or workflow failures that the product can plausibly address.
+- Why the main recommendation targets a true missing capability rather than merely copying a competitor surface.
+- Source URLs, access dates, and any uncertainty caused by paywalls, stale pages, inaccessible products, or weak evidence.
+
+Prefer primary sources, recent sources, and sources from actual user workflows. Do not let the market scan override observed product evidence: use it to sharpen the gap, vocabulary, and acceptance criteria. If internet access is unavailable or the user forbids web search, call the loop evidence-limited and ask whether to proceed from local evidence only.
 
 ## Discovery Output
 
@@ -85,12 +100,13 @@ Include:
 1. Product diagnosis: where the current product is thinnest or most blocked.
 2. Capability-map freshness: relevant capabilities marked `confirmed`, `stale`, or `unknown`, with current product-surface evidence.
 3. North-star metric: product-level metric, baseline, v1 target, acceptance method, and guardrails.
-4. Main recommendation: the one product capability or workflow improvement to build next.
-5. Why now: why this beats the alternatives at the current product stage.
-6. V1 capability definition: what a user can do after v1 ships, and what remains out of scope.
-7. Acceptance and audit plan: how product-design audit, rendered-product checks, commands, tests, or review will prove the result.
-8. Implementation plan: likely files/modules, steps, commands, and stop conditions.
-9. Alternatives: two reasonable directions not selected, with short reasons to defer them.
+4. External market scan: sources reviewed, table-stakes expectations, true missing capability, and uncertainty.
+5. Main recommendation: the one product capability or workflow improvement to build next.
+6. Why now: why this beats the alternatives at the current product stage and in the external market context.
+7. V1 capability definition: what a user can do after v1 ships, and what remains out of scope.
+8. Acceptance and audit plan: how product-design audit, rendered-product checks, commands, tests, or review will prove the result.
+9. Implementation plan: likely files/modules, steps, commands, and stop conditions.
+10. Alternatives: two reasonable directions not selected, with short reasons to defer them.
 
 Ask for approval before implementation.
 
@@ -98,6 +114,7 @@ Ask for approval before implementation.
 
 Implement only after the user approves the product recommendation and v1 plan.
 
+- First, hand the approved plan to `$grill-me` for a requirements discussion. This gate is complete only when the discussion has resolved the target user/job, must-have behavior, explicit non-goals, acceptance criteria, data or persistence boundaries, risks, and stop conditions. If the discussion changes scope, update the plan and ask for approval again before editing product code.
 - Build the smallest coherent end-to-end version of the approved capability.
 - Use the repository's existing package manager, scripts, frameworks, UI primitives, and architecture. Do not introduce a new tool or abstraction unless it is needed for the v1.
 - Follow local boundaries for client/server code, generated files, API contracts, persistence, permissions, and data ownership.
@@ -159,6 +176,7 @@ Write the log as a product decision record plus engineering result. Include:
 - Trigger: user request and starting git status.
 - Product stage/context.
 - Evidence reviewed.
+- External market scan: source URLs, access date, table-stakes expectations, true missing capability, and uncertainty.
 - Capability-map freshness: entries read, entries updated, and any stale or unknown boundaries.
 - Product north-star metric: name, reason, baseline, target, measurement method, and guardrails.
 - Candidate product opportunities: main recommendation and two alternatives.
@@ -166,6 +184,7 @@ Write the log as a product decision record plus engineering result. Include:
 - V1 capability definition: user-visible behavior, scope, and explicit non-goals.
 - Acceptance/audit plan.
 - Implementation plan and approval status.
+- `$grill-me` requirements discussion: questions resolved, scope changes, remaining ambiguity, and approval status.
 - Work performed, if approved.
 - Verification and product-design audit results, if implemented.
 - Review: findings, fixes, remaining risks.
