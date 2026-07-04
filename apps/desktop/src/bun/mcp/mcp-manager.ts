@@ -21,22 +21,47 @@ import {
   buildMcpToolName,
   normalizeMcpName,
   type McpCallToolResponse,
+  type McpServerReadiness,
   type McpServerConfig,
   type McpServerDraft,
   type McpServersConfig,
   type McpServerToolsResponse,
   type McpServerView,
+  type McpToolSummary,
   type McpToolView,
 } from "../../shared/mcp";
 
 const CONNECT_TIMEOUT_MS = 10_000;
 const LIST_TIMEOUT_MS = 10_000;
-const CALL_TIMEOUT_MS = 60_000;
+const CALL_TIMEOUT_MS = 5 * 60_000;
 const MAX_OUTPUT_CHARS = 20_000;
 const ENV_REFERENCE_PATTERN =
   /\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g;
 
 const stringRecordSchema = z.record(z.string(), z.string());
+const toolSummarySchema = z.object({
+  toolName: z.string(),
+  normalizedToolName: z.string(),
+  directName: z.string(),
+  description: z.string(),
+  inputSchema: z.unknown(),
+  requiredFields: z.array(z.string()).optional(),
+  topLevelProperties: z.array(z.string()).optional(),
+  available: z.boolean(),
+  disabledReason: z.string().optional(),
+});
+const readinessSchema = z.object({
+  status: z.union([
+    z.literal("untested"),
+    z.literal("ready"),
+    z.literal("error"),
+    z.literal("stale"),
+  ]),
+  testedAt: z.number().optional(),
+  toolCount: z.number().nullable(),
+  lastError: z.string().optional(),
+  tools: z.array(toolSummarySchema).optional(),
+});
 
 const serverConfigSchema = z.object({
   id: z.string(),
@@ -55,6 +80,7 @@ const serverConfigSchema = z.object({
   headers: stringRecordSchema.optional(),
   createdAt: z.number().optional(),
   updatedAt: z.number().optional(),
+  readiness: readinessSchema.optional(),
 });
 
 const serversConfigSchema = z.object({
@@ -116,7 +142,14 @@ export class McpManager {
     this._assertUniqueServerName(server, serverId);
     this._config = {
       servers: this._config.servers.map((item) =>
-        item.id === serverId ? server : item
+        item.id === serverId
+          ? {
+              ...server,
+              readiness: current.readiness
+                ? _markReadinessStale(current.readiness, server.serverName)
+                : undefined,
+            }
+          : item
       ),
     };
     await this._closeServer(serverId);
@@ -135,20 +168,45 @@ export class McpManager {
     return this.listServers();
   }
 
+  async disconnectServer(serverId: string): Promise<McpServerView[]> {
+    this._getServer(serverId);
+    await this._closeServer(serverId);
+    this._status.delete(serverId);
+    return this.listServers();
+  }
+
   async listTools(serverId: string): Promise<McpServerToolsResponse> {
     const server = this._getServer(serverId);
     try {
       const entry = await this._connect(server);
       const tools = await this._fetchAllTools(entry.client);
       entry.tools = tools;
-      this._status.set(serverId, { toolCount: tools.length });
+      const toolViews = this._toToolViews(server, tools);
+      const updatedServer = this._setServerReadiness(serverId, {
+        status: "ready",
+        testedAt: Date.now(),
+        toolCount: toolViews.length,
+        tools: toolViews.map(_toToolSummary),
+      });
+      this._status.set(serverId, { toolCount: toolViews.length });
       return {
-        server: this._toServerView(server),
-        tools: this._toToolViews(server, tools),
+        server: this._toServerView(updatedServer),
+        tools: toolViews,
       };
     } catch (error) {
-      const message = _errorMessage(error);
-      this._status.set(serverId, { toolCount: null, lastError: message });
+      const message = _safeErrorMessage(error, server);
+      const previous = server.readiness;
+      const updatedServer = this._setServerReadiness(serverId, {
+        status: "error",
+        testedAt: Date.now(),
+        toolCount: previous?.toolCount ?? null,
+        lastError: message,
+        tools: previous?.tools ?? [],
+      });
+      this._status.set(serverId, {
+        toolCount: updatedServer.readiness?.toolCount ?? null,
+        lastError: message,
+      });
       await this._closeServer(serverId);
       throw new Error(message, { cause: error });
     }
@@ -173,7 +231,7 @@ export class McpManager {
       );
       return _flattenToolResult(result as CallToolResult);
     } catch (error) {
-      const message = _errorMessage(error);
+      const message = _safeErrorMessage(error, server);
       this._status.set(serverId, {
         toolCount: this._status.get(serverId)?.toolCount ?? null,
         lastError: message,
@@ -264,10 +322,9 @@ export class McpManager {
     const tools: SdkMcpTool[] = [];
     let cursor: string | undefined;
     do {
-      const response = await client.listTools(
-        cursor ? { cursor } : undefined,
-        { timeout: LIST_TIMEOUT_MS }
-      );
+      const response = await client.listTools(cursor ? { cursor } : undefined, {
+        timeout: LIST_TIMEOUT_MS,
+      });
       tools.push(...response.tools);
       cursor = response.nextCursor;
     } while (cursor);
@@ -300,6 +357,7 @@ export class McpManager {
         }),
         description: tool.description ?? "",
         inputSchema: tool.inputSchema,
+        ..._summarizeInputSchema(tool.inputSchema),
         available,
         disabledReason:
           normalizedToolName === ""
@@ -311,13 +369,40 @@ export class McpManager {
     });
   }
 
+  private _setServerReadiness(
+    serverId: string,
+    readiness: McpServerReadiness
+  ): McpServerConfig {
+    let updated: McpServerConfig | null = null;
+    this._config = {
+      servers: this._config.servers.map((server) => {
+        if (server.id !== serverId) {
+          return server;
+        }
+        updated = { ...server, readiness };
+        return updated;
+      }),
+    };
+    if (!updated) {
+      throw new Error(`MCP server not configured: ${serverId}`);
+    }
+    this._saveConfig();
+    return updated;
+  }
+
   private _toServerView(server: McpServerConfig): McpServerView {
     const status = this._status.get(server.id);
+    const readiness = server.readiness ?? {
+      status: "untested",
+      toolCount: null,
+      tools: [],
+    };
     return {
       ...server,
+      readiness,
       connected: this._clients.has(server.id),
-      toolCount: status?.toolCount ?? null,
-      lastError: status?.lastError,
+      toolCount: status?.toolCount ?? readiness.toolCount,
+      lastError: status?.lastError ?? readiness.lastError,
     };
   }
 
@@ -412,7 +497,9 @@ export class McpManager {
     }
   }
 
-  private _resolveValueMap(values: Record<string, string>): Record<string, string> {
+  private _resolveValueMap(
+    values: Record<string, string>
+  ): Record<string, string> {
     const resolved: Record<string, string> = {};
     for (const [key, value] of Object.entries(values)) {
       const trimmedKey = key.trim();
@@ -447,6 +534,9 @@ export class McpManager {
           ...server,
           createdAt: server.createdAt ?? Date.now(),
           updatedAt: server.updatedAt ?? Date.now(),
+          readiness: server.readiness
+            ? _normalizeReadiness(server.readiness)
+            : undefined,
         })),
       };
     } catch (error) {
@@ -470,6 +560,76 @@ export class McpManager {
       return empty;
     }
   }
+}
+
+function _normalizeReadiness(
+  readiness: z.infer<typeof readinessSchema>
+): McpServerReadiness {
+  return {
+    status: readiness.status,
+    testedAt: readiness.testedAt,
+    toolCount: readiness.toolCount,
+    lastError: readiness.lastError,
+    tools: (readiness.tools ?? []).map((tool) => ({
+      ...tool,
+      inputSchema: tool.inputSchema as McpToolSummary["inputSchema"],
+      requiredFields: tool.requiredFields ?? [],
+      topLevelProperties: tool.topLevelProperties ?? [],
+    })),
+  };
+}
+
+function _markReadinessStale(
+  readiness: McpServerReadiness,
+  serverName: string
+): McpServerReadiness {
+  return {
+    ...readiness,
+    status: "stale",
+    lastError: undefined,
+    tools: readiness.tools.map((tool) => ({
+      ...tool,
+      directName: buildMcpToolName({
+        serverName,
+        toolName: tool.normalizedToolName,
+      }),
+    })),
+  };
+}
+
+function _toToolSummary(tool: McpToolView): McpToolSummary {
+  return {
+    toolName: tool.toolName,
+    normalizedToolName: tool.normalizedToolName,
+    directName: tool.directName,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+    requiredFields: tool.requiredFields,
+    topLevelProperties: tool.topLevelProperties,
+    available: tool.available,
+    disabledReason: tool.disabledReason,
+  };
+}
+
+function _summarizeInputSchema(inputSchema: unknown): {
+  requiredFields: string[];
+  topLevelProperties: string[];
+} {
+  if (!inputSchema || typeof inputSchema !== "object") {
+    return { requiredFields: [], topLevelProperties: [] };
+  }
+  const schema = inputSchema as {
+    required?: unknown;
+    properties?: unknown;
+  };
+  const requiredFields = Array.isArray(schema.required)
+    ? schema.required.filter((item): item is string => typeof item === "string")
+    : [];
+  const topLevelProperties =
+    schema.properties && typeof schema.properties === "object"
+      ? Object.keys(schema.properties)
+      : [];
+  return { requiredFields, topLevelProperties };
 }
 
 function _cleanRecord(
@@ -502,7 +662,9 @@ function _resolveValue(value: string): string {
   );
 }
 
-function _headersToRecord(headers: HeadersInit | undefined): Record<string, string> {
+function _headersToRecord(
+  headers: HeadersInit | undefined
+): Record<string, string> {
   if (!headers) {
     return {};
   }
@@ -517,6 +679,58 @@ function _headersToRecord(headers: HeadersInit | undefined): Record<string, stri
 
 function _errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function _safeErrorMessage(error: unknown, server: McpServerConfig): string {
+  const secrets = _secretCandidates([
+    ...Object.values(server.env ?? {}),
+    ...Object.values(server.headers ?? {}),
+  ]);
+  return _redactErrorMessage(_errorMessage(error), secrets);
+}
+
+function _secretCandidates(values: string[]): string[] {
+  const secrets = new Set<string>();
+  for (const value of values) {
+    if (value && !value.startsWith("$")) {
+      secrets.add(value);
+    }
+    for (const match of value.matchAll(ENV_REFERENCE_PATTERN)) {
+      const name = match[1] ?? match[2];
+      if (!name) {
+        continue;
+      }
+      const resolved = process.env[name];
+      if (resolved) {
+        secrets.add(resolved);
+      }
+    }
+  }
+  return [...secrets];
+}
+
+function _redactErrorMessage(message: string, secrets: string[]): string {
+  let result = message;
+  for (const secret of secrets) {
+    if (!secret) {
+      continue;
+    }
+    result = result.split(secret).join("[redacted]");
+  }
+  result = result.replace(/https?:\/\/[^\s?#]+(?:\?[^\s#]*)?/g, (urlText) => {
+    try {
+      const url = new URL(urlText);
+      return `${url.origin}${url.pathname}`;
+    } catch {
+      return urlText.split("?")[0] ?? urlText;
+    }
+  });
+  result = result.replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [redacted]");
+  result = result.replace(
+    /\b(authorization|cookie|token|api[-_]?key)\s*[:=]\s*[^\s,;]+/gi,
+    "$1=[redacted]"
+  );
+  return result;
 }
 
 function _flattenToolResult(result: CallToolResult): McpCallToolResponse {

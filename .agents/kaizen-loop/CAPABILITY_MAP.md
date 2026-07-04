@@ -1,7 +1,7 @@
 # LLM Space Capability Map
 
 - Last updated: 2026-07-04
-- Map status: updated after current product discovery for MCP integration planning; Trace Inspector V1 remains the latest shipped product-code loop.
+- Map status: updated after MCP Tool Readiness V1; MCP remains intentionally tools-only for the current product stage.
 - Evidence rule: entries marked `confirmed` cite current rendered-product or current-code evidence. Entries marked `stale` rely on previous logs or code paths not fully re-inspected in this loop. Entries marked `unknown` need a future product-surface check before they can drive a recommendation.
 
 ## First-Run Model Setup
@@ -89,9 +89,29 @@
   - `apps/desktop/src/shared/rpc.ts` and `apps/desktop/src/bun/rpc/index.ts` expose typed MCP server/tool/call requests across the renderer/Bun boundary.
   - `packages/core/src/types/tools/index.ts` stores optional MCP provenance on function tools while preserving plain function tools.
   - Manager fixture verification discovered `mcp__fixture__echo` and returned `fixture:ok`; rendered CEF verification returned `fixture:cef`.
-- Boundary: users can configure MCP servers in local settings, with stdio, Streamable HTTP, or SSE transport fields; discover MCP tools; explicitly add selected tools to a thread as `mcp__{server_name}__{tool_name}` direct tools; and explicitly execute visible assistant MCP tool calls after a click, writing flattened text output into the existing tool-response field.
+  - Readiness audit screenshot `audits/2026-07-04-151659-mcp-tool-readiness-v1/01-settings-ready-tools-current.png` shows Settings > MCP presenting Ready status, tool count, tested time, and live-session connection state after an explicit Test.
+  - Readiness audit screenshot `audits/2026-07-04-151659-mcp-tool-readiness-v1/02-after-restart-last-test-current.png` shows the last tested status and tool summaries persist after an app restart without automatically reconnecting the MCP server.
+  - Readiness audit screenshot `audits/2026-07-04-151659-mcp-tool-readiness-v1/03-add-mcp-readiness-popover-current.png` shows the thread `Add MCP` popover using persisted readiness/tool summaries with an explicit refresh and `Open Settings` path.
+  - Readiness audit screenshot `audits/2026-07-04-151659-mcp-tool-readiness-v1/04-error-state-current.png` shows a readable failed readiness state for a missing environment variable.
+  - `apps/desktop/src/bun/mcp/mcp-manager.ts` persists readiness snapshots in `settings/mcp.json`, including status, tested time, redacted latest error, tool count, and compact tool summaries.
+- Boundary: users can configure MCP servers in local settings, with stdio, Streamable HTTP, or SSE transport fields; discover MCP tools; inspect persisted readiness status and last-known tool summaries; explicitly refresh/test a server; explicitly add selected tools to a thread as `mcp__{server_name}__{tool_name}` direct tools; and explicitly execute visible assistant MCP tool calls after a click, writing flattened text output into the existing tool-response field.
 - Explicit non-goals: no full built-in OAuth authorization-code callback, token refresh, revoke, or account-management flow; no resources browser; no prompts browser; no sampling, elicitation, or tasks; no automatic MCP execution during agent streaming; no MCP registry browsing; no global permission policy beyond explicit per-call user action.
-- Visible gaps: Streamable HTTP/SSE code paths and settings fields are implemented but were not audited against a real authenticated remote MCP service; MCP outputs are flattened to text rather than preserving rich resource/blob payloads; threads must add MCP tools explicitly one by one; direct tool names are disabled rather than auto-suffixed when normalized MCP tool names collide.
+- Visible gaps: Streamable HTTP/SSE code paths and settings fields are implemented but were not audited against a real authenticated remote MCP service; readiness stores a last-known snapshot rather than a background health monitor; MCP outputs are flattened to text rather than preserving rich resource/blob payloads; threads must add MCP tools explicitly one by one; direct tool names are disabled rather than auto-suffixed when normalized MCP tool names collide. Resources/prompts are an intentional near-term non-goal because expected usage is low for the current product stage.
+
+## MCP Context Primitives
+
+- Status: deferred/non-goal for current stage
+- Freshness: confirmed
+- Last checked: 2026-07-04
+- Evidence:
+  - Current discovery screenshot `audits/2026-07-04-142708-mcp-next-discovery/01-settings-mcp-empty.png` shows the Settings > MCP surface has server management only; no resources or prompts section is present.
+  - Current discovery screenshots `audits/2026-07-04-142708-mcp-next-discovery/02-blank-thread-add-mcp-entry.png` and `03-add-mcp-no-servers.png` show the thread-level MCP entry is scoped to adding MCP tools, not browsing or inserting context/prompt primitives.
+  - `apps/desktop/src/bun/mcp/mcp-manager.ts` currently implements `listTools()` and `callTool()` but no `listResources()`, `readResource()`, `listPrompts()`, or `getPrompt()` path.
+  - `apps/desktop/src/shared/rpc.ts` exposes MCP server CRUD, tool listing, and tool calls only.
+  - `apps/desktop/node_modules/@modelcontextprotocol/sdk/README.md` confirms the installed SDK exposes high-level client helpers for tools, resources, and prompts.
+- Boundary: users cannot discover MCP resources, read text resources, discover MCP prompt templates, provide prompt arguments, preview prompt messages, or insert MCP-provided context into a thread.
+- Explicit non-goals: no automatic context inclusion, no resource subscriptions/templates, no binary/resource gallery, no MCP sampling, elicitation, tasks, apps, or full OAuth account lifecycle.
+- Visible gaps: all user-facing resource and prompt flows are absent, but this is no longer treated as the next priority. Product decision on 2026-07-04: keep MCP tool-only for now because resources/prompts exist in the protocol but appear rarely used in practice.
 
 ## Debug Timeline
 

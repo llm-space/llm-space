@@ -36,6 +36,12 @@ export async function removeMcpServer(
   return _rpc().request.mcpRemoveServer({ serverId });
 }
 
+export async function disconnectMcpServer(
+  serverId: string
+): Promise<McpServerView[]> {
+  return _rpc().request.mcpDisconnectServer({ serverId });
+}
+
 export async function listMcpTools(
   serverId: string
 ): Promise<McpServerToolsResponse> {

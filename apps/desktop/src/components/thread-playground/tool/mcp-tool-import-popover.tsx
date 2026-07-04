@@ -4,8 +4,10 @@ import { type FunctionTool } from "@llm-space/core";
 import { Cable, Loader2, RefreshCw } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { format } from "timeago.js";
 
 import { listMcpServers, listMcpTools } from "@/client/mcp";
+import { useCommands } from "@/commands";
 import { Tooltip } from "@/components/tooltip";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { McpServerView, McpToolView } from "@/shared/mcp";
+import {
+  getMcpReadinessLabel,
+  type McpServerView,
+  type McpToolSummary,
+} from "@/shared/mcp";
 
 function _McpToolImportPopover({
   existingToolNames,
@@ -33,9 +39,10 @@ function _McpToolImportPopover({
   onAdd: (tool: FunctionTool) => boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const { executeCommand } = useCommands();
   const [servers, setServers] = useState<McpServerView[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>("");
-  const [tools, setTools] = useState<McpToolView[]>([]);
+  const [tools, setTools] = useState<McpToolSummary[]>([]);
   const [loadingServers, setLoadingServers] = useState(false);
   const [loadingTools, setLoadingTools] = useState(false);
 
@@ -56,7 +63,8 @@ function _McpToolImportPopover({
       );
     } catch (error) {
       toast.error("Failed to load MCP servers", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setLoadingServers(false);
@@ -80,6 +88,7 @@ function _McpToolImportPopover({
         );
       } catch (error) {
         setTools([]);
+        await refreshServers();
         toast.error("Failed to load MCP tools", {
           description:
             error instanceof Error ? error.message : "Please try again.",
@@ -88,7 +97,7 @@ function _McpToolImportPopover({
         setLoadingTools(false);
       }
     },
-    []
+    [refreshServers]
   );
 
   useEffect(() => {
@@ -99,21 +108,24 @@ function _McpToolImportPopover({
   }, [open, refreshServers]);
 
   useEffect(() => {
-    if (!open || !selectedServerId) {
+    if (!open) {
       return;
     }
-    void refreshTools(selectedServerId);
-  }, [open, selectedServerId, refreshTools]);
+    setTools(selectedServer?.readiness?.tools ?? []);
+  }, [open, selectedServer]);
 
-  const handleAdd = (tool: McpToolView) => {
+  const handleAdd = (tool: McpToolSummary) => {
+    if (!selectedServer) {
+      return;
+    }
     const added = onAdd({
       name: tool.directName,
       description: tool.description,
       parameters: tool.inputSchema,
       source: {
         type: "mcp",
-        serverId: tool.serverId,
-        serverName: tool.serverName,
+        serverId: selectedServer.id,
+        serverName: selectedServer.serverName,
         toolName: tool.toolName,
       },
     });
@@ -173,6 +185,35 @@ function _McpToolImportPopover({
             </Tooltip>
           </div>
 
+          {selectedServer ? (
+            <div className="bg-muted/40 flex min-w-0 items-center justify-between gap-2 rounded-md px-2 py-1.5">
+              <div className="min-w-0">
+                <div className="text-xs font-medium">
+                  {_serverReadinessLabel(selectedServer)}
+                </div>
+                {selectedServer.lastError ? (
+                  <div className="text-destructive truncate text-xs">
+                    {selectedServer.lastError}
+                  </div>
+                ) : null}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0"
+                onClick={() => {
+                  setOpen(false);
+                  executeCommand({
+                    type: "openSettings",
+                    args: { tab: "mcp" },
+                  });
+                }}
+              >
+                Open Settings
+              </Button>
+            </div>
+          ) : null}
+
           <div className="max-h-80 overflow-y-auto">
             {servers.length === 0 ? (
               <div className="text-muted-foreground px-1 py-6 text-center text-sm">
@@ -180,7 +221,7 @@ function _McpToolImportPopover({
               </div>
             ) : tools.length === 0 && !loadingTools ? (
               <div className="text-muted-foreground px-1 py-6 text-center text-sm">
-                No tools loaded.
+                No tools loaded. Refresh to test this server.
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -234,3 +275,18 @@ function _McpToolImportPopover({
 }
 
 export const McpToolImportPopover = memo(_McpToolImportPopover);
+
+function _serverReadinessLabel(server: McpServerView): string {
+  const readiness = server.readiness;
+  const label = getMcpReadinessLabel(readiness);
+  const parts = [label];
+  if (readiness?.toolCount !== null && readiness?.toolCount !== undefined) {
+    parts.push(
+      `${readiness.toolCount} tool${readiness.toolCount === 1 ? "" : "s"}`
+    );
+  }
+  if (readiness?.testedAt) {
+    parts.push(`tested ${format(readiness.testedAt)}`);
+  }
+  return parts.join(" · ");
+}

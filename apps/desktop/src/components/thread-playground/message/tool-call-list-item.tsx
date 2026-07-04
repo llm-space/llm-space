@@ -1,9 +1,16 @@
 import type { ToolCall, ToolCallInput } from "@llm-space/core";
-import { Cable, Loader2 } from "lucide-react";
+import {
+  AlertCircleIcon,
+  Cable,
+  CheckCircle2,
+  Clock4,
+  Loader2,
+} from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { callMcpTool } from "@/client/mcp";
+import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 
 import { CodeEditor } from "../../code-editor";
 import { Button } from "../../ui/button";
@@ -26,6 +33,9 @@ function _ToolCallListItem({
     return tool?.source?.type === "mcp" ? tool.source : null;
   });
   const [callingMcp, setCallingMcp] = useState(false);
+  const [callStatus, setCallStatus] = useState<"waiting" | "success" | "error">(
+    "waiting"
+  );
   const handleOutputChange = useCallback(
     (value: string) => {
       if (readonly) {
@@ -69,13 +79,14 @@ function _ToolCallListItem({
         result.isError ?? false
       );
       if (result.isError) {
-        toast.error("MCP tool returned an error");
+        setCallStatus("error");
       } else {
-        toast.success("MCP tool called");
+        setCallStatus("success");
       }
     } catch (error) {
       toast.error("Failed to call MCP tool", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setCallingMcp(false);
@@ -100,18 +111,27 @@ function _ToolCallListItem({
             disabled={readonly || callingMcp}
             onClick={() => void handleCallMcpTool()}
           >
-            {callingMcp ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Cable />
-            )}
+            {callingMcp ? <Loader2 className="animate-spin" /> : <Cable />}
             Call MCP Tool
           </Button>
         ) : null}
       </div>
       <hr />
       <div className="flex w-full flex-col gap-1">
-        <div className="text-muted-foreground text-xs font-medium">Response</div>
+        <div className="text-muted-foreground text-xs font-medium">
+          <Marker role="status">
+            <MarkerIcon>
+              {callStatus === "waiting" && <Clock4 />}
+              {callStatus === "success" && (
+                <CheckCircle2 className="text-green-500" />
+              )}
+              {callStatus === "error" && (
+                <AlertCircleIcon className="text-red-500" />
+              )}
+            </MarkerIcon>
+            <MarkerContent>Response</MarkerContent>
+          </Marker>
+        </div>
         <CodeEditor
           className="max-h-96 min-h-9.5 px-0!"
           hideBorder

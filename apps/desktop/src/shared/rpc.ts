@@ -139,6 +139,10 @@ export interface DesktopRPCType {
         params: { serverId: string };
         response: McpServerView[];
       };
+      mcpDisconnectServer: {
+        params: { serverId: string };
+        response: McpServerView[];
+      };
       mcpListTools: {
         params: { serverId: string };
         response: McpServerToolsResponse;

@@ -35,7 +35,7 @@ async function getModelProviderGroups() {
  */
 type MainWindowRPC = ReturnType<typeof BrowserView.defineRPC<DesktopRPCType>>;
 
-const MAX_REQUEST_TIME_MS = 70_000;
+const MAX_REQUEST_TIME_MS = 5 * 60_000 + 10_000;
 
 export const mainWindowRPC: MainWindowRPC =
   BrowserView.defineRPC<DesktopRPCType>({
@@ -141,6 +141,8 @@ export const mainWindowRPC: MainWindowRPC =
           mcpManager.updateServer(serverId, server),
         mcpRemoveServer: async ({ serverId }) =>
           mcpManager.removeServer(serverId),
+        mcpDisconnectServer: async ({ serverId }) =>
+          mcpManager.disconnectServer(serverId),
         mcpListTools: async ({ serverId }) => mcpManager.listTools(serverId),
         mcpCallTool: async ({ serverId, toolName, arguments: args }) =>
           mcpManager.callTool({ serverId, toolName, arguments: args }),

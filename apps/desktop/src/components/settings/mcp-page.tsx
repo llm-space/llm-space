@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Unplug,
 } from "lucide-react";
 import {
   useCallback,
@@ -17,9 +18,11 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
+import { format } from "timeago.js";
 
 import {
   addMcpServer,
+  disconnectMcpServer,
   listMcpServers,
   listMcpTools,
   removeMcpServer,
@@ -40,9 +43,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
+  getMcpReadinessLabel,
   normalizeMcpName,
   type McpServerDraft,
+  type McpServerReadiness,
   type McpServerView,
+  type McpToolSummary,
   type McpToolView,
   type McpTransportType,
 } from "@/shared/mcp";
@@ -132,12 +138,17 @@ function _recordFromRows(rows: Row[]): Record<string, string> | undefined {
 export function McpPage() {
   const [servers, setServers] = useState<McpServerView[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIdBeforeCreate, setSelectedIdBeforeCreate] = useState<
+    string | null
+  >(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<ServerForm>(EMPTY_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
   const [tools, setTools] = useState<McpToolView[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
 
   const selectedServer = useMemo(
@@ -162,7 +173,8 @@ export function McpPage() {
       });
     } catch (error) {
       toast.error("Failed to load MCP servers", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setLoading(false);
@@ -181,13 +193,29 @@ export function McpPage() {
   }, [creating, selectedServer?.id]);
 
   const createServer = () => {
+    setSelectedIdBeforeCreate(selectedId);
     setCreating(true);
     setSelectedId(null);
-    setForm({ ...EMPTY_FORM, name: "New MCP Server" });
+    setFormError(null);
+    setForm({ ...EMPTY_FORM });
     setTools([]);
   };
 
+  const cancelCreate = () => {
+    setCreating(false);
+    setFormError(null);
+    setTools([]);
+    setSelectedId(
+      selectedIdBeforeCreate &&
+        servers.some((server) => server.id === selectedIdBeforeCreate)
+        ? selectedIdBeforeCreate
+        : (servers[0]?.id ?? null)
+    );
+    setSelectedIdBeforeCreate(null);
+  };
+
   const save = async () => {
+    setFormError(null);
     setSaving(true);
     try {
       const draft = _draftFromForm(form);
@@ -200,15 +228,18 @@ export function McpPage() {
         creating || !selectedId
           ? [...next]
               .reverse()
-              .find((server) => server.serverName === normalizeMcpName(form.name))
+              .find(
+                (server) => server.serverName === normalizeMcpName(form.name)
+              )
           : next.find((server) => server.id === selectedId);
       setCreating(false);
+      setSelectedIdBeforeCreate(null);
       setSelectedId(saved?.id ?? next[0]?.id ?? null);
       toast.success("MCP server saved");
     } catch (error) {
-      toast.error("Failed to save MCP server", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      setFormError(
+        error instanceof Error ? error.message : "Please try again."
+      );
     } finally {
       setSaving(false);
     }
@@ -218,6 +249,7 @@ export function McpPage() {
     if (!selectedServer) {
       return;
     }
+    setFormError(null);
     setTesting(true);
     try {
       const response = await listMcpTools(selectedServer.id);
@@ -231,12 +263,34 @@ export function McpPage() {
         description: `${response.tools.length} tool${response.tools.length === 1 ? "" : "s"} discovered`,
       });
     } catch (error) {
+      setTools([]);
       await refresh();
       toast.error("Failed to connect MCP server", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const disconnectServer = async () => {
+    if (!selectedServer) {
+      return;
+    }
+    setDisconnecting(true);
+    try {
+      const next = await disconnectMcpServer(selectedServer.id);
+      setServers(next);
+      setTools([]);
+      toast.success("MCP server disconnected");
+    } catch (error) {
+      toast.error("Failed to disconnect MCP server", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -252,7 +306,8 @@ export function McpPage() {
       toast.success("MCP server removed");
     } catch (error) {
       toast.error("Failed to remove MCP server", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     }
   };
@@ -304,6 +359,7 @@ export function McpPage() {
                   )}
                   onClick={() => {
                     setCreating(false);
+                    setFormError(null);
                     setSelectedId(server.id);
                   }}
                 >
@@ -315,6 +371,9 @@ export function McpPage() {
                   </span>
                   <span className="text-muted-foreground truncate pl-4 font-mono text-xs">
                     {server.transport}
+                  </span>
+                  <span className="text-muted-foreground truncate pl-4 text-xs">
+                    {_sidebarReadiness(server)}
                   </span>
                 </button>
               ))}
@@ -343,12 +402,20 @@ export function McpPage() {
               form={form}
               normalizedName={normalizedName}
               server={selectedServer}
+              formError={formError}
               saving={saving}
               testing={testing}
+              disconnecting={disconnecting}
+              creating={creating}
               tools={tools}
-              onFormChange={setForm}
+              onFormChange={(nextForm) => {
+                setFormError(null);
+                setForm(nextForm);
+              }}
               onSave={() => void save()}
               onTest={() => void testServer()}
+              onDisconnect={() => void disconnectServer()}
+              onCancel={cancelCreate}
               onRemove={() => setRemoveOpen(true)}
             />
           ) : (
@@ -379,27 +446,45 @@ function ServerEditor({
   form,
   normalizedName,
   server,
+  formError,
   saving,
   testing,
+  disconnecting,
+  creating,
   tools,
   onFormChange,
   onSave,
   onTest,
+  onDisconnect,
+  onCancel,
   onRemove,
 }: {
   form: ServerForm;
   normalizedName: string;
   server: McpServerView | null;
+  formError: string | null;
   saving: boolean;
   testing: boolean;
+  disconnecting: boolean;
+  creating: boolean;
   tools: McpToolView[];
   onFormChange: (form: ServerForm) => void;
   onSave: () => void;
   onTest: () => void;
+  onDisconnect: () => void;
+  onCancel: () => void;
   onRemove: () => void;
 }) {
   const patch = (partial: Partial<ServerForm>) =>
     onFormChange({ ...form, ...partial });
+  const toolItems: McpToolSummary[] =
+    tools.length > 0 ? tools : (server?.readiness?.tools ?? []);
+  const toolsLabel =
+    tools.length > 0
+      ? "Current test"
+      : server?.readiness?.testedAt
+        ? `Last test ${format(server.readiness.testedAt)}`
+        : null;
 
   return (
     <ScrollArea className="h-full">
@@ -410,9 +495,21 @@ function ServerEditor({
               {form.name || "MCP Server"}
             </h3>
             <div className="text-muted-foreground font-mono text-xs">
-              {normalizedName ? `mcp__${normalizedName}__tool` : "mcp__server__tool"}
+              {normalizedName
+                ? `mcp__${normalizedName}__tool`
+                : "mcp__server__tool"}
             </div>
           </div>
+          {creating ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+          ) : null}
           <Button size="sm" onClick={onSave} disabled={saving}>
             {saving ? <Loader2 className="animate-spin" /> : <Check />}
             Save
@@ -423,11 +520,26 @@ function ServerEditor({
                 size="sm"
                 variant="secondary"
                 onClick={onTest}
-                disabled={testing}
+                disabled={testing || disconnecting}
               >
                 {testing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-                Test
+                {server.connected ? "Retest" : "Connect & Test"}
               </Button>
+              {server.connected ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onDisconnect}
+                  disabled={testing || disconnecting}
+                >
+                  {disconnecting ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Unplug />
+                  )}
+                  Disconnect
+                </Button>
+              ) : null}
               <Tooltip content="Remove MCP server">
                 <Button
                   size="icon-sm"
@@ -442,11 +554,15 @@ function ServerEditor({
           ) : null}
         </div>
 
-        {server?.lastError ? (
+        {formError ? (
           <div className="border-destructive/40 text-destructive flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
-            <span className="min-w-0 break-words">{server.lastError}</span>
+            <span className="min-w-0 break-words">{formError}</span>
           </div>
+        ) : null}
+
+        {server ? (
+          <ReadinessPanel server={server} liveToolsLoaded={tools.length > 0} />
         ) : null}
 
         <Field label="Name">
@@ -533,42 +649,30 @@ function ServerEditor({
 
         {server ? (
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <span className="text-sm font-medium">Tools</span>
               {server.toolCount !== null ? (
                 <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
                   {server.toolCount}
                 </span>
               ) : null}
+              {toolsLabel ? (
+                <span className="text-muted-foreground truncate text-xs">
+                  {toolsLabel}
+                </span>
+              ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
-              {tools.length === 0 ? (
+              {toolItems.length === 0 ? (
                 <div className="text-muted-foreground px-1 py-2 text-xs">
                   No tools loaded.
                 </div>
               ) : (
-                tools.map((tool) => (
-                  <div
-                    key={tool.toolName}
-                    className="bg-muted/40 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5"
-                  >
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        tool.available ? "bg-emerald-500" : "bg-destructive"
-                      )}
-                    />
-                    <div className="min-w-0 grow">
-                      <div className="truncate font-mono text-xs">
-                        {tool.directName}
-                      </div>
-                      {tool.disabledReason ? (
-                        <div className="text-destructive text-xs">
-                          {tool.disabledReason}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+                toolItems.map((tool) => (
+                  <ToolSummaryRow
+                    key={`${tool.directName}:${tool.toolName}`}
+                    tool={tool}
+                  />
                 ))
               )}
             </div>
@@ -579,13 +683,96 @@ function ServerEditor({
   );
 }
 
-function Field({
-  label,
-  children,
+function ReadinessPanel({
+  server,
+  liveToolsLoaded,
 }: {
-  label: string;
-  children: ReactNode;
+  server: McpServerView;
+  liveToolsLoaded: boolean;
 }) {
+  const readiness = server.readiness ?? _emptyReadiness();
+  const label = getMcpReadinessLabel(readiness);
+  const statusClass =
+    readiness.status === "ready"
+      ? "text-emerald-400"
+      : readiness.status === "error"
+        ? "text-destructive"
+        : readiness.status === "stale"
+          ? "text-amber-400"
+          : "text-muted-foreground";
+  const detail = _readinessDetail(readiness, liveToolsLoaded);
+
+  return (
+    <div className="border-border bg-muted/30 flex flex-col gap-2 rounded-md border px-3 py-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <StatusDot server={server} />
+        <span className={cn("text-sm font-medium", statusClass)}>{label}</span>
+        <span className="text-muted-foreground truncate text-xs">{detail}</span>
+      </div>
+      {server.lastError ? (
+        <div className="text-destructive flex min-w-0 items-start gap-2 text-xs">
+          <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
+          <span className="min-w-0 break-words">{server.lastError}</span>
+        </div>
+      ) : null}
+      {server.connected ? (
+        <div className="text-muted-foreground text-xs">
+          Connected now in this app session.
+        </div>
+      ) : readiness.status === "ready" || readiness.status === "stale" ? (
+        <div className="text-muted-foreground text-xs">
+          Not connected. This is the last saved test result.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ToolSummaryRow({ tool }: { tool: McpToolSummary }) {
+  const schemaJson = JSON.stringify(tool.inputSchema, null, 2);
+  return (
+    <div className="bg-muted/40 flex min-w-0 flex-col gap-1.5 rounded-md px-2 py-1.5">
+      <div className="flex min-w-0 items-start gap-2">
+        <span
+          className={cn(
+            "mt-1.5 size-1.5 shrink-0 rounded-full",
+            tool.available ? "bg-emerald-500" : "bg-destructive"
+          )}
+        />
+        <div className="min-w-0 grow">
+          <div className="truncate font-mono text-xs">{tool.directName}</div>
+          <div className="text-muted-foreground truncate font-mono text-[11px]">
+            raw: {tool.toolName}
+          </div>
+          {tool.description ? (
+            <div className="text-muted-foreground line-clamp-2 text-xs">
+              {tool.description}
+            </div>
+          ) : null}
+          <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <span>required: {_joinOrNone(tool.requiredFields)}</span>
+            <span>properties: {_joinOrNone(tool.topLevelProperties)}</span>
+          </div>
+          {tool.disabledReason ? (
+            <div className="text-destructive text-xs">
+              {tool.disabledReason}
+            </div>
+          ) : null}
+          <details className="text-muted-foreground mt-1 text-xs">
+            <summary className="cursor-pointer select-none">
+              JSON schema
+            </summary>
+            <pre className="border-border bg-background/60 mt-1 max-h-48 overflow-auto rounded border p-2 text-[11px] whitespace-pre-wrap">
+              {schemaJson}
+            </pre>
+          </details>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <label className="text-sm font-medium">{label}</label>
@@ -662,11 +849,52 @@ function KeyValueRows({
 }
 
 function StatusDot({ server }: { server: McpServerView }) {
-  if (server.lastError) {
+  const status = server.readiness?.status ?? "untested";
+  if (status === "error" || server.lastError) {
     return <CircleAlert className="text-destructive size-3.5 shrink-0" />;
   }
-  if (server.connected) {
-    return <CircleDot className="text-emerald-500 size-3.5 shrink-0" />;
+  if (status === "ready" || server.connected) {
+    return <CircleDot className="size-3.5 shrink-0 text-emerald-500" />;
+  }
+  if (status === "stale") {
+    return <CircleDot className="size-3.5 shrink-0 text-amber-400" />;
   }
   return <CircleDot className="text-muted-foreground size-3.5 shrink-0" />;
+}
+
+function _emptyReadiness(): McpServerReadiness {
+  return { status: "untested", toolCount: null, tools: [] };
+}
+
+function _readinessDetail(
+  readiness: McpServerReadiness,
+  liveToolsLoaded: boolean
+): string {
+  const parts: string[] = [];
+  if (readiness.toolCount !== null) {
+    parts.push(
+      `${readiness.toolCount} tool${readiness.toolCount === 1 ? "" : "s"}`
+    );
+  }
+  if (readiness.testedAt) {
+    parts.push(
+      `${liveToolsLoaded ? "tested" : "last tested"} ${format(readiness.testedAt)}`
+    );
+  }
+  return parts.join(" · ") || "Run Test to discover tools";
+}
+
+function _joinOrNone(values: string[]): string {
+  return values.length > 0 ? values.join(", ") : "none";
+}
+
+function _sidebarReadiness(server: McpServerView): string {
+  const readiness = server.readiness ?? _emptyReadiness();
+  const label = getMcpReadinessLabel(readiness);
+  if (readiness.toolCount === null) {
+    return label;
+  }
+  return `${label} · ${readiness.toolCount} tool${
+    readiness.toolCount === 1 ? "" : "s"
+  }`;
 }

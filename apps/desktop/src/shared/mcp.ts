@@ -13,11 +13,34 @@ export interface McpServerDraft {
   headers?: Record<string, string>;
 }
 
+export type McpReadinessStatus = "untested" | "ready" | "error" | "stale";
+
+export interface McpToolSummary {
+  toolName: string;
+  normalizedToolName: string;
+  directName: string;
+  description: string;
+  inputSchema: JSONSchema;
+  requiredFields: string[];
+  topLevelProperties: string[];
+  available: boolean;
+  disabledReason?: string;
+}
+
+export interface McpServerReadiness {
+  status: McpReadinessStatus;
+  testedAt?: number;
+  toolCount: number | null;
+  lastError?: string;
+  tools: McpToolSummary[];
+}
+
 export interface McpServerConfig extends McpServerDraft {
   id: string;
   serverName: string;
   createdAt: number;
   updatedAt: number;
+  readiness?: McpServerReadiness;
 }
 
 export interface McpServerView extends McpServerConfig {
@@ -35,6 +58,8 @@ export interface McpToolView {
   directName: string;
   description: string;
   inputSchema: JSONSchema;
+  requiredFields: string[];
+  topLevelProperties: string[];
   available: boolean;
   disabledReason?: string;
 }
@@ -72,4 +97,19 @@ export function buildMcpToolName({
   toolName: string;
 }): string {
   return `mcp__${serverName}__${toolName}`;
+}
+
+export function getMcpReadinessLabel(
+  readiness: McpServerReadiness | undefined
+): string {
+  if (!readiness || readiness.status === "untested") {
+    return "Untested";
+  }
+  if (readiness.status === "ready") {
+    return "Ready";
+  }
+  if (readiness.status === "stale") {
+    return "Stale";
+  }
+  return "Error";
 }
