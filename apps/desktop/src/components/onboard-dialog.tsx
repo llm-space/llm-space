@@ -336,7 +336,7 @@ function _DetectedSetupState({
       <div>
         <div className="text-sm font-medium">Provider detected</div>
         <div className="text-xs text-white/65">
-          Add one detected provider to make the example thread runnable.
+          Add one detected provider to get started.
         </div>
       </div>
       <div className="flex flex-col gap-2">
