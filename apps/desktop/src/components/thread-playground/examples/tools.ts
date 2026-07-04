@@ -263,7 +263,7 @@ const GLOB_TOOL: FunctionTool = {
 const PRESENT_FILES_TOOL: FunctionTool = {
   name: "present_files",
   description:
-    "Presents one or more files to the user as rich visual cards in the chat, typically with download links. Use when delivering final artifacts, reports, charts, or other outputs the user should see or download. Not for your own inspection — use read_file instead.",
+    'You should always use this tool to present the artifacts and foundings after each creation or edit. Other wise the user won\'t be able to "see" them. Use when delivering final artifacts, reports, charts, or other outputs the user should see or download.',
   strict: true,
   parameters: {
     type: "object",
