@@ -61,7 +61,7 @@ function _TokenUsageSummary({
         className={cn(
           "text-muted-foreground bg-foreground/4 flex w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-[0.625rem]",
           variant === "header" &&
-            "min-h-7 max-w-80 rounded px-1.5 py-1 text-[0.5625rem] leading-3",
+            "min-h-6 max-w-80 rounded px-1.5 py-1 text-[0.5625rem] leading-3",
           className
         )}
       >

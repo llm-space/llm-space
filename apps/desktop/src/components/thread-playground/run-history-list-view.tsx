@@ -37,7 +37,6 @@ import {
 import { RunTraceView } from "./run-trace-view";
 import { useThreadStore, useThreadStoreActions } from "./stores";
 import type { EvaluationRecord, RunSnapshot } from "./stores";
-import { formatCompactUsage, usageForRun } from "./token-usage";
 
 const VERDICT_LABELS: Record<EvaluationRecord["verdict"], string> = {
   leftBetter: "Run A Better",
