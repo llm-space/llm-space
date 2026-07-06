@@ -132,18 +132,18 @@ function _ToolCallListItem({
       </div>
       <hr />
       <div className="flex w-full flex-col gap-1">
-        <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs font-medium">
-          <Marker role="status">
-            <MarkerIcon>
+        <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
+          <Marker role="status" className="gap-1">
+            <MarkerIcon className="size-3">
               {toolCallStatus === "needsResponse" && <Clock4 />}
               {toolCallStatus === "ready" && (
-                <CheckCircle2 className="text-green-500" />
+                <CheckCircle2 className="size-3 text-green-500" />
               )}
               {toolCallStatus === "error" && (
-                <AlertCircleIcon className="text-red-500" />
+                <AlertCircleIcon className="size-3 text-red-500" />
               )}
             </MarkerIcon>
-            <MarkerContent>
+            <MarkerContent className="text-xs">
               Response ·{" "}
               {toolCallStatus === "needsResponse"
                 ? isError

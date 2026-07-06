@@ -265,20 +265,20 @@ function _ToolStepContinuation({
     : missingLabel;
 
   return (
-    <div className="bg-foreground/4 flex min-w-0 items-center justify-between gap-3 rounded-md px-3 py-2">
+    <div className="bg-foreground/4 flex min-w-0 items-center justify-between gap-3 rounded-md px-3 py-1">
       <Marker role="status" className="min-w-0">
-        <MarkerIcon>
+        <MarkerIcon className="size-3">
           {summary.canContinue ? (
             summary.errorCount > 0 ? (
-              <AlertCircleIcon className="text-red-500" />
+              <AlertCircleIcon className="size-3 text-red-500" />
             ) : (
-              <CheckCircle2 className="text-green-500" />
+              <CheckCircle2 className="size-3 text-green-500" />
             )
           ) : (
             <Clock4 />
           )}
         </MarkerIcon>
-        <MarkerContent className="truncate">
+        <MarkerContent className="truncate text-xs">
           {summary.canContinue ? "Tool Results Ready" : "Waiting for Tools"} ·{" "}
           {statusLabel}
         </MarkerContent>
@@ -296,7 +296,7 @@ function _ToolStepContinuation({
         onClick={onContinue}
       >
         <PlayCircleIcon />
-        Continue
+        Run
       </Button>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   uuid,
   type AssistantMessage,
   type Message,
+  type ModelConfig,
   type ModelUsage,
   type Thread,
   type ToolCall,
@@ -65,6 +66,7 @@ interface ParsedLangfuseFile {
 const TRACE_ROOT = path.join(getLlmSpaceRoot(), "traces", "projects");
 const TRACE_PROJECT_ID_PREFIX = "proj";
 const TRACE_KEY_MAX_SLUG = 48;
+const CODEX_PROVIDER_ID = "openai-codex";
 
 /**
  * Owns trace-project storage under `LLM_SPACE_ROOT/traces`.
@@ -398,10 +400,13 @@ export class TraceManager {
         "utf8"
       );
     }
+    const raw = await this._readRawTrace(projectId, traceKey);
     const thread = JSON.parse(
       await fs.readFile(workbenchPath, "utf8")
     ) as Thread;
-    const normalizedThread = _normalizeExistingWorkbenchThread(thread);
+    const normalizedThread = _normalizeExistingWorkbenchThread(
+      _threadWithImportedModel(thread, raw.rows)
+    );
     if (normalizedThread !== thread) {
       await fs.writeFile(
         workbenchPath,
@@ -606,9 +611,28 @@ export class TraceManager {
     projectId: string,
     traceKey: string
   ): Promise<TraceRecord> {
-    return JSON.parse(
+    const trace = JSON.parse(
       await fs.readFile(this._tracePath(projectId, traceKey), "utf8")
     ) as TraceRecord;
+    if (trace.model) {
+      return trace;
+    }
+    try {
+      const raw = await this._readRawTrace(projectId, traceKey);
+      const model = _traceModelIdFromRows(raw.rows);
+      if (!model) {
+        return trace;
+      }
+      const nextTrace = { ...trace, model, updatedAt: Date.now() };
+      await fs.writeFile(
+        this._tracePath(projectId, traceKey),
+        JSON.stringify(nextTrace, null, 2),
+        "utf8"
+      );
+      return nextTrace;
+    } catch {
+      return trace;
+    }
   }
 
   private async _readRawTrace(
@@ -862,6 +886,28 @@ function _threadWithTitle(thread: Thread, title: string): Thread {
   };
 }
 
+function _threadWithImportedModel(
+  thread: Thread,
+  rows: LangfuseObservation[]
+): Thread {
+  if (thread.model) {
+    return thread;
+  }
+  const model = _modelConfigFromRows(rows);
+  if (!model) {
+    return thread;
+  }
+  return {
+    ...thread,
+    model,
+    runHistory: thread.runHistory?.map((run) =>
+      run.thread.model
+        ? run
+        : { ...run, thread: { ...run.thread, model } }
+    ),
+  };
+}
+
 function _normalizeExistingWorkbenchThread(thread: Thread): Thread {
   const normalized = _normalizeThreadMessages(thread);
   let changed = normalized.changed;
@@ -977,6 +1023,7 @@ function _createTraceRecord({
   const startedAt = _minDate(ordered.map(_rowStartTime));
   const endedAt = _maxDate(ordered.map(_rowEndTime));
   const usage = _aggregateRowsUsage(ordered);
+  const modelId = _traceModelIdFromRows(rows);
   return {
     id: traceId,
     key,
@@ -990,19 +1037,7 @@ function _createTraceRecord({
     ...(startedAt && endedAt
       ? { latencyMs: Math.max(0, Date.parse(endedAt) - Date.parse(startedAt)) }
       : {}),
-    ...(_firstString(
-      ...rows.map((row) => row.model),
-      ...rows.map((row) => row.providedModelName),
-      ...rows.map((row) => row.modelId)
-    )
-      ? {
-          model: _firstString(
-            ...rows.map((row) => row.model),
-            ...rows.map((row) => row.providedModelName),
-            ...rows.map((row) => row.modelId)
-          ),
-        }
-      : {}),
+    ...(modelId ? { model: modelId } : {}),
     status: rows.some(_rowIsError) ? "error" : "ok",
     ...(usage ? { usage } : {}),
     source: {
@@ -1101,8 +1136,10 @@ function _createWorkbench(
     });
   }
 
+  const model = _modelConfigFromRows(rows);
   const thread: Thread = {
     title: trace.title,
+    ...(model ? { model } : {}),
     context: {
       systemPrompt: systemParts.join("\n\n") || "",
       messages,
@@ -1114,6 +1151,7 @@ function _createWorkbench(
       id: `imported-${_shortHash(trace.source.traceId)}`,
       thread: {
         title: thread.title,
+        ...(thread.model ? { model: thread.model } : {}),
         context: thread.context,
       },
       ...(usage ? { usage } : {}),
@@ -1388,6 +1426,50 @@ function _rowStartTime(row: LangfuseObservation): string | undefined {
 
 function _rowEndTime(row: LangfuseObservation): string | undefined {
   return _firstString(row.endTime, row.end_time, row.updatedAt);
+}
+
+function _modelConfigFromRows(rows: LangfuseObservation[]): ModelConfig | null {
+  const codexModel = _codexModelFromRows(rows);
+  return codexModel ? { provider: CODEX_PROVIDER_ID, id: codexModel } : null;
+}
+
+function _traceModelIdFromRows(
+  rows: LangfuseObservation[]
+): string | undefined {
+  return (
+    _codexModelFromRows(rows) ??
+    _firstString(
+      ...rows.map((row) => row.model),
+      ...rows.map((row) => row.providedModelName),
+      ...rows.map((row) => row.modelId)
+    )
+  );
+}
+
+function _codexModelFromRows(
+  rows: LangfuseObservation[]
+): string | undefined {
+  const rootRows = rows.filter(_isRootObservation);
+  return _firstString(
+    ...rootRows.map(_codexModelFromRowMetadata),
+    ...rows.map(_codexModelFromRowMetadata)
+  );
+}
+
+function _isRootObservation(row: LangfuseObservation): boolean {
+  return !_firstString(row.parentObservationId, row.parent_observation_id);
+}
+
+function _codexModelFromRowMetadata(
+  row: LangfuseObservation
+): string | undefined {
+  const metadata = _asRecord(_jsonDecodedValue(row.metadata));
+  if (!metadata) {
+    return undefined;
+  }
+  // Codex traces store the runnable model in the root observation metadata.
+  const codex = _asRecord(_jsonDecodedValue(metadata.codex));
+  return _firstString(codex?.model, metadata["codex.model"]);
 }
 
 function _minDate(values: (string | undefined)[]): string | undefined {

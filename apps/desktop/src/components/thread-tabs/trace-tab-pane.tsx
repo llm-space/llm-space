@@ -169,16 +169,16 @@ function _TraceHeaderDetails({ trace }: { trace: TraceRecord }) {
     trace.source.mode === "manual" ? "Manual Import" : "Connected";
   return (
     <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[0.6875rem]">
-      <span className="shrink-0">Langfuse</span>
+      <span className="border-border bg-muted/60 text-foreground max-w-72 min-w-0 truncate rounded-full border px-2 py-0.5 font-mono text-[0.625rem]">
+        Langfuse
+      </span>
       <span className="shrink-0">·</span>
-      <span className="shrink-0">{sourceLabel}</span>
-      <span className="shrink-0">·</span>
-      <span className="hidden shrink-0 sm:inline">
-        imported {new Date(trace.importedAt).toLocaleString()}
+      <span className="border-border bg-muted/60 text-foreground max-w-72 min-w-0 truncate rounded-full border px-2 py-0.5 font-mono text-[0.625rem]">
+        {new Date(trace.updatedAt).toLocaleString()}
       </span>
       <span className="hidden shrink-0 sm:inline">·</span>
       <span
-        className="border-border bg-muted/60 text-foreground min-w-0 max-w-72 truncate rounded-full border px-2 py-0.5 font-mono text-[0.625rem]"
+        className="border-border bg-muted/60 text-foreground max-w-72 min-w-0 truncate rounded-full border px-2 py-0.5 font-mono text-[0.625rem]"
         title={traceId}
       >
         {traceId}
