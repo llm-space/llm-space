@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckIcon,
+  ChevronDownIcon,
   DatabaseIcon,
   FolderPlusIcon,
   ImportIcon,
@@ -102,7 +103,7 @@ const DEFAULT_TRACE_SEARCH_FORM: TraceSearchFormState = {
   fromTimestamp: "",
   toTimestamp: "",
   orderBy: "timestamp.desc",
-  limit: "50",
+  limit: "25",
 };
 
 const TRACE_SEARCH_ORDER_OPTIONS = [
@@ -957,6 +958,7 @@ function _SyncProjectDialog({
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searching, setSearching] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const selectedIds = useMemo(() => [...selected], [selected]);
   const searchFilters = useMemo(
     () => _traceSearchFiltersFromForm(form),
@@ -968,6 +970,7 @@ function _SyncProjectDialog({
       setForm(DEFAULT_TRACE_SEARCH_FORM);
       setRemoteTraces([]);
       setSelected(new Set());
+      setAdvancedFiltersOpen(false);
     }
   }, [open, project?.id]);
 
@@ -1010,6 +1013,10 @@ function _SyncProjectDialog({
       }
       return next;
     });
+  }, []);
+
+  const toggleAdvancedFilters = useCallback(() => {
+    setAdvancedFiltersOpen((current) => !current);
   }, []);
 
   const syncSelected = useCallback(() => {
@@ -1118,101 +1125,119 @@ function _SyncProjectDialog({
                     Search
                   </Button>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <_Field label="Trace ID">
-                    <Input
-                      placeholder="exact trace id"
-                      value={form.traceId}
-                      onChange={(event) =>
-                        setFormValue("traceId", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="Name">
-                    <Input
-                      placeholder="trace name"
-                      value={form.name}
-                      onChange={(event) =>
-                        setFormValue("name", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="User ID">
-                    <Input
-                      placeholder="user id"
-                      value={form.userId}
-                      onChange={(event) =>
-                        setFormValue("userId", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="Session ID">
-                    <Input
-                      placeholder="session id"
-                      value={form.sessionId}
-                      onChange={(event) =>
-                        setFormValue("sessionId", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="Tags">
-                    <Input
-                      placeholder="tag-a, tag-b"
-                      value={form.tags}
-                      onChange={(event) =>
-                        setFormValue("tags", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="Environment">
-                    <Input
-                      placeholder="production"
-                      value={form.environment}
-                      onChange={(event) =>
-                        setFormValue("environment", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="Version">
-                    <Input
-                      placeholder="version"
-                      value={form.version}
-                      onChange={(event) =>
-                        setFormValue("version", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <_Field label="Release">
-                    <Input
-                      placeholder="release"
-                      value={form.release}
-                      onChange={(event) =>
-                        setFormValue("release", event.target.value)
-                      }
-                    />
-                  </_Field>
-                  <div className="grid grid-cols-2 gap-3 lg:col-span-1">
-                    <_Field label="From">
+                {advancedFiltersOpen && (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <_Field label="Trace ID">
                       <Input
-                        type="datetime-local"
-                        value={form.fromTimestamp}
+                        placeholder="exact trace id"
+                        value={form.traceId}
                         onChange={(event) =>
-                          setFormValue("fromTimestamp", event.target.value)
+                          setFormValue("traceId", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="To">
+                    <_Field label="Name">
                       <Input
-                        type="datetime-local"
-                        value={form.toTimestamp}
+                        placeholder="trace name"
+                        value={form.name}
                         onChange={(event) =>
-                          setFormValue("toTimestamp", event.target.value)
+                          setFormValue("name", event.target.value)
+                        }
+                      />
+                    </_Field>
+                    <_Field label="User ID">
+                      <Input
+                        placeholder="user id"
+                        value={form.userId}
+                        onChange={(event) =>
+                          setFormValue("userId", event.target.value)
+                        }
+                      />
+                    </_Field>
+                    <_Field label="Session ID">
+                      <Input
+                        placeholder="session id"
+                        value={form.sessionId}
+                        onChange={(event) =>
+                          setFormValue("sessionId", event.target.value)
+                        }
+                      />
+                    </_Field>
+                    <_Field label="Tags">
+                      <Input
+                        placeholder="tag-a, tag-b"
+                        value={form.tags}
+                        onChange={(event) =>
+                          setFormValue("tags", event.target.value)
+                        }
+                      />
+                    </_Field>
+                    <_Field label="Environment">
+                      <Input
+                        placeholder="production"
+                        value={form.environment}
+                        onChange={(event) =>
+                          setFormValue("environment", event.target.value)
+                        }
+                      />
+                    </_Field>
+                    <_Field label="Version">
+                      <Input
+                        placeholder="version"
+                        value={form.version}
+                        onChange={(event) =>
+                          setFormValue("version", event.target.value)
+                        }
+                      />
+                    </_Field>
+                    <_Field label="Release">
+                      <Input
+                        placeholder="release"
+                        value={form.release}
+                        onChange={(event) =>
+                          setFormValue("release", event.target.value)
                         }
                       />
                     </_Field>
                   </div>
+                )}
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto]">
+                  <_Field label="From">
+                    <Input
+                      type="datetime-local"
+                      value={form.fromTimestamp}
+                      onChange={(event) =>
+                        setFormValue("fromTimestamp", event.target.value)
+                      }
+                    />
+                  </_Field>
+                  <_Field label="To">
+                    <Input
+                      type="datetime-local"
+                      value={form.toTimestamp}
+                      onChange={(event) =>
+                        setFormValue("toTimestamp", event.target.value)
+                      }
+                    />
+                  </_Field>
+                  <div className="flex items-end">
+                    <Button
+                      className="mt-5 min-w-28 justify-between"
+                      variant="link"
+                      aria-expanded={advancedFiltersOpen}
+                      onClick={toggleAdvancedFilters}
+                    >
+                      <ChevronDownIcon
+                        className={cn(
+                          "size-3.5 transition-transform",
+                          advancedFiltersOpen && "rotate-180"
+                        )}
+                      />
+                      {advancedFiltersOpen ? "Hide Filters" : "More Filters"}
+                    </Button>
+                  </div>
                 </div>
-                <div className="border-border/70 max-h-80 min-h-60 overflow-auto rounded-md border bg-[#141414]">
+                <div className="border-border/70 max-h-80 min-h-65 overflow-auto rounded-md border bg-[#141414]">
                   {remoteTraces.length === 0 ? (
                     <div className="flex h-60 flex-col items-center justify-center px-6 text-center">
                       <SearchIcon className="text-muted-foreground/70 mb-2 size-5" />
