@@ -18,7 +18,7 @@ function _ToolCallInputView({ input }: { input: ToolCallInput }) {
   const args = input.arguments as Record<string, unknown>;
   const entries = Object.entries(args);
   return (
-    <div className="block w-full overflow-x-auto font-mono text-sm select-auto">
+    <div className="block w-full overflow-x-hidden font-mono text-sm select-auto">
       <div>
         <span className="text-primary">{input.name}</span>
         <span className="text-muted-foreground">(</span>
@@ -30,7 +30,6 @@ function _ToolCallInputView({ input }: { input: ToolCallInput }) {
         <ToolCallArgumentRow
           key={key}
           argumentKey={key}
-          params={args}
           value={value}
           trailingComma={index < entries.length - 1}
         />
@@ -47,19 +46,16 @@ export const ToolCallInputView = memo(_ToolCallInputView);
 
 function _ToolCallArgumentRow({
   argumentKey,
-  params,
   value,
   trailingComma,
 }: {
   argumentKey: string;
-  params: Record<string, unknown>;
   value: unknown;
   trailingComma: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const valueText = formatJson(value);
-  const displayValue = indentMultilineValue(valueText);
   const copyText = useCallback(async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -80,9 +76,17 @@ function _ToolCallArgumentRow({
   const openPreview = useCallback(() => {
     setPreviewOpen(true);
   }, []);
+  const handleContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(true);
+  }, []);
 
   return (
-    <div className="group/argument relative min-w-max py-0.5 pl-1.5">
+    <div
+      className="group/argument relative flex w-full min-w-0 items-baseline py-0.5 pl-1.5"
+      onContextMenu={handleContextMenu}
+    >
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -117,12 +121,12 @@ function _ToolCallArgumentRow({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      <span className="whitespace-pre">
-        {"  "}
+      <span className="flex min-w-0 flex-1 items-baseline whitespace-pre">
+        <span className="shrink-0">{"  "}</span>
         <span className="text-foreground">{argumentKey}</span>
-        <span className="text-muted-foreground">: </span>
-        {displayValue}
-        {trailingComma ? "," : ""}
+        <span className="text-muted-foreground shrink-0">: </span>
+        <span className="truncate">{valueText}</span>
+        <span className="shrink-0">{trailingComma ? "," : ""}</span>
       </span>
       {typeof value === "string" ? (
         <TextPreviewDialog
@@ -139,8 +143,4 @@ const ToolCallArgumentRow = memo(_ToolCallArgumentRow);
 
 function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2) ?? String(value);
-}
-
-function indentMultilineValue(value: string): string {
-  return value.split("\n").join("\n  ");
 }

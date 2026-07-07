@@ -175,7 +175,7 @@ const PlainTextCodeEditor = forwardRef<
       )}
     >
       <Textarea
-        className="my-0 min-h-0! w-full shrink-0 resize-none border-none bg-transparent! px-1 pt-2 pb-0 font-mono text-sm outline-none focus-visible:border-transparent focus-visible:ring-0"
+        className="text-foreground/80 my-0 min-h-0! w-full shrink-0 resize-none border-none bg-transparent! px-2 pt-2 pb-0 font-mono text-sm! outline-none focus-visible:border-transparent focus-visible:ring-0"
         autoFocus={autoFocus}
         placeholder={placeholder}
         readOnly={readonly}

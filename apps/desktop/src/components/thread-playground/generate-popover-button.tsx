@@ -79,7 +79,7 @@ function _GeneratePopoverButton({
         )}
       >
         <Textarea
-          className="min-h-0 flex-1 border-0! bg-transparent! text-sm leading-relaxed shadow-none focus-visible:ring-0 md:text-base"
+          className="min-h-0 flex-1 border-0! bg-transparent! font-mono text-sm leading-relaxed shadow-none focus-visible:ring-0 md:text-base"
           value={prompt}
           placeholder={placeholder}
           autoFocus
