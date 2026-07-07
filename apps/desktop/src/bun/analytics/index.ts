@@ -133,12 +133,19 @@ class Analytics {
   }
 
   private _saveConfig(): void {
-    const config: PersistedAnalytics = {
+    this._writeConfig({
       anonymousId: this._anonymousId,
       enabled: this._enabled,
-    };
+    });
+  }
+
+  private _writeConfig(config: PersistedAnalytics): void {
     mkdirSync(getSettingsDir(), { recursive: true });
-    writeFileSync(this._configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    writeFileSync(
+      this._configPath,
+      `${JSON.stringify(config, null, 2)}\n`,
+      "utf8"
+    );
   }
 
   /**
@@ -176,8 +183,7 @@ class Analytics {
 
     const seeded: PersistedAnalytics = { anonymousId: randomUUID(), enabled };
     try {
-      mkdirSync(getSettingsDir(), { recursive: true });
-      writeFileSync(this._configPath, `${JSON.stringify(seeded, null, 2)}\n`, "utf8");
+      this._writeConfig(seeded);
     } catch {
       // Non-fatal: we'll just mint a fresh id again next launch.
     }

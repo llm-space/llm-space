@@ -51,20 +51,9 @@ export async function runStreamThread(
     });
   } finally {
     activeStreams.delete(streamId);
-    // Anonymous shape/outcome metadata only - never any message content. The
-    // provider/model pair is reported verbatim only when it comes from a
-    // shipped builtin catalog; user-typed ids collapse to "custom" so a
-    // private provider or model name can never leave the machine.
+    // Anonymous shape/outcome metadata only - never any message content.
     analytics.capture("thread_run", {
-      provider: modelManager.isBuiltin(request.model.provider)
-        ? request.model.provider
-        : "custom",
-      model: modelManager.isBuiltinCatalogModel(
-        request.model.provider,
-        request.model.id
-      )
-        ? request.model.id
-        : "custom",
+      ..._scrubModelForTelemetry(request.model),
       outcome,
       durationMs: Date.now() - startedAt,
       messageCount: request.context.messages.length,
@@ -72,6 +61,25 @@ export async function runStreamThread(
       hasSystemPrompt: Boolean(request.context.systemPrompt),
     });
   }
+}
+
+/**
+ * Collapse a run's model selector for telemetry. Only ids from a shipped
+ * builtin catalog are reported verbatim; user-typed providers and models
+ * become the literal "custom" so a private name never leaves the machine.
+ */
+function _scrubModelForTelemetry(model: { provider: string; id: string }): {
+  provider: string;
+  model: string;
+} {
+  return {
+    provider: modelManager.isBuiltin(model.provider)
+      ? model.provider
+      : "custom",
+    model: modelManager.isBuiltinCatalogModel(model.provider, model.id)
+      ? model.id
+      : "custom",
+  };
 }
 
 /** Abort an in-flight stream started by {@link runStreamThread}. */

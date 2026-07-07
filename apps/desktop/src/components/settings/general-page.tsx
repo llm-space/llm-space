@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 
-import {
-  getAnalyticsSettings,
-  setAnalyticsSettings,
-} from "@/client/analytics";
+import { getAnalyticsSettings, setAnalyticsSettings } from "@/client/analytics";
 import {
   isModelAvailable,
   useDefaultModel,
@@ -160,10 +163,9 @@ function AnalyticsToggle() {
   }, []);
 
   const handleChange = useCallback(async (next: boolean) => {
-    setEnabled(next); // Optimistic; reconcile with the persisted value below.
+    setEnabled(next); // Optimistic; the RPC echoes the input, so no reconcile.
     try {
-      const saved = await setAnalyticsSettings(next);
-      setEnabled(saved.enabled);
+      await setAnalyticsSettings(next);
     } catch (error) {
       setEnabled(!next);
       toast.error("Failed to update analytics setting", {
@@ -287,8 +289,8 @@ export function GeneralPage() {
           <span className="flex flex-col gap-0.5">
             Share anonymous usage analytics
             <span className="text-muted-foreground text-xs">
-              Helps improve the app. Only anonymous actions are sent - never your
-              prompts, messages, or API keys.
+              Helps improve the app. Only anonymous actions are sent - never
+              your prompts, messages, or API keys.
             </span>
           </span>
         }

@@ -13,9 +13,9 @@ export const POSTHOG_HOST = "https://eu.i.posthog.com";
 
 /**
  * The project API key. This is a *write-only, client-side* PostHog key — safe
- * to ship in the app — so it's baked in as the default and overridable via env
- * (forks/dev builds point at their own project). Set it to `""` here, or set
- * `LLM_SPACE_ANALYTICS_DISABLED=1`, to disable analytics entirely.
+ * to ship in the app. `LLM_SPACE_POSTHOG_KEY` repoints a fork or dev build at
+ * its own project; to turn telemetry off, use `LLM_SPACE_ANALYTICS_DISABLED`
+ * (below) rather than blanking the key.
  */
 const DEFAULT_POSTHOG_KEY = "phc_t8sHZoJnt85kTQWtXjPmBHdha5sEvvcRFogKJiN9ihDY";
 

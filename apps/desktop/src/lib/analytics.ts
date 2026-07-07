@@ -1,7 +1,4 @@
-import type {
-  AnalyticsEventMap,
-  AnalyticsEventName,
-} from "@/shared/analytics";
+import type { AnalyticsEvent } from "@/shared/analytics";
 
 import { electrobun } from "./electrobun";
 
@@ -13,14 +10,9 @@ import { electrobun } from "./electrobun";
  * message. Safe to call before RPC is ready and can never throw into UI code.
  * See `shared/analytics.ts` for the privacy contract.
  */
-export function track<K extends AnalyticsEventName>(
-  event: K,
-  properties: AnalyticsEventMap[K]
-): void {
+export function track(event: AnalyticsEvent): void {
   try {
-    // `send` is fire-and-forget; the union member is reconstructed on the bun
-    // side, so the `event`/`properties` pairing is asserted at this boundary.
-    electrobun.rpc?.send.captureAnalyticsEvent({ event, properties } as never);
+    electrobun.rpc?.send.captureAnalyticsEvent(event);
   } catch {
     // Telemetry must never break the UI.
   }

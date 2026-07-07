@@ -178,6 +178,10 @@ function PageInner() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
+  // One event per open transition, no matter which command opened Settings.
+  useEffect(() => {
+    if (settingsOpen) track({ event: "settings_opened", properties: {} });
+  }, [settingsOpen]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
@@ -239,12 +243,10 @@ function PageInner() {
     openSettings: ({ tab }) => {
       if (tab) setSettingsTab(tab);
       setSettingsOpen(true);
-      track("settings_opened", {});
     },
     openModelSettings: () => {
       setSettingsTab("models");
       setSettingsOpen(true);
-      track("settings_opened", {});
     },
     openCommandPalette: () => setCommandPaletteOpen(true),
     openOnboard: () => setOnboardOpen(true),

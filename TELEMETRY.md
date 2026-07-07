@@ -53,9 +53,8 @@ Any of the following, in order of convenience:
    Persisted immediately; the client is torn down and nothing further is sent.
 2. Set the environment variable `LLM_SPACE_ANALYTICS_DISABLED=1` - a hard
    override that wins over everything else.
-3. Set `LLM_SPACE_POSTHOG_KEY=""` (empty), or building from source, blank out
-   `DEFAULT_POSTHOG_KEY` in `apps/desktop/src/bun/analytics/config.ts` - with
-   no key, no client is ever created.
+3. Set `LLM_SPACE_POSTHOG_KEY=""` (empty) - with no key, no client is ever
+   created.
 
 ## For forks
 
