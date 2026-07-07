@@ -169,17 +169,9 @@ export function ThreadTabs({
   }, [tabs.length, handleTabsHeaderDoubleClick]);
 
   const handleContextMenu = useCallback((event: MouseEvent<HTMLDivElement>) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      setContextMenuId(null);
-      event.preventDefault();
-      return;
-    }
-
-    const tab = target.closest<HTMLElement>(".chrome-tab[data-tab-id]");
-    const path = tab?.getAttribute("data-tab-id") ?? null;
-    setContextMenuId(path);
-    if (path === null) {
+    const id = _tabIdFromEventTarget(event.target);
+    setContextMenuId(id);
+    if (id === null) {
       event.preventDefault();
     }
   }, []);
@@ -190,24 +182,32 @@ export function ThreadTabs({
   // The chrome-tabs lib activates a tab on ANY mousedown, so a middle-click
   // close would flash the tab active before closing it. Stop the middle-button
   // mousedown during capture — before it reaches the lib's tab-level listener —
-  // and close on auxclick, which the browser still dispatches independently of
-  // the swallowed mousedown. preventDefault also disables middle-click
-  // autoscroll on Windows/Linux.
+  // and close when the matching middle mouseup lands on the same tab. mouseup
+  // is used instead of auxclick because the system WKWebView (the non-CEF
+  // renderer) only dispatches auxclick on WebKit ≥ 17.4. A middle-click chorded
+  // into a left-button drag (buttons & 1) is ignored entirely: closing a tab
+  // mid-drag would force the lib to end the drag against a stale tab list.
+  // preventDefault also disables middle-click autoscroll on Windows/Linux.
+  const middlePressedTabIdRef = useRef<string | null>(null);
   const handleMouseDownCapture = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
-      if (event.button !== 1) return;
-      if (_tabIdFromEventTarget(event.target) === null) return;
+      if (event.button !== 1 || (event.buttons & 1) !== 0) return;
+      const id = _tabIdFromEventTarget(event.target);
+      if (id === null) return;
+      middlePressedTabIdRef.current = id;
       event.preventDefault();
       event.stopPropagation();
     },
     []
   );
 
-  const handleAuxClick = useCallback(
+  const handleMouseUp = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       if (event.button !== 1) return;
+      const pressed = middlePressedTabIdRef.current;
+      middlePressedTabIdRef.current = null;
       const id = _tabIdFromEventTarget(event.target);
-      if (id !== null) close(id);
+      if (id !== null && id === pressed) close(id);
     },
     [close]
   );
@@ -223,7 +223,7 @@ export function ThreadTabs({
             className="bg-tabs relative flex w-full"
             onContextMenu={handleContextMenu}
             onMouseDownCapture={handleMouseDownCapture}
-            onAuxClick={handleAuxClick}
+            onMouseUp={handleMouseUp}
           >
             <div
               className={cn(

@@ -337,23 +337,24 @@ export function useThreadTabs(): ThreadTabs {
     setActiveId(id);
   }, []);
 
-  const activateSibling = useCallback((offset: number) => {
+  const activateSibling = useCallback((offset: 1 | -1) => {
     setActiveId((current) => {
       const list = tabsRef.current;
       if (list.length === 0) return current;
       const index = list.findIndex((tab) => tab.id === current);
+      // No resolvable active tab: enter the cycle from the end being stepped
+      // into, so "previous" still moves leftwards (to the last tab).
       const next =
         index === -1
-          ? list[0]
+          ? offset === 1
+            ? list[0]
+            : list[list.length - 1]
           : list[(index + offset + list.length) % list.length];
-      return next?.id ?? current;
+      return next.id;
     });
   }, []);
 
-  const activateNext = useCallback(
-    () => activateSibling(1),
-    [activateSibling]
-  );
+  const activateNext = useCallback(() => activateSibling(1), [activateSibling]);
 
   const activatePrevious = useCallback(
     () => activateSibling(-1),
