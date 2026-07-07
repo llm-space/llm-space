@@ -6,8 +6,9 @@
     <title>LLM Space</title>
     <script>
       // Apply the persisted appearance before first paint to avoid a flash of
-      // the wrong theme/accent. Mirrors the logic in theme-provider.tsx — keep
-      // the storage keys ("llm-space-theme", "llm-space-primary") in sync.
+      // the wrong theme/accent (and of motion). Mirrors the logic in
+      // theme-provider.tsx — keep the storage keys ("llm-space-theme",
+      // "llm-space-primary", "llm-space-rendering-fidelity") in sync.
       (function () {
         try {
           var root = document.documentElement;
@@ -17,6 +18,12 @@
             (theme === "system" &&
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           root.classList.toggle("dark", dark);
+
+          // "Lite" fidelity disables all transitions/animations (see globals.css).
+          root.classList.toggle(
+            "lite",
+            localStorage.getItem("llm-space-rendering-fidelity") === "lite"
+          );
 
           var primary = localStorage.getItem("llm-space-primary");
           if (primary && /^#[0-9a-fA-F]{6}$/.test(primary)) {

@@ -121,6 +121,15 @@ function _applyTheme(resolved: ResolvedTheme) {
   document.documentElement.classList.toggle("dark", resolved === "dark");
 }
 
+/**
+ * Toggle the `.lite` class on `<html>`. "Lite" fidelity disables all
+ * transitions/animations (see the `.lite` rule in `globals.css`) alongside the
+ * plain-text message list.
+ */
+function _applyFidelity(fidelity: RenderingFidelity) {
+  document.documentElement.classList.toggle("lite", fidelity === "lite");
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(_readStoredTheme);
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
@@ -165,6 +174,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     _applyPrimary(primaryColor);
   }, [primaryColor]);
+
+  // Reflect the fidelity onto `<html>` so the global `.lite` CSS can disable
+  // motion. The anti-FOUC bootstrap in `mainview/index.html` applies it before
+  // React mounts — keep the storage key in sync.
+  useEffect(() => {
+    _applyFidelity(fidelity);
+  }, [fidelity]);
 
   // Apply the resolved theme to the document, and — while following the system
   // — re-resolve when the OS color scheme flips.

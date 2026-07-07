@@ -160,7 +160,7 @@ function _MessageListItem({
           </Button>
         </Tooltip>
       </div>
-      {streaming && (
+      {streaming && fidelity !== "lite" && (
         <ShineBorder
           shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]}
           duration={8}

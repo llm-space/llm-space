@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { Tooltip } from "../tooltip";
+import { Textarea } from "../ui/textarea";
 
 import type { CodeEditorHandle, CodeEditorProps } from "./editor";
 
@@ -51,9 +52,7 @@ function CodeEditorLoadingFallback({
       )}
     >
       <pre className="overflow-auto px-2 py-1 font-mono text-sm break-words whitespace-pre-wrap">
-        {value || (
-          <span className="text-muted-foreground">{placeholder}</span>
-        )}
+        {value || <span className="text-muted-foreground">{placeholder}</span>}
       </pre>
     </div>
   );
@@ -105,109 +104,113 @@ class CodeEditorErrorBoundary extends Component<
 const PlainTextCodeEditor = forwardRef<
   CodeEditorHandle,
   PlainTextCodeEditorProps
->(
-  function PlainTextCodeEditor(
-    {
-      className,
-      autoFocus,
-      placeholder,
-      hideBorder,
-      readonly,
-      value,
-      onChange,
-      onKeyDown,
-      onPaste,
-      onRetry,
+>(function PlainTextCodeEditor(
+  {
+    className,
+    autoFocus,
+    placeholder,
+    hideBorder,
+    readonly,
+    scrollOnFocus,
+    value,
+    onChange,
+    onKeyDown,
+    onPaste,
+    onRetry,
+  },
+  ref
+) {
+  const [draft, setDraft] = useState(value);
+  const draftRef = useRef(value);
+  const committedRef = useRef(value);
+  const focusedRef = useRef(false);
+
+  const setDraftValue = useCallback((next: string) => {
+    draftRef.current = next;
+    setDraft(next);
+  }, []);
+
+  useEffect(() => {
+    if (!focusedRef.current || readonly) {
+      setDraftValue(value);
+      committedRef.current = value;
+    }
+  }, [readonly, setDraftValue, value]);
+
+  const commit = useCallback(() => {
+    if (onChange && draftRef.current !== committedRef.current) {
+      onChange(draftRef.current);
+      committedRef.current = draftRef.current;
+    }
+  }, [onChange]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      commit,
+      getValue: () => draftRef.current,
+    }),
+    [commit]
+  );
+
+  const handleChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => {
+      setDraftValue(event.currentTarget.value);
     },
-    ref
-  ) {
-    const [draft, setDraft] = useState(value);
-    const draftRef = useRef(value);
-    const committedRef = useRef(value);
-    const focusedRef = useRef(false);
+    [setDraftValue]
+  );
 
-    const setDraftValue = useCallback((next: string) => {
-      draftRef.current = next;
-      setDraft(next);
-    }, []);
-
-    useEffect(() => {
-      if (!focusedRef.current || readonly) {
-        setDraftValue(value);
-        committedRef.current = value;
-      }
-    }, [readonly, setDraftValue, value]);
-
-    const commit = useCallback(() => {
-      if (onChange && draftRef.current !== committedRef.current) {
-        onChange(draftRef.current);
-        committedRef.current = draftRef.current;
-      }
-    }, [onChange]);
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        commit,
-        getValue: () => draftRef.current,
-      }),
-      [commit]
-    );
-
-    const handleChange = useCallback(
-      (event: ChangeEvent<HTMLTextAreaElement>) => {
-        setDraftValue(event.currentTarget.value);
-      },
-      [setDraftValue]
-    );
-
-    return (
-      <div
-        className={cn(
-          "relative flex cursor-text flex-col overflow-hidden rounded-lg border bg-(--textarea) px-1 transition-opacity",
-          hideBorder && "border-transparent",
-          readonly && "opacity-67",
-          className
-        )}
-      >
-        <textarea
-          className="min-h-9.5 grow resize-none overflow-auto bg-transparent px-2 py-1 font-mono text-sm outline-none placeholder:text-muted-foreground"
-          autoFocus={autoFocus}
-          placeholder={placeholder}
-          readOnly={readonly}
-          value={draft}
-          onBlur={() => {
-            focusedRef.current = false;
+  return (
+    <div
+      className={cn(
+        "relative flex cursor-text flex-col rounded-lg border bg-(--textarea) px-1 transition-opacity",
+        // Clip at rest, scroll once focused (mirrors the CodeMirror editor);
+        // otherwise always scroll past the `max-h-*` cap.
+        scrollOnFocus
+          ? "overflow-hidden focus-within:overflow-auto"
+          : "overflow-auto",
+        hideBorder && "border-transparent",
+        readonly && "opacity-67",
+        className
+      )}
+    >
+      <Textarea
+        className="my-0 min-h-0! w-full shrink-0 resize-none border-none bg-transparent! px-1 pt-2 pb-0 font-mono text-sm outline-none focus-visible:border-transparent focus-visible:ring-0"
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        readOnly={readonly}
+        value={draft}
+        onBlur={() => {
+          focusedRef.current = false;
+          commit();
+        }}
+        onChange={handleChange}
+        onFocus={() => {
+          focusedRef.current = true;
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && event.metaKey) {
             commit();
-          }}
-          onChange={handleChange}
-          onFocus={() => {
-            focusedRef.current = true;
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && event.metaKey) {
-              commit();
-            }
-            onKeyDown?.(event);
-          }}
-          onPaste={onPaste}
-        />
-        {onRetry ? (
-          <Tooltip content="Retry CodeMirror editor">
-            <button
-              type="button"
-              aria-label="Retry CodeMirror editor"
-              className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1 right-1 inline-flex size-6 items-center justify-center rounded transition-colors"
-              onClick={onRetry}
-            >
-              <RefreshCw className="size-3.5" />
-            </button>
-          </Tooltip>
-        ) : null}
-      </div>
-    );
-  }
-);
+          }
+          onKeyDown?.(event);
+        }}
+        onPaste={onPaste}
+      />
+      {onRetry ? (
+        <Tooltip content="Retry CodeMirror editor">
+          <button
+            type="button"
+            aria-label="Retry CodeMirror editor"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1 right-1 inline-flex size-6 items-center justify-center rounded transition-colors"
+            onClick={onRetry}
+          >
+            <RefreshCw className="size-3.5" />
+          </button>
+        </Tooltip>
+      ) : null}
+    </div>
+  );
+});
 
 export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
   function CodeEditor(props, ref) {

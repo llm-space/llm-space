@@ -329,3 +329,20 @@
 .chrome-tabs .chrome-tabs-content {
   transition: none;
 }
+
+/*
+ * Rendering-fidelity "lite" (toggled as `.lite` on <html> by theme-provider):
+ * disable every transition and animation app-wide for a fully motion-free UI,
+ * pairing with the plain-text message list. `*-duration: 0s` (rather than
+ * `animation: none`) makes Radix enter/exit states jump straight to their end
+ * frame instead of never rendering. Unlayered + !important to win the cascade.
+ */
+html.lite *,
+html.lite *::before,
+html.lite *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
