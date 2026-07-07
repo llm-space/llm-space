@@ -4,5 +4,7 @@
 import "./env/hydrate";
 // Seed a fresh workspace (before `./app` pulls in storage/RPC).
 import "./workspace/seed";
+// Seed the managed skills folder (before `./app` pulls in the SkillsManager).
+import "./skills/seed";
 import "./app";
 /* eslint-enable import-x/order */

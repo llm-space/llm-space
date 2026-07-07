@@ -192,6 +192,17 @@ ApplicationMenu.setApplicationMenu([
         action: "openGitHubProject",
       },
       {
+        type: "divider",
+      },
+      {
+        label: "Visit Harness 101 - English",
+        action: "openHarness101English",
+      },
+      {
+        label: "Visit Harness 101 - Chinese",
+        action: "openHarness101Chinese",
+      },
+      {
         label: "Report Bug",
         action: "reportBugs",
       },
@@ -246,6 +257,16 @@ const MENU_ACTION_COMMANDS: Record<string, Command> = {
     args: { url: "https://my.feishu.cn/wiki/OvLBwVuSkiCR1ik5wGEcBXZfnye" },
   },
   onboard: { type: "openOnboard", args: {} },
+  openHarness101English: {
+    type: "openLink",
+    args: { url: "https://my.feishu.cn/docx/G8CGdg2PQoGjsRxspKAc9XZYnKT" },
+  },
+  openHarness101Chinese: {
+    type: "openLink",
+    args: {
+      url: "https://my.feishu.cn/wiki/L082wubkdie8uMkRUjgceKYQnIe?fromScene=spaceOverview",
+    },
+  },
 };
 
 /**

@@ -19,6 +19,8 @@ import {
   type SkillsSettings,
 } from "../../shared/skills";
 
+import { getManagedSkillsDir } from "./seed";
+
 /**
  * Owns `settings/skills.json`: the discovery folders backing the built-in Skill
  * tool and, per folder, the skills the user has hidden. Mirrors
@@ -224,6 +226,20 @@ class SkillsManager {
     };
   }
 
+  /**
+   * The seeded defaults: the shared browser-safe folders plus the
+   * llm-space-managed `<root>/skills` folder (whose absolute path is only
+   * resolvable here, in the bun process).
+   */
+  private _defaultSettings(): SkillsSettings {
+    const settings = this._clone(DEFAULT_SKILLS_SETTINGS);
+    const managed = getManagedSkillsDir();
+    if (!settings.discoveryPaths.some((entry) => entry.path === managed)) {
+      settings.discoveryPaths.push({ path: managed, hiddenSkills: [] });
+    }
+    return settings;
+  }
+
   private get _configPath(): string {
     return path.join(getSettingsDir(), "skills.json");
   }
@@ -251,7 +267,7 @@ class SkillsManager {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       }
-      const defaults = this._clone(DEFAULT_SKILLS_SETTINGS);
+      const defaults = this._defaultSettings();
       mkdirSync(getSettingsDir(), { recursive: true });
       writeFileSync(
         this._configPath,
@@ -264,7 +280,7 @@ class SkillsManager {
 
   private _normalize(input: Partial<SkillsSettings>): SkillsSettings {
     if (!Array.isArray(input.discoveryPaths)) {
-      return this._clone(DEFAULT_SKILLS_SETTINGS);
+      return this._defaultSettings();
     }
     const seen = new Set<string>();
     const discoveryPaths: DiscoveryPathConfig[] = [];

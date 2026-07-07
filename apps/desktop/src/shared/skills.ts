@@ -35,9 +35,15 @@ export interface SkillContent {
   path: string;
 }
 
+/**
+ * Default discovery folders seeded on a fresh install. The llm-space-managed
+ * `<root>/skills` folder is appended by the bun `SkillsManager` (its absolute
+ * path depends on `getLlmSpaceRoot()`, which isn't available in this
+ * browser-safe module).
+ */
 export const DEFAULT_SKILLS_SETTINGS: SkillsSettings = {
   discoveryPaths: [
     { path: "~/.claude/skills", hiddenSkills: [] },
-    { path: "~/.agents/skills", hiddenSkills: [] },
+    { path: "~/.codex/skills", hiddenSkills: [] },
   ],
 };

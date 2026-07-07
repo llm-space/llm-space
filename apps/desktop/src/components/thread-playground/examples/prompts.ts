@@ -205,14 +205,15 @@ async function generalAgentMessages(): Promise<Message[]> {
     ensureRootDir("tmp/deep-research"),
   ]);
   const lines = skills
-    .map((skill) => `- ${skill.name}: ${skill.description}`)
-    .join("\n");
+    .map((skill) => `- **${skill.name}**: ${skill.description}`)
+    .join("\n\n");
   const reminder = `<system-reminder>
 <workspace>
-<root path="${rootPath}" exists="false" />
+<root path="${rootPath}" />
 </workspace>
+
 <available-skills>
-The following skills are available for use with the Skill tool:
+The following skills are available for use with the \`skill()\` tool:
 
 ${lines}
 </available-skills>
