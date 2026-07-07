@@ -4,6 +4,7 @@ import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { PreviewDialog } from "@/components/preview-dialog-lazy";
+import { Tooltip } from "@/components/tooltip";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +19,9 @@ function _ToolCallInputView({ input }: { input: ToolCallInput }) {
   const args = input.arguments as Record<string, unknown>;
   const entries = Object.entries(args);
   return (
-    <div className="block w-full overflow-x-hidden font-mono text-sm select-auto">
+    // `overflow-x-auto` so an expanded object row can scroll horizontally;
+    // collapsed rows truncate within the width and never overflow.
+    <div className="block w-full overflow-x-auto font-mono text-sm select-auto">
       <div>
         <span className="text-primary">{input.name}</span>
         <span className="text-muted-foreground">(</span>
@@ -55,8 +58,16 @@ function _ToolCallArgumentRow({
 }) {
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const valueText = formatJson(value);
   const isObject = typeof value === "object" && value !== null;
+  // Only object values can expand into their full, pretty-printed form; strings
+  // and primitives always stay on their single truncated line.
+  const toggleExpanded = useCallback(() => {
+    if (isObject) {
+      setExpanded((prev) => !prev);
+    }
+  }, [isObject]);
   const copyText = useCallback(async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -98,11 +109,20 @@ function _ToolCallArgumentRow({
             )}
             size="icon-xs"
             variant="ghost"
+            onClick={(event) => event.stopPropagation()}
           >
             <MoreHorizontal className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-44">
+          {isObject ? (
+            <>
+              <DropdownMenuItem onSelect={toggleExpanded}>
+                {expanded ? "Collapse" : "Expand"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           {typeof value === "string" ? (
             <DropdownMenuItem onSelect={copyTextContent}>
               Copy Text Content
@@ -131,13 +151,14 @@ function _ToolCallArgumentRow({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      <span className="flex min-w-0 flex-1 items-baseline whitespace-pre">
-        <span className="shrink-0">{"  "}</span>
-        <span className="text-foreground">{argumentKey}</span>
-        <span className="text-muted-foreground shrink-0">: </span>
-        <span className="truncate">{valueText}</span>
-        <span className="shrink-0">{trailingComma ? "," : ""}</span>
-      </span>
+      <ArgumentLine
+        argumentKey={argumentKey}
+        valueText={valueText}
+        trailingComma={trailingComma}
+        expandable={isObject}
+        expanded={expanded}
+        onToggle={toggleExpanded}
+      />
       {typeof value === "string" ? (
         <PreviewDialog
           open={previewOpen}
@@ -159,6 +180,66 @@ function _ToolCallArgumentRow({
   );
 }
 const ToolCallArgumentRow = memo(_ToolCallArgumentRow);
+
+/**
+ * One `key: value` line. Non-expandable lines (strings, primitives) render a
+ * single truncated line. Expandable lines (objects) are click-to-toggle with a
+ * pointer cursor and tooltip, and expand into the value's full pretty-printed
+ * form — a single `whitespace-pre` block so only the first line is indented by
+ * the key and the JSON's continuation lines wrap flush to the left.
+ */
+function ArgumentLine({
+  argumentKey,
+  valueText,
+  trailingComma,
+  expandable,
+  expanded,
+  onToggle,
+}: {
+  argumentKey: string;
+  valueText: string;
+  trailingComma: boolean;
+  expandable: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const line =
+    expandable && expanded ? (
+      <div
+        className="min-w-max flex-1 cursor-pointer whitespace-pre"
+        onClick={onToggle}
+      >
+        {"  "}
+        <span className="text-foreground">{argumentKey}</span>
+        <span className="text-muted-foreground">: </span>
+        {valueText}
+        {trailingComma ? "," : ""}
+      </div>
+    ) : (
+      <span
+        className={cn(
+          "flex min-w-0 flex-1 items-baseline whitespace-pre",
+          expandable && "cursor-pointer"
+        )}
+        onClick={expandable ? onToggle : undefined}
+      >
+        <span className="shrink-0">{"  "}</span>
+        <span className="text-foreground shrink-0">{argumentKey}</span>
+        <span className="text-muted-foreground shrink-0">: </span>
+        <span className="truncate">{valueText}</span>
+        <span className="shrink-0">{trailingComma ? "," : ""}</span>
+      </span>
+    );
+
+  if (!expandable) {
+    return line;
+  }
+  return (
+    <Tooltip content={`Click to ${expanded ? "collapse" : "expand"}`}>
+      <span onClick={onToggle}>{line}</span>
+    </Tooltip>
+  );
+}
 
 function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2) ?? String(value);
