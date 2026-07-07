@@ -5,6 +5,7 @@ import path from "node:path";
 import { getSettingsDir } from "@llm-space/core/server";
 import { PostHog } from "posthog-node";
 
+import electrobunConfig from "../../../electrobun.config";
 import type {
   AnalyticsEventMap,
   AnalyticsEventName,
@@ -13,6 +14,16 @@ import type {
 import { DEFAULT_ANALYTICS_SETTINGS } from "../../shared/analytics";
 
 import { ANALYTICS_DISABLED, POSTHOG_HOST, POSTHOG_KEY } from "./config";
+
+/**
+ * Merged into every event so metrics can be sliced by release and OS. Only
+ * anonymous build/platform facts - never anything user- or machine-identifying.
+ */
+const COMMON_PROPERTIES = {
+  appVersion: electrobunConfig.app.version,
+  platform: process.platform,
+  arch: process.arch,
+} as const;
 
 /** On-disk shape of `settings/analytics.json`. */
 interface PersistedAnalytics extends AnalyticsSettings {
@@ -36,6 +47,8 @@ interface PersistedAnalytics extends AnalyticsSettings {
  * wrapped so telemetry can never crash the app.
  */
 class Analytics {
+  /** True when this launch minted the install id (first run, or an id reset). */
+  readonly isFirstRun: boolean;
   private readonly _anonymousId: string;
   private _enabled: boolean;
   private _client: PostHog | null = null;
@@ -43,9 +56,10 @@ class Analytics {
   private readonly _available = Boolean(POSTHOG_KEY) && !ANALYTICS_DISABLED;
 
   constructor() {
-    const persisted = this._loadConfig();
+    const { persisted, isFirstRun } = this._loadConfig();
     this._anonymousId = persisted.anonymousId;
     this._enabled = persisted.enabled;
+    this.isFirstRun = isFirstRun;
   }
 
   /** The user-facing opt-out preference (independent of the hard gates). */
@@ -81,17 +95,18 @@ class Analytics {
     properties: AnalyticsEventMap[K]
   ): void {
     if (!this._available || !this._enabled) return;
-    // Desktop app: flush eagerly so events aren't lost when the window closes.
-    this._client ??= new PostHog(POSTHOG_KEY, {
-      host: POSTHOG_HOST,
-      flushAt: 1,
-      flushInterval: 5_000,
-    });
     try {
+      // Desktop app: flush eagerly so events aren't lost when the window closes.
+      this._client ??= new PostHog(POSTHOG_KEY, {
+        host: POSTHOG_HOST,
+        flushAt: 1,
+        flushInterval: 5_000,
+      });
       this._client.capture({
         distinctId: this._anonymousId,
         event,
         properties: {
+          ...COMMON_PROPERTIES,
           ...properties,
           // Never materialize a person profile for an anonymous install id.
           $process_person_profile: false,
@@ -131,35 +146,42 @@ class Analytics {
    * on first run. A missing/partial file falls back to defaults; a corrupt or
    * unreadable file is best-effort and never blocks startup.
    */
-  private _loadConfig(): PersistedAnalytics {
+  private _loadConfig(): {
+    persisted: PersistedAnalytics;
+    isFirstRun: boolean;
+  } {
+    let parsed: Partial<PersistedAnalytics> = {};
     try {
-      const parsed = JSON.parse(
+      parsed = JSON.parse(
         readFileSync(this._configPath, "utf8")
       ) as Partial<PersistedAnalytics>;
-      if (parsed.anonymousId) {
-        return {
-          anonymousId: parsed.anonymousId,
-          enabled:
-            typeof parsed.enabled === "boolean"
-              ? parsed.enabled
-              : DEFAULT_ANALYTICS_SETTINGS.enabled,
-        };
-      }
     } catch {
-      // Missing, corrupt, or unreadable — fall through and seed a fresh file.
+      // Missing, corrupt, or unreadable - treat as empty and reseed below.
     }
 
-    const seeded: PersistedAnalytics = {
-      anonymousId: randomUUID(),
-      ...DEFAULT_ANALYTICS_SETTINGS,
-    };
+    // Honour a persisted opt-out independently of the install id: a partial
+    // file (e.g. a hand-edited or truncated one that lost its id) must never
+    // silently re-enroll a user who turned analytics off.
+    const enabled =
+      typeof parsed.enabled === "boolean"
+        ? parsed.enabled
+        : DEFAULT_ANALYTICS_SETTINGS.enabled;
+
+    if (parsed.anonymousId) {
+      return {
+        persisted: { anonymousId: parsed.anonymousId, enabled },
+        isFirstRun: false,
+      };
+    }
+
+    const seeded: PersistedAnalytics = { anonymousId: randomUUID(), enabled };
     try {
       mkdirSync(getSettingsDir(), { recursive: true });
       writeFileSync(this._configPath, `${JSON.stringify(seeded, null, 2)}\n`, "utf8");
     } catch {
       // Non-fatal: we'll just mint a fresh id again next launch.
     }
-    return seeded;
+    return { persisted: seeded, isFirstRun: true };
   }
 }
 
