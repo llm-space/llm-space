@@ -11,7 +11,7 @@ import "@/lib/electrobun";
 import { App } from "../app";
 
 scan({
-  enabled: import.meta.env.DEV,
+  //enabled: import.meta.env.DEV,
 });
 
 createRoot(document.getElementById("root")!).render(

@@ -453,11 +453,7 @@ function _EmptyProjects({ onAddProject }: { onAddProject: () => void }) {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button
-          className="w-full justify-start"
-          size="sm"
-          onClick={onAddProject}
-        >
+        <Button className="w-full py-4" size="lg" onClick={onAddProject}>
           <PlusIcon className="size-3" />
           Add Trace Project
         </Button>
