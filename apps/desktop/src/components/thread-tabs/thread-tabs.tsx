@@ -185,13 +185,18 @@ export function ThreadTabs({
   // and close when the matching middle mouseup lands on the same tab. mouseup
   // is used instead of auxclick because the system WKWebView (the non-CEF
   // renderer) only dispatches auxclick on WebKit ≥ 17.4. A middle-click chorded
-  // into a left-button drag (buttons & 1) is ignored entirely: closing a tab
-  // mid-drag would force the lib to end the drag against a stale tab list.
+  // into a left-button drag (buttons & 1) is ignored on both the press and the
+  // release: closing a tab mid-drag would force the lib to end the drag against
+  // a stale tab list. Every middle press first clears the pending-close target,
+  // and every middle release clears it again, so a press that never released
+  // over the strip can't leak into a later gesture and close the wrong tab.
   // preventDefault also disables middle-click autoscroll on Windows/Linux.
   const middlePressedTabIdRef = useRef<string | null>(null);
   const handleMouseDownCapture = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
-      if (event.button !== 1 || (event.buttons & 1) !== 0) return;
+      if (event.button !== 1) return;
+      middlePressedTabIdRef.current = null;
+      if ((event.buttons & 1) !== 0) return;
       const id = _tabIdFromEventTarget(event.target);
       if (id === null) return;
       middlePressedTabIdRef.current = id;
@@ -206,6 +211,7 @@ export function ThreadTabs({
       if (event.button !== 1) return;
       const pressed = middlePressedTabIdRef.current;
       middlePressedTabIdRef.current = null;
+      if ((event.buttons & 1) !== 0) return;
       const id = _tabIdFromEventTarget(event.target);
       if (id !== null && id === pressed) close(id);
     },
