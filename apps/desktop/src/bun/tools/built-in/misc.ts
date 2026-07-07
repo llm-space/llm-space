@@ -1,5 +1,7 @@
 import type { BuiltinTool } from "@llm-space/core";
 
+import { revealInFileManager } from "../../fs";
+
 // -- weather_report -----------------------------------------------------------
 
 interface WeatherReport {
@@ -136,8 +138,14 @@ export const presentFilesTool: BuiltinTool = {
   },
 };
 
-export async function present_files(): Promise<"OK"> {
-  return Promise.resolve("OK");
+/**
+ * Present files to the user by revealing each in the OS file manager (Finder on
+ * macOS, Explorer on Windows, the enclosing folder on Linux) — the same reveal
+ * used by the tree-view "Reveal in Finder" action.
+ */
+export async function present_files(paths: string[]): Promise<"OK"> {
+  await Promise.all(paths.map((p) => revealInFileManager(p)));
+  return "OK";
 }
 
 // -- todo_write ---------------------------------------------------------------
@@ -272,8 +280,8 @@ export const miscBuiltInTools = [
   },
   {
     tool: presentFilesTool,
-    async execute() {
-      return present_files();
+    async execute(args: Record<string, unknown>) {
+      return present_files(_requireStringArray(args, "paths"));
     },
   },
   {
@@ -295,3 +303,21 @@ export const miscBuiltInTools = [
     },
   },
 ];
+
+// -- helpers ------------------------------------------------------------------
+
+/** Read a non-empty array of strings from `args`, rejecting other shapes. */
+function _requireStringArray(
+  args: Record<string, unknown>,
+  key: string
+): string[] {
+  const value = args[key];
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    !value.every((item): item is string => typeof item === "string")
+  ) {
+    throw new Error(`${key} must be a non-empty array of strings.`);
+  }
+  return value;
+}
