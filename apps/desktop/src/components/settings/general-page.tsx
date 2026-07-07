@@ -142,20 +142,25 @@ function DefaultModelSelect() {
 
 /**
  * Opt out of anonymous, behaviour-only product analytics. The switch reflects
- * the user's stored preference; toggling it persists immediately via RPC. See
- * `shared/analytics.ts` for exactly what is (and isn't) collected.
+ * the user's stored preference; toggling it persists immediately via RPC. When
+ * telemetry is force-disabled (no key, or `LLM_SPACE_ANALYTICS_DISABLED`), the
+ * switch renders off and disabled instead of claiming data is being shared.
+ * See `shared/analytics.ts` for exactly what is (and isn't) collected.
  */
 function AnalyticsToggle() {
   const [enabled, setEnabled] = useState(DEFAULT_ANALYTICS_SETTINGS.enabled);
+  const [available, setAvailable] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     void getAnalyticsSettings()
       .then((loaded) => {
-        if (!cancelled) setEnabled(loaded.enabled);
+        if (cancelled) return;
+        setEnabled(loaded.enabled);
+        setAvailable(loaded.available);
       })
       .catch(() => {
-        // Keep the default; a load failure is non-fatal for the toggle.
+        // Keep the defaults; a load failure is non-fatal for the toggle.
       });
     return () => {
       cancelled = true;
@@ -174,6 +179,21 @@ function AnalyticsToggle() {
       });
     }
   }, []);
+
+  if (!available) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground text-xs">
+          Disabled by environment
+        </span>
+        <Switch
+          checked={false}
+          disabled
+          aria-label="Share anonymous usage analytics"
+        />
+      </div>
+    );
+  }
 
   return (
     <Switch
