@@ -24,6 +24,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Welcome } from "@/components/welcome";
+import { track } from "@/lib/analytics";
 import { electrobun } from "@/lib/electrobun";
 import {
   importThreadFileRecords,
@@ -238,10 +239,12 @@ function PageInner() {
     openSettings: ({ tab }) => {
       if (tab) setSettingsTab(tab);
       setSettingsOpen(true);
+      track("settings_opened", {});
     },
     openModelSettings: () => {
       setSettingsTab("models");
       setSettingsOpen(true);
+      track("settings_opened", {});
     },
     openCommandPalette: () => setCommandPaletteOpen(true),
     openOnboard: () => setOnboardOpen(true),

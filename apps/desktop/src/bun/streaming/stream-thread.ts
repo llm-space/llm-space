@@ -5,6 +5,7 @@ import type {
   StreamThreadRequestPayload,
   StreamThreadResponsePayload,
 } from "../../shared/rpc";
+import { analytics } from "../analytics";
 import { modelManager } from "../models";
 
 /** Abort controllers for in-flight streams, keyed by `streamId`. */
@@ -21,6 +22,10 @@ export async function runStreamThread(
   const { streamId, request } = payload;
   const abortController = new AbortController();
   activeStreams.set(streamId, abortController);
+  const startedAt = Date.now();
+  // Resolved in each terminal branch, then reported once in `finally` so a
+  // single run always yields exactly one anonymous `thread_run` event.
+  let outcome: "completed" | "error" | "aborted" = "error";
   try {
     for await (const event of streamAgent(request, {
       models: await modelManager.getAvailableModels(),
@@ -31,10 +36,12 @@ export async function runStreamThread(
     })) {
       send({ streamId, type: "event", event });
     }
+    outcome = "completed";
     send({ streamId, type: "done" });
   } catch (error) {
     // The client aborted and has already torn down its listener; stay quiet.
     if (abortController.signal.aborted) {
+      outcome = "aborted";
       return;
     }
     send({
@@ -44,6 +51,16 @@ export async function runStreamThread(
     });
   } finally {
     activeStreams.delete(streamId);
+    // Anonymous shape/outcome metadata only — never any message content.
+    analytics.capture("thread_run", {
+      provider: request.model.provider,
+      model: request.model.id,
+      outcome,
+      durationMs: Date.now() - startedAt,
+      messageCount: request.context.messages.length,
+      toolCount: request.context.tools.length,
+      hasSystemPrompt: Boolean(request.context.systemPrompt),
+    });
   }
 }
 

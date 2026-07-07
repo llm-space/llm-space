@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import { useCommands } from "@/commands";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 import {
@@ -91,10 +92,12 @@ export function OnboardDialog({
   }, [builtinProviders]);
 
   const handleConfigureModels = useCallback(() => {
+    track("onboarding_choice", { choice: "configure_models" });
     onOpenChange(false);
     executeCommand({ type: "openSettings", args: { tab: "models" } });
   }, [executeCommand, onOpenChange]);
   const handleLearnMore = useCallback(() => {
+    track("onboarding_choice", { choice: "learn_more" });
     executeCommand({ type: "openDocument", args: {} });
   }, [executeCommand]);
 
