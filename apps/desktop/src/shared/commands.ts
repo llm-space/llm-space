@@ -226,6 +226,9 @@ export interface OpenDocumentCommand extends GenericCommand<
 /** Open the GitHub issues page in the user's default browser to report a bug. */
 export interface ReportBugsCommand extends GenericCommand<"reportBugs"> {}
 
+/** Open the workspace folder (`LLM_SPACE_ROOT/workspace`) in the OS file manager. */
+export interface OpenWorkspaceFolderCommand extends GenericCommand<"openWorkspaceFolder"> {}
+
 /** The discriminated union of every command. */
 export type Command =
   | NewFileCommand
@@ -260,7 +263,8 @@ export type Command =
   | ReloadCommand
   | OpenLinkCommand
   | OpenDocumentCommand
-  | ReportBugsCommand;
+  | ReportBugsCommand
+  | OpenWorkspaceFolderCommand;
 
 /** The `type` string of any command. */
 export type CommandType = Command["type"];
@@ -326,4 +330,5 @@ export const COMMAND_META: Record<
   openLink: { label: "Open Link", target: "bun" },
   openDocument: { label: "Documents", target: "bun" },
   reportBugs: { label: "Report Bug", target: "bun" },
+  openWorkspaceFolder: { label: "Open Workspace Folder", target: "bun" },
 };

@@ -1,3 +1,7 @@
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+
+import { getLlmSpaceRoot } from "@llm-space/core/server";
 import { Utils, type BrowserWindow } from "electrobun/bun";
 
 import { COMMAND_META, type Command } from "../shared/commands";
@@ -66,6 +70,12 @@ export function executeCommandInBun(command: Command, window: BrowserWindow) {
     }
     case "reportBugs": {
       Utils.openExternal(ISSUES_URL);
+      return;
+    }
+    case "openWorkspaceFolder": {
+      const workspacePath = path.join(getLlmSpaceRoot(), "workspace");
+      mkdirSync(workspacePath, { recursive: true });
+      Utils.openPath(workspacePath);
       return;
     }
     default:

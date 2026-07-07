@@ -204,18 +204,21 @@ async function generalAgentMessages(): Promise<Message[]> {
     listEnabledSkills(),
     ensureRootDir("tmp/deep-research"),
   ]);
-  const lines = skills
-    .map((skill) => `- **${skill.name}**: ${skill.description}`)
-    .join("\n\n");
+  const skillsSection =
+    skills.length === 0
+      ? "No skills are currently available. The `skill()` tool has nothing to invoke — do not call it; rely on your other tools instead."
+      : `The following skills are available for use with the \`skill()\` tool:
+
+${skills
+  .map((skill) => `- **${skill.name}**: ${skill.description}`)
+  .join("\n\n")}`;
   const reminder = `<system-reminder>
 <workspace>
 <root path="${rootPath}" />
 </workspace>
 
 <available-skills>
-The following skills are available for use with the \`skill()\` tool:
-
-${lines}
+${skillsSection}
 </available-skills>
 </system-reminder>`;
   return [

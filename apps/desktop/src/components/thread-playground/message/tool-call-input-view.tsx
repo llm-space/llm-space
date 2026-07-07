@@ -3,7 +3,7 @@ import { MoreHorizontal } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
 
-import { PreviewDialog } from "@/components/preview-dialog";
+import { PreviewDialog } from "@/components/preview-dialog-lazy";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

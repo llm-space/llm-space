@@ -68,6 +68,10 @@ ApplicationMenu.setApplicationMenu([
         action: "refreshTree",
       },
       {
+        label: "Reveal Workspace Folder",
+        action: "revealWorkspaceFolder",
+      },
+      {
         type: "divider",
       },
       {
@@ -240,6 +244,7 @@ const MENU_ACTION_COMMANDS: Record<string, Command> = {
   newFolder: { type: "newFolder", args: {} },
   importFiles: { type: "importFiles", args: {} },
   refreshTree: { type: "refreshTree", args: {} },
+  revealWorkspaceFolder: { type: "openWorkspaceFolder", args: {} },
   closeTab: { type: "closeTab", args: {} },
   closeOtherTabs: { type: "closeOtherTabs", args: {} },
   closeAllTabs: { type: "closeAllTabs", args: {} },

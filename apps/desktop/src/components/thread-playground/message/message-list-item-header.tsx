@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
 
-import { PreviewDialog } from "@/components/preview-dialog";
+import { PreviewDialog } from "@/components/preview-dialog-lazy";
 import { cn } from "@/lib/utils";
 
 import { Tooltip } from "../../tooltip";

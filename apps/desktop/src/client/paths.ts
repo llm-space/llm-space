@@ -16,3 +16,8 @@ export async function ensureRootDir(relativePath: string): Promise<string> {
   const { path } = await _rpc().request.ensureRootDir({ relativePath });
   return path;
 }
+
+/** Absolute path to `LLM_SPACE_ROOT/workspace`, creating it if missing. */
+export async function getWorkspacePath(): Promise<string> {
+  return ensureRootDir("workspace");
+}

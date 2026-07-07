@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 
 import { getAnalyticsSettings, setAnalyticsSettings } from "@/client/analytics";
+import { getWorkspacePath } from "@/client/paths";
 import {
   isModelAvailable,
   useDefaultModel,
@@ -38,6 +39,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_ANALYTICS_SETTINGS } from "@/shared/analytics";
 
+import { Link } from "../link";
 import { ModelAvatar } from "../thread-playground/model-avatar";
 import { Button } from "../ui/button";
 
@@ -204,6 +206,38 @@ function AnalyticsRow() {
   );
 }
 
+function WorkspaceFolderLink() {
+  const [path, setPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getWorkspacePath()
+      .then((loaded) => {
+        if (!cancelled) setPath(loaded);
+      })
+      .catch(() => {
+        // Non-fatal; leave the placeholder.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!path) {
+    return <span className="text-muted-foreground text-sm">…</span>;
+  }
+
+  return (
+    <Link
+      command={{ type: "openWorkspaceFolder", args: {} }}
+      className="text-primary max-w-64 truncate font-mono text-sm underline underline-offset-2 hover:opacity-80"
+      title={path}
+    >
+      {path}
+    </Link>
+  );
+}
+
 export function GeneralPage() {
   const { theme, setTheme } = useTheme();
   const { fidelity, setFidelity } = useRenderingFidelity();
@@ -216,6 +250,19 @@ export function GeneralPage() {
   const showResetPrimaryColor = primaryColor !== DEFAULT_PRIMARY;
   return (
     <SettingsPage title="General">
+      <SettingsRow label="Language">
+        <Select defaultValue="en-US" disabled>
+          <SelectTrigger className="w-32" aria-label="Language">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en-US">English (US)</SelectItem>
+          </SelectContent>
+        </Select>
+      </SettingsRow>
+
+      <Separator />
+
       <SettingsRow label="Appearance">
         <Select value={theme} onValueChange={(v) => setTheme(v as Theme)}>
           <SelectTrigger className="w-32" aria-label="Appearance">
@@ -227,22 +274,6 @@ export function GeneralPage() {
             <SelectItem value="system">System</SelectItem>
           </SelectContent>
         </Select>
-      </SettingsRow>
-
-      <Separator />
-
-      <SettingsRow
-        label={
-          <span className="flex flex-col gap-0.5">
-            Default model
-            <span className="text-muted-foreground text-xs">
-              Used for new threads, and when a thread&apos;s model is no longer
-              available.
-            </span>
-          </span>
-        }
-      >
-        <DefaultModelSelect />
       </SettingsRow>
 
       <Separator />
@@ -291,15 +322,24 @@ export function GeneralPage() {
 
       <Separator />
 
-      <SettingsRow label="Language">
-        <Select defaultValue="en-US" disabled>
-          <SelectTrigger className="w-32" aria-label="Language">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="en-US">English (US)</SelectItem>
-          </SelectContent>
-        </Select>
+      <SettingsRow
+        label={
+          <span className="flex flex-col gap-0.5">
+            Default model
+            <span className="text-muted-foreground text-xs">
+              Used for new threads, and when a thread&apos;s model is no longer
+              available.
+            </span>
+          </span>
+        }
+      >
+        <DefaultModelSelect />
+      </SettingsRow>
+
+      <Separator />
+
+      <SettingsRow label="Workspace folder">
+        <WorkspaceFolderLink />
       </SettingsRow>
 
       <Separator />
