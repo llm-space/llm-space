@@ -259,7 +259,7 @@ const MENU_ACTION_COMMANDS: Record<string, Command> = {
   openDocument: { type: "openDocument", args: {} },
   openGitHubProject: {
     type: "openLink",
-    args: { url: "https://github.com/llm-space/llm-space/tree/main" },
+    args: { url: "https://github.com/deer-flow/llm-space/tree/main" },
   },
   reportBugs: { type: "reportBugs", args: {} },
   donate: {

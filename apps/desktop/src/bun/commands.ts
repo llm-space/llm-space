@@ -18,7 +18,7 @@ import { mainWindowRPC } from "./rpc";
 const DOCS_URL = "https://my.feishu.cn/wiki/QnGGwGkoti8nwok2cEOc2oMvnrd";
 
 /** The GitHub issues page opened by the `reportBugs` command. */
-const ISSUES_URL = "https://github.com/llm-space/llm-space/issues";
+const ISSUES_URL = "https://github.com/deer-flow/llm-space/issues";
 
 const ZOOM_STEP = 0.1;
 const ZOOM_MIN = 0.3;

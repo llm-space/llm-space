@@ -2,7 +2,7 @@
 
 ![screenshot](https://github.com/user-attachments/assets/7fe0a937-a7fa-4a3c-9417-34ee5a35b19d)
 
-[**LLM Space** v4](https://github.com/llm-space/llm-space) is a desktop app for agent builders — prototype your next agent ideas, inspect every step of your harness execution, debug failures, and evaluate performance, all in one place.
+[**LLM Space** v4](https://github.com/deer-flow/llm-space) is a desktop app for agent builders — prototype your next agent ideas, inspect every step of your harness execution, debug failures, and evaluate performance, all in one place.
 
 LLM Space is a sister project of [DeerFlow](https://github.com/bytedance/deer-flow), and we dogfood it heavily: every version of DeerFlow is built and debugged with LLM Space. The project started in March 2023, and v4 is its fourth major iteration.
 
@@ -81,7 +81,7 @@ The full user manual lives here:
 
 For now, we only merge pull requests from the [DeerFlow](https://github.com/bytedance/deer-flow) core team members.
 
-Everyone else is very welcome to help by [opening an issue](https://github.com/llm-space/llm-space/issues) — bug reports, ideas, and feedback all make the project better.
+Everyone else is very welcome to help by [opening an issue](https://github.com/deer-flow/llm-space/issues) — bug reports, ideas, and feedback all make the project better.
 
 ## Sponsors
 
@@ -99,7 +99,7 @@ LLM Space is free and open source, and it stays that way thanks to our sponsors.
   <strong><a href="https://superdesign.dev">Superdesign</a></strong> is an AI product design agent that turns natural-language prompts into UI mockups, components, and full designs on an infinite canvas. Thank you for making LLM Space possible. 💜
 </p>
 
-Want to see your logo here? We would love to talk - [reach out by opening an issue](https://github.com/llm-space/llm-space/issues) or [support the project](#donate).
+Want to see your logo here? We would love to talk - [reach out by opening an issue](https://github.com/deer-flow/llm-space/issues) or [support the project](#donate).
 
 ## Donate
 
