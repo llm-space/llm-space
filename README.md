@@ -93,7 +93,7 @@ LLM Space is free and open source, and it stays that way thanks to our sponsors.
 
 <p align="center">
   <a href="https://superdesign.dev" target="_blank" rel="noopener">
-    <img src="./docs/images/sponsor-superdesign.svg" alt="Superdesign - AI product design agent that turns prompts into designs on an infinite canvas (Platinum Sponsor)" width="100%" />
+    <img src="./docs/images/sponsor-superdesign.svg" alt="Superdesign - AI product design agent that turns prompts into designs on an infinite canvas (Platinum Sponsor)" width="600" />
   </a>
 </p>
 
