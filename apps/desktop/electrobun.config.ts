@@ -49,6 +49,12 @@ export default {
       bundleCEF: false,
     },
   },
+  scripts: {
+    // Both run right before their respective codesign step. Workaround for
+    // electrobun#485 (x64-only, no-op elsewhere); see the script header.
+    postBuild: "scripts/fix-x64-headerpad.ts",
+    postWrap: "scripts/fix-x64-headerpad.ts",
+  },
   release: {
     // Burned into every shipped bundle — the updater fetches
     // `{baseUrl}/{channel}-{os}-{arch}-update.json` from here. Both channels
