@@ -39,3 +39,18 @@ export async function importFilesWithNativePicker(parent = "") {
     args: { parent, files },
   });
 }
+
+/**
+ * Native clipboard import entrypoint. Clipboard access belongs to the bun side;
+ * the renderer still owns parsing/writing through the regular file-import path.
+ */
+export function importTextFromClipboard(parent = "") {
+  const text = Utils.clipboardReadText();
+  mainWindowRPC.send.executeCommand({
+    type: "importFiles",
+    args: {
+      parent,
+      files: [{ name: "clipboard.json", text: text ?? "" }],
+    },
+  });
+}

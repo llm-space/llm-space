@@ -61,6 +61,10 @@ ApplicationMenu.setApplicationMenu([
         action: "importFiles",
       },
       {
+        label: "Import from Clipboard",
+        action: "importFromClipboard",
+      },
+      {
         type: "divider",
       },
       {
@@ -243,6 +247,7 @@ const MENU_ACTION_COMMANDS: Record<string, Command> = {
   newFromExamples: { type: "openStartFromExample", args: { parent: "" } },
   newFolder: { type: "newFolder", args: {} },
   importFiles: { type: "importFiles", args: {} },
+  importFromClipboard: { type: "importFromClipboard", args: {} },
   refreshTree: { type: "refreshTree", args: {} },
   revealWorkspaceFolder: { type: "openWorkspaceFolder", args: {} },
   closeTab: { type: "closeTab", args: {} },

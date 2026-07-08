@@ -106,6 +106,16 @@ export interface ImportFilesCommand extends GenericCommand<
   { parent?: string; files?: ImportFilePayload[] }
 > {}
 
+/**
+ * Import a thread from the OS clipboard's text content. The bun process reads
+ * the native clipboard, then forwards a virtual JSON file to the renderer so
+ * parsing/writing stays shared with file imports.
+ */
+export interface ImportFromClipboardCommand extends GenericCommand<
+  "importFromClipboard",
+  { parent?: string }
+> {}
+
 // --- Traces ----------------------------------------------------------------
 
 /**
@@ -182,12 +192,7 @@ export interface ToggleSidebarCommand extends GenericCommand<"toggleSidebar"> {}
 
 /** Which Settings tab to show. */
 export type SettingsTab =
-  | "general"
-  | "models"
-  | "mcp"
-  | "search"
-  | "skills"
-  | "experimental";
+  "general" | "models" | "mcp" | "search" | "skills" | "experimental";
 
 /** Open the Settings dialog, optionally on a specific `tab`. */
 export interface OpenSettingsCommand extends GenericCommand<
@@ -252,6 +257,7 @@ export type Command =
   | CopyFileCommand
   | RefreshTreeCommand
   | ImportFilesCommand
+  | ImportFromClipboardCommand
   | CreateTraceProjectCommand
   | CreateConnectedTraceProjectCommand
   | ImportLangfuseTraceFilesCommand
@@ -313,6 +319,7 @@ export const COMMAND_META: Record<
   copyFile: { label: "Copy", target: "bun" },
   refreshTree: { label: "Refresh", target: "webview" },
   importFiles: { label: "Import from Files...", target: "webview" },
+  importFromClipboard: { label: "Import from Clipboard", target: "bun" },
   createTraceProject: { label: "New Trace Project", target: "webview" },
   createConnectedTraceProject: {
     label: "Connect Langfuse",

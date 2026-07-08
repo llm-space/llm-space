@@ -3,6 +3,7 @@
 import type { FileNode } from "@llm-space/core";
 import {
   ClipboardCopy,
+  ClipboardPaste,
   FilePlus,
   FilesIcon,
   FolderOpen,
@@ -184,17 +185,30 @@ export function NodeActions({
             {REVEAL_LABEL}
           </DropdownMenuItem>
           {isDir && (
-            <DropdownMenuItem
-              onSelect={() =>
-                executeCommand({
-                  type: "importFiles",
-                  args: { parent: node.path },
-                })
-              }
-            >
-              <Import />
-              Import from Files...
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem
+                onSelect={() =>
+                  executeCommand({
+                    type: "importFiles",
+                    args: { parent: node.path },
+                  })
+                }
+              >
+                <Import />
+                Import from Files...
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  executeCommand({
+                    type: "importFromClipboard",
+                    args: { parent: node.path },
+                  })
+                }
+              >
+                <ClipboardPaste />
+                Import from Clipboard
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuSeparator />
           {!isDir && (
@@ -296,6 +310,17 @@ export function RootActions({
           >
             <Import />
             Import from Files...
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() =>
+              executeCommand({
+                type: "importFromClipboard",
+                args: { parent: "" },
+              })
+            }
+          >
+            <ClipboardPaste />
+            Import from Clipboard
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
