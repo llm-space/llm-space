@@ -6,10 +6,23 @@ bun = "1.3"
 # Deliberately no NODE_ENV here: mise [env] applies to every command run in
 # this directory (and reaches CI through mise-action's shims) — a global
 # NODE_ENV=development leaks into `vite build` and ships dev-mode React.
-# Tools set their own. Day-to-day commands live in package.json scripts;
-# mise tasks exist only where they add env/dir composition on top.
+# Tools set their own.
 [env]
 _.path = "node_modules/.bin"
+
+# --- Dev workflow (thin forwards to package.json scripts) -------------------
+
+[tasks.dev]
+description = "Run the desktop app (Vite HMR + electrobun watch)"
+run = "bun run dev"
+
+[tasks."dev:cef"]
+description = "Run the desktop app with CEF/CDP debugging on :9333"
+run = "bun run dev:cef"
+
+[tasks.lint]
+description = "Check lint (read-only; `bun run lint` is the --fix variant)"
+run = "bun run lint:check"
 
 # --- Local packaging (see AGENTS.md "Releases & auto-update") ---------------
 
