@@ -185,6 +185,22 @@
 - Explicit non-goals: no automatic context inclusion, no resource subscriptions/templates, no binary/resource gallery, no MCP sampling, elicitation, tasks, apps, or full OAuth account lifecycle.
 - Visible gaps: all user-facing resource and prompt flows are absent, but this is no longer treated as the next priority. Product decision on 2026-07-04: keep MCP tool-only for now because resources/prompts exist in the protocol but appear rarely used in practice.
 
+## Skill Discovery And Runtime Loading
+
+- Status: partially shipped, evidence-limited
+- Freshness: unknown
+- Last checked: 2026-07-08
+- Evidence:
+  - Source inspection on 2026-07-08 found `apps/desktop/src/components/settings/skills-page.tsx` exposes a Settings > Skills page with discovery folders, per-skill enable switches, bulk enable/disable, and folder removal confirmation.
+  - Source inspection found `apps/desktop/src/bun/skills/skills-manager.ts` persists `settings/skills.json`, seeds default discovery folders, validates `SKILL.md` frontmatter, resolves enabled skills by name, and reads selected skill content for runtime use.
+  - Source inspection found `apps/desktop/src/bun/skills/seed.ts` seeds a bundled `deep-research` skill under the app data root on fresh installs.
+  - Source inspection found `apps/desktop/src/components/thread-playground/examples/prompts.ts` injects enabled skills into the General Agent starter thread's `<available-skills>` reminder.
+  - Source inspection found `apps/desktop/src/bun/tools/built-in/fs.ts` implements the runtime `skill()` tool and returns the selected skill base directory plus `SKILL.md` body.
+  - Current CEF/CDP product-surface verification was attempted with an isolated `LLM_SPACE_ROOT` on port `9381`, but Electrobun stayed in the CEF dependency download path and never exposed CDP during this loop.
+- Boundary: source evidence indicates users can configure local skill discovery folders, enable or hide discovered skills, seed a bundled Deep Research skill, expose enabled skills in the General Agent starter context, and load skill instructions at runtime through `skill(name)`.
+- Explicit non-goals: no skill creation/editing UI, no runtime skill preview/test call from Settings, no skill provenance panel inside threads, no conflict resolution for duplicate names beyond first-folder-wins, no packaged skill registry/marketplace.
+- Visible gaps: rendered flow is unconfirmed in this loop; users likely cannot test from Settings that a skill can be loaded by a thread, see which skills a particular thread captured, or diagnose duplicate/invalid skills without source-level knowledge.
+
 ## Debug Timeline
 
 - Status: shipped V1 with inspection entry points

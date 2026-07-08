@@ -1,5 +1,5 @@
 import { type ToolCallInput } from "@llm-space/core";
-import { MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
 
@@ -104,14 +104,32 @@ function _ToolCallArgumentRow({
           <Button
             aria-label={`Open actions for ${argumentKey}`}
             className={cn(
-              "text-muted-foreground invisible absolute top-0.5 left-0 size-5 group-hover/argument:visible aria-expanded:visible",
+              "text-muted-foreground absolute top-0.5 left-0 size-5 aria-expanded:visible",
+              // Object rows always show their expand/collapse chevron; other
+              // rows only reveal the actions button on hover.
+              isObject
+                ? "visible"
+                : "invisible group-hover/argument:visible",
               open && "visible"
             )}
             size="icon-xs"
             variant="ghost"
             onClick={(event) => event.stopPropagation()}
           >
-            <MoreHorizontal className="size-3.5" />
+            {isObject ? (
+              <>
+                {/* Chevron by default, swapped for the `...` actions icon while
+                    the row is hovered (or the menu is open). */}
+                {expanded ? (
+                  <ChevronDown className="size-3.5 group-hover/argument:hidden group-aria-expanded/button:hidden" />
+                ) : (
+                  <ChevronRight className="size-3.5 group-hover/argument:hidden group-aria-expanded/button:hidden" />
+                )}
+                <MoreHorizontal className="hidden size-3.5 group-hover/argument:block group-aria-expanded/button:block" />
+              </>
+            ) : (
+              <MoreHorizontal className="size-3.5" />
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-44">
