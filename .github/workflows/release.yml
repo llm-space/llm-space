@@ -4,10 +4,11 @@ name: Release
 # which bumps apps/desktop/package.json, updates CHANGELOG.md, commits and tags).
 # A `-canary` suffix in the tag selects the canary channel; otherwise stable.
 #
-# Artifacts land in two places:
+# Jobs: meta (validate tag) → build (macOS arm64 + x64 matrix: sign, notarize,
+# smoke-test) → publish. Artifacts land in two places:
 #   - the rolling `updates` release — the machine-readable update feed the
 #     in-app updater polls (`release.baseUrl` in electrobun.config.ts)
-#   - a versioned release per tag — DMG + changelog for humans
+#   - a versioned release per tag — DMGs + changelog for humans
 
 on:
   push:
@@ -28,11 +29,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: macos-15
-    timeout-minutes: 60
-    env:
-      GH_TOKEN: ${{ github.token }}
+  meta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      channel: ${{ steps.meta.outputs.channel }}
     steps:
       # Tag names may contain shell metacharacters — never interpolate them
       # into `run:` scripts via ${{ }}; pass them through `env:` instead.
@@ -71,6 +74,22 @@ jobs:
           esac
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: meta
+    strategy:
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
 
       - uses: jdx/mise-action@v2
 
@@ -115,17 +134,18 @@ jobs:
         env:
           ELECTROBUN_APPLEAPIKEY: ${{ secrets.ASC_API_KEY_ID }}
           ELECTROBUN_APPLEAPIISSUER: ${{ secrets.ASC_API_ISSUER_ID }}
-          CHANNEL: ${{ steps.meta.outputs.channel }}
+          CHANNEL: ${{ needs.meta.outputs.channel }}
         run: bun run "build:$CHANNEL"
 
       - name: Smoke test the signed app
         working-directory: apps/desktop
         env:
-          CHANNEL: ${{ steps.meta.outputs.channel }}
+          CHANNEL: ${{ needs.meta.outputs.channel }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          APP="$(find "build/$CHANNEL-macos-arm64" -maxdepth 1 -name '*.app' | head -1)"
+          APP="$(find "build/$CHANNEL-macos-$ARCH" -maxdepth 1 -name '*.app' | head -1)"
           if [ -z "$APP" ]; then
-            echo "::error::no .app bundle found in build/$CHANNEL-macos-arm64"
+            echo "::error::no .app bundle found in build/$CHANNEL-macos-$ARCH"
             exit 1
           fi
           codesign --verify --deep --strict "$APP"
@@ -136,8 +156,9 @@ jobs:
           # swaps the real app into the same bundle path and relaunches it.
           # Launch it and require a live process from that path well after
           # extraction has finished — a signed-but-corrupted binary dies
-          # instantly (see electrobun#485 on x64), so this gates the whole
-          # extract→relaunch user path.
+          # instantly (electrobun#485 on x64; scripts/fix-x64-headerpad.ts is
+          # the workaround this gates), so this covers the whole
+          # extract→relaunch user path on both architectures.
           open "$APP"
           sleep 25
           pgrep -f "$APP/Contents/MacOS/" > /dev/null || {
@@ -146,15 +167,43 @@ jobs:
           }
           pkill -f "$APP/Contents/MacOS/" || true
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.arch }}
+          path: apps/desktop/artifacts/
+          if-no-files-found: error
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain build.keychain || true
+
+  publish:
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: artifacts-*
+          path: artifacts
+          merge-multiple: true
+
       - name: Publish update feed (rolling `updates` release)
-        working-directory: apps/desktop/artifacts
+        working-directory: artifacts
         run: |
           gh release view updates --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 || \
             gh release create updates --repo "$GITHUB_REPOSITORY" --prerelease \
               --title "Update feed" \
               --notes "Machine-readable update feed polled by the in-app updater. Download installers from the versioned releases instead."
           # Upload order is load-bearing: update.json is the update trigger and
-          # must land last, after the patch and tarball it points at.
+          # must land last, after the patches and tarballs it points at —
+          # across both architectures.
           shopt -s nullglob
           for f in *.patch; do
             gh release upload updates "$f" --repo "$GITHUB_REPOSITORY" --clobber
@@ -164,9 +213,9 @@ jobs:
 
       - name: Publish versioned release
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
-          VERSION: ${{ steps.meta.outputs.version }}
-          CHANNEL: ${{ steps.meta.outputs.channel }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          CHANNEL: ${{ needs.meta.outputs.channel }}
         run: |
           # Extract this version's section from CHANGELOG.md as release notes.
           awk -v ver="$VERSION" '
@@ -185,9 +234,5 @@ jobs:
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 || \
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
               --title "$TAG" "${NOTES_ARGS[@]}" "${PRERELEASE_ARGS[@]}"
-          gh release upload "$TAG" apps/desktop/artifacts/*.dmg \
+          gh release upload "$TAG" artifacts/*.dmg \
             --repo "$GITHUB_REPOSITORY" --clobber
-
-      - name: Clean up keychain
-        if: always()
-        run: security delete-keychain build.keychain || true
