@@ -373,9 +373,13 @@ function _DetectedSetupState({
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <div className="text-sm font-medium">Provider detected</div>
+        <div className="text-sm font-medium">
+          {providers.length === 1 ? "Provider detected" : "Providers detected"}
+        </div>
         <div className="text-xs text-white/65">
-          Add one detected provider to get started.
+          {providers.length === 1
+            ? "Add a detected provider from the list to get started."
+            : "Add detected providers from the list to get started."}
         </div>
       </div>
       <div className="flex flex-col gap-2">
