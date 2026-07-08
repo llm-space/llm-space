@@ -1,6 +1,6 @@
 # LLM Space 4
 
-![LLM Space 4](./docs/images/screenshot-01.png)
+![screenshot](https://github.com/user-attachments/assets/7fe0a937-a7fa-4a3c-9417-34ee5a35b19d)
 
 [**LLM Space** v4](https://github.com/llm-space/llm-space) is a desktop app for agent builders — prototype your next agent ideas, inspect every step of execution, debug failures, and evaluate performance, all in one place.
 
