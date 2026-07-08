@@ -1,6 +1,7 @@
 {
   "name": "llm-space",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"

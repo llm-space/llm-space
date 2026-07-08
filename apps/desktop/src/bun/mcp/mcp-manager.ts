@@ -1,8 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { uuid } from "@llm-space/core";
-import { getSettingsDir } from "@llm-space/core/server";
+import {
+  getSettingsDir,
+  readJsonFileWithRecoverySync,
+} from "@llm-space/core/server";
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
@@ -709,7 +712,9 @@ export class McpManager {
   private _loadConfig(): McpServersConfig {
     try {
       const parsed = serversConfigSchema.parse(
-        JSON.parse(readFileSync(this._configPath, "utf8"))
+        readJsonFileWithRecoverySync<unknown>(this._configPath, {
+          servers: [],
+        })
       );
       return {
         servers: parsed.servers.map((server) => ({
@@ -731,14 +736,6 @@ export class McpManager {
         throw error;
       }
       const empty: McpServersConfig = { servers: [] };
-      if (!existsSync(this._configPath)) {
-        mkdirSync(getSettingsDir(), { recursive: true });
-        writeFileSync(
-          this._configPath,
-          `${JSON.stringify(empty, null, 2)}\n`,
-          "utf8"
-        );
-      }
       return empty;
     }
   }

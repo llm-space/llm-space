@@ -82,7 +82,16 @@ export class LocalFileSystem implements FileSystem, ThreadStorage {
 
   async read(p: string): Promise<Thread> {
     const text = await fs.readFile(this._resolve(p), "utf8");
-    return normalizeThread(JSON.parse(text) as Thread);
+    try {
+      return normalizeThread(JSON.parse(text) as Thread);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error(`Thread file "${p}" contains invalid JSON.`, {
+          cause: error,
+        });
+      }
+      throw error;
+    }
   }
 
   async write(p: string, thread: Thread): Promise<void> {
