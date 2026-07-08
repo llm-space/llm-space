@@ -9,20 +9,11 @@ import { BrowserWindow, Updater } from "electrobun/bun";
 
 import { mainWindowRPC } from "../rpc";
 
+import { getDevServerUrl } from "./dev-server-url";
 import { registerMenuActions } from "./menu";
 import { attachWindowStates } from "./window-state";
 
-const DEV_SERVER_PORT = _getDevServerPort();
-const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
-
-function _getDevServerPort(): number {
-  const value = process.env.LLM_SPACE_DESKTOP_HMR_PORT;
-  if (!value) {
-    return 5173;
-  }
-  const port = Number(value);
-  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : 5173;
-}
+const DEV_SERVER_URL = getDevServerUrl(process.env.LLM_SPACE_DESKTOP_HMR_PORT);
 
 // Check if Vite dev server is running for HMR
 async function getMainViewUrl(): Promise<string> {
