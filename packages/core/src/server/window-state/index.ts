@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 
 import { getSettingsDir, getWindowStatePath } from "../paths";
+import { readJsonFileWithRecovery } from "../settings-json";
 
 export interface WindowFrame {
   x: number;
@@ -56,15 +57,7 @@ export function getWindowZoom(state: WindowState): number | undefined {
 }
 
 export async function loadWindowState(): Promise<WindowState> {
-  try {
-    const text = await fs.readFile(getWindowStatePath(), "utf8");
-    return JSON.parse(text) as WindowState;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return {};
-    }
-    throw error;
-  }
+  return readJsonFileWithRecovery(getWindowStatePath(), {});
 }
 
 async function writeWindowState(next: WindowState): Promise<void> {

@@ -11,7 +11,10 @@ import {
   type Provider,
 } from "@earendil-works/pi-ai";
 import { ModelProviderGroup, type ModelConfig } from "@llm-space/core";
-import { getSettingsDir } from "@llm-space/core/server";
+import {
+  getSettingsDir,
+  readJsonFileWithRecoverySync,
+} from "@llm-space/core/server";
 
 import {
   BUILTIN_PROVIDER_META,
@@ -572,27 +575,14 @@ export class ModelManager {
    * config on disk so the app has something to edit, and report no providers.
    */
   private _loadConfig(): ModelsConfig {
-    try {
-      const parsed = JSON.parse(
-        readFileSync(this._configPath, "utf8")
-      ) as ModelsConfig;
-      return {
-        providers: Array.isArray(parsed.providers) ? parsed.providers : [],
-        defaultModel: parsed.defaultModel,
-      };
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        throw error;
-      }
-      const empty: ModelsConfig = { providers: [] };
-      mkdirSync(getSettingsDir(), { recursive: true });
-      writeFileSync(
-        this._configPath,
-        `${JSON.stringify(empty, null, 2)}\n`,
-        "utf8"
-      );
-      return empty;
-    }
+    const parsed = readJsonFileWithRecoverySync<ModelsConfig>(
+      this._configPath,
+      { providers: [] }
+    );
+    return {
+      providers: Array.isArray(parsed.providers) ? parsed.providers : [],
+      defaultModel: parsed.defaultModel,
+    };
   }
 
   private async _detectProviders() {

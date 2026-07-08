@@ -1,7 +1,10 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { getSettingsDir } from "@llm-space/core/server";
+import {
+  getSettingsDir,
+  readJsonFileWithRecoverySync,
+} from "@llm-space/core/server";
 
 import {
   DEFAULT_SEARCH_SETTINGS,
@@ -51,24 +54,11 @@ class SearchSettingsManager {
    * files stay valid. Seeds the default config on disk when the file is absent.
    */
   private _loadConfig(): SearchSettings {
-    try {
-      const parsed = JSON.parse(
-        readFileSync(this._configPath, "utf8")
-      ) as Partial<SearchSettings>;
-      return this._normalize(parsed);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        throw error;
-      }
-      const defaults = { ...DEFAULT_SEARCH_SETTINGS };
-      mkdirSync(getSettingsDir(), { recursive: true });
-      writeFileSync(
-        this._configPath,
-        `${JSON.stringify(defaults, null, 2)}\n`,
-        "utf8"
-      );
-      return defaults;
-    }
+    const parsed = readJsonFileWithRecoverySync<Partial<SearchSettings>>(
+      this._configPath,
+      { ...DEFAULT_SEARCH_SETTINGS }
+    );
+    return this._normalize(parsed);
   }
 
   private _normalize(input: Partial<SearchSettings>): SearchSettings {
