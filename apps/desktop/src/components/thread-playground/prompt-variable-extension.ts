@@ -1,5 +1,6 @@
 import {
   autocompletion,
+  type Completion,
   type CompletionContext,
   type CompletionResult,
 } from "@codemirror/autocomplete";
@@ -249,14 +250,14 @@ function createVariableCompletion(list: PromptVariableLister): Extension {
     }
     const typed = /[A-Za-z0-9_]*$/.exec(before.text)?.[0] ?? "";
     const from = context.pos - typed.length;
-    const options = list().map((variable) => ({
+    const options: Completion[] = list().map((variable) => ({
       label: variable.name,
       detail: truncate(variable.hint, HINT_MAX_CHARS),
       type: "variable",
       // Insert just the name; add the closing `}}` only if it isn't already
       // there (bracket auto-close usually supplies it), then place the caret
       // after the closing braces.
-      apply: (view: EditorView, _completion: unknown, applyFrom: number, applyTo: number) => {
+      apply: (view, _completion, applyFrom, applyTo) => {
         const hasClose = view.state.sliceDoc(applyTo, applyTo + 2) === "}}";
         view.dispatch({
           changes: {

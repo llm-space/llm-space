@@ -1,4 +1,5 @@
 import { type Extension } from "@codemirror/state";
+import type { ThreadContext } from "@llm-space/core";
 import { useContext, useMemo } from "react";
 
 import type { SkillInfo } from "@/shared/skills";
@@ -7,7 +8,7 @@ import { createPromptVariableExtension } from "./prompt-variable-extension";
 import {
   listEnabledPromptVariableSkills,
   listPromptVariableCompletions,
-  resolvePromptVariableValue,
+  resolvePromptVariableValueForPlace,
 } from "./prompt-variables";
 import { ThreadStoreContext, type ThreadStore } from "./stores";
 
@@ -33,27 +34,38 @@ function loadSkillsCached(): Promise<SkillInfo[]> {
   return skillsInflight;
 }
 
-// One identity-stable extension per thread store, shared by the system-prompt
-// editor and every message editor. Stable identity keeps @uiw/react-codemirror
-// from reconfiguring the editor on each render (which would drop focus / undo).
-const extensionByStore = new WeakMap<ThreadStore, Extension[]>();
+// One identity-stable extension per thread store and prompt place. Stable
+// identity keeps @uiw/react-codemirror from reconfiguring the editor on each
+// render (which would drop focus / undo).
+const extensionByStore = new WeakMap<ThreadStore, Map<string, Extension[]>>();
 
-function getExtensionForStore(store: ThreadStore): Extension[] {
-  let extension = extensionByStore.get(store);
+function getExtensionForStore(
+  store: ThreadStore,
+  placeKey: string | undefined
+): Extension[] {
+  let byPlace = extensionByStore.get(store);
+  if (!byPlace) {
+    byPlace = new Map();
+    extensionByStore.set(store, byPlace);
+  }
+
+  const key = placeKey ?? "";
+  let extension = byPlace.get(key);
   if (!extension) {
     extension = createPromptVariableExtension({
       // Lazy, non-reactive reads — run only on hover / while completing, so edits
       // to variables are always reflected without any subscription.
       resolve: (name) =>
-        resolvePromptVariableValue(
+        resolvePromptVariableValueForPlace(
           name,
           store.getState().thread.context,
+          placeKey,
           loadSkillsCached
         ),
       listVariables: () =>
         listPromptVariableCompletions(store.getState().thread.context),
     });
-    extensionByStore.set(store, extension);
+    byPlace.set(key, extension);
   }
   return extension;
 }
@@ -66,7 +78,38 @@ const EMPTY: Extension[] = [];
  * `<CodeEditor extraExtensions={...} />` from the system-prompt and message
  * editors — the only editors that know the thread's variables.
  */
-export function usePromptVariableExtension(): Extension[] {
-  const store = useContext(ThreadStoreContext);
-  return useMemo(() => (store ? getExtensionForStore(store) : EMPTY), [store]);
+export function usePromptVariableExtension(placeKey?: string): Extension[] {
+  return usePromptVariableExtensionForContext(placeKey, undefined);
+}
+
+/**
+ * Build a variable extension against an explicit context. Used by readonly run
+ * snapshots, whose frozen variable values must come from that saved context
+ * instead of the currently open thread store.
+ */
+export function usePromptVariableExtensionForContext(
+  placeKey: string | undefined,
+  context: ThreadContext | undefined,
+  store?: ThreadStore | null
+): Extension[] {
+  const fallbackStore = useContext(ThreadStoreContext);
+  const resolvedStore = store ?? fallbackStore;
+  return useMemo(
+    () =>
+      context
+        ? createPromptVariableExtension({
+            resolve: (name) =>
+              resolvePromptVariableValueForPlace(
+                name,
+                context,
+                placeKey,
+                loadSkillsCached
+              ),
+            listVariables: () => listPromptVariableCompletions(context),
+          })
+        : resolvedStore
+          ? getExtensionForStore(resolvedStore, placeKey)
+          : EMPTY,
+    [context, placeKey, resolvedStore]
+  );
 }

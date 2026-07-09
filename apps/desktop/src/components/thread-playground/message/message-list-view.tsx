@@ -5,9 +5,16 @@ import {
   type DropResult,
   type DroppableProvided,
 } from "@hello-pangea/dnd";
-import type { AssistantMessage, Message } from "@llm-space/core";
+import type { AssistantMessage, Message, ThreadContext } from "@llm-space/core";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -19,10 +26,12 @@ import { MessageListItem } from "./message-list-item";
 
 export function MessageListView({
   className,
+  context: contextFromProps,
   messages: messagesFromProps,
   readonly: readonlyFromProps = false,
 }: {
   className?: string;
+  context?: ThreadContext;
   messages?: Message[];
   readonly?: boolean;
 }) {
@@ -70,7 +79,11 @@ export function MessageListView({
     <ScrollArea className={cn("size-full", className)}>
       <div ref={contentRef} className="flex flex-col p-3 pt-0.5">
         {isSnapshotView ? (
-          <StaticMessageList messages={messages} readonly={readonly} />
+          <StaticMessageList
+            context={contextFromProps}
+            messages={messages}
+            readonly={readonly}
+          />
         ) : (
           <DragDropContext
             onDragStart={handleDragStart}
@@ -114,9 +127,11 @@ export function MessageListView({
 }
 
 function StaticMessageList({
+  context,
   messages,
   readonly,
 }: {
+  context?: ThreadContext;
   messages: Message[];
   readonly: boolean;
 }) {
@@ -126,6 +141,7 @@ function StaticMessageList({
         <MessageListItem
           key={message.id}
           className="mb-3.5"
+          context={context}
           message={message}
           readonly={readonly}
         />
@@ -172,7 +188,7 @@ function DroppableMessageList({
                 // to size the placeholder and compute drag displacement — a
                 // `gap` is invisible to it and offsets every item mid-drag.
                 className="mb-3.5"
-                style={style}
+                style={style as CSSProperties | undefined}
               >
                 <MessageListItem
                   message={message}

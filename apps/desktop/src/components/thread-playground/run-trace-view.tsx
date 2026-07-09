@@ -66,6 +66,7 @@ function _RunTraceView({
       </details>
       <MessageListView
         className="min-h-0 flex-1"
+        context={run.thread.context}
         messages={messages}
         readonly
       />

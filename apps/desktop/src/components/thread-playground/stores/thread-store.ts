@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import {
   AssistantMessage,
+  getMessageText,
   isDangerousBashCommand,
   isExecutableTool,
   isRunnableConversation,
@@ -19,6 +20,7 @@ import {
   type ModelConfigParams,
   type ReducedMessageContent,
   type Thread,
+  type ThreadContext,
   type ThreadVariable,
   type ThreadVariableVariants,
   type ThreadVariables,
@@ -34,12 +36,16 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { useShallow } from "zustand/shallow";
 
 import {
+  createMessagePromptVariablePlaceKey,
+  createToolResultPromptVariablePlaceKey,
   DEFAULT_VARIABLE_VARIANT_NAME,
   ensureThreadVariableState,
   normalizePromptVariableState,
   PromptVariableError,
-  replacePromptVariableReferences,
-  renderSystemPromptVariables,
+  removePromptVariableSnapshotPlaces,
+  replaceThreadPromptVariableReferences,
+  renderThreadPromptVariables,
+  SYSTEM_PROMPT_PLACE_KEY,
 } from "../prompt-variables";
 import { aggregateMessageUsage } from "../token-usage";
 
@@ -209,6 +215,19 @@ export function createThreadStore(
         patchThread({ context: { ...get().thread.context, ...partial } });
       };
 
+      const threadWithPromptSnapshot = (
+        thread: Thread,
+        snapshot: ThreadContext["snapshot"]
+      ): Thread => {
+        const context: ThreadContext = { ...(thread.context ?? {}) };
+        if (snapshot === undefined) {
+          delete context.snapshot;
+        } else {
+          context.snapshot = snapshot;
+        }
+        return { ...thread, context };
+      };
+
       const getVariableState = () =>
         normalizePromptVariableState(get().thread.context);
 
@@ -220,9 +239,8 @@ export function createThreadStore(
         patchContext({ variables, variableVariants, systemPrompt });
       };
 
-      const defaultCustomValues = (
-        variableVariants: ThreadVariableVariants
-      ) => variableVariants.variants[DEFAULT_VARIABLE_VARIANT_NAME] ?? {};
+      const defaultCustomValues = (variableVariants: ThreadVariableVariants) =>
+        variableVariants.variants[DEFAULT_VARIABLE_VARIANT_NAME] ?? {};
 
       const customVariableNames = (variableVariants: ThreadVariableVariants) =>
         new Set(Object.keys(defaultCustomValues(variableVariants)));
@@ -499,7 +517,16 @@ export function createThreadStore(
           }
         },
         updateSystemPrompt(systemPrompt: string) {
-          patchContext({ systemPrompt });
+          const context = get().thread.context ?? {};
+          if (context.systemPrompt === systemPrompt) {
+            return;
+          }
+          patchContext({
+            systemPrompt,
+            snapshot: removePromptVariableSnapshotPlaces(context.snapshot, [
+              SYSTEM_PROMPT_PLACE_KEY,
+            ]),
+          });
         },
         updatePromptVariable(name, variable) {
           const { variables, variableVariants } = getVariableState();
@@ -527,15 +554,17 @@ export function createThreadStore(
           const nextVariables = { ...variables };
           delete nextVariables[oldName];
           nextVariables[newName] = variable;
-          setVariableState(
-            nextVariables,
-            variableVariants,
-            replacePromptVariableReferences(
-              get().thread.context?.systemPrompt ?? "",
+          patchThread({
+            context: replaceThreadPromptVariableReferences(
+              {
+                ...(get().thread.context ?? {}),
+                variables: nextVariables,
+                variableVariants,
+              },
               oldName,
               newName
-            )
-          );
+            ),
+          });
           return true;
         },
         addCustomVariable(name, value = "") {
@@ -579,15 +608,17 @@ export function createThreadStore(
           const value = nextValues[oldName];
           delete nextValues[oldName];
           nextValues[newName] = value;
-          setDefaultCustomValues(
-            variables,
-            nextValues,
-            replacePromptVariableReferences(
-              get().thread.context?.systemPrompt ?? "",
+          patchThread({
+            context: replaceThreadPromptVariableReferences(
+              {
+                ...(get().thread.context ?? {}),
+                variables,
+                variableVariants: withDefaultCustomValues(nextValues),
+              },
               oldName,
               newName
-            )
-          );
+            ),
+          });
           return true;
         },
         removeCustomVariable(name) {
@@ -624,7 +655,17 @@ export function createThreadStore(
           });
         },
         updateMessageTextContent(id: string, text: string) {
-          updateMessage(id, (message) => {
+          const context = get().thread.context ?? {};
+          const messages = context.messages ?? [];
+          let changed = false;
+          const nextMessages = messages.map((message) => {
+            if (message.id !== id) {
+              return message;
+            }
+            if (getMessageText(message) === text) {
+              return message;
+            }
+            changed = true;
             const content = [...message.content] as MessageContent[];
             const index = content.findIndex((c) => c.type === "text");
             if (index === -1) {
@@ -633,6 +674,15 @@ export function createThreadStore(
               content[index] = { type: "text", text };
             }
             return { ...message, content } as Message;
+          });
+          if (!changed) {
+            return;
+          }
+          patchContext({
+            messages: nextMessages,
+            snapshot: removePromptVariableSnapshotPlaces(context.snapshot, [
+              createMessagePromptVariablePlaceKey(id),
+            ]),
           });
         },
         addMessageImageContent(id: string, mimeType: string, data: string) {
@@ -708,29 +758,63 @@ export function createThreadStore(
           });
         },
         updateToolCallOutputTextContent(messageId, toolCallId, text, isError) {
-          const message = getMessage(messageId);
-          if (message?.role !== "assistant") {
+          const context = get().thread.context ?? {};
+          const messages = context.messages ?? [];
+          let changed = false;
+          let textChanged = false;
+          const nextMessages = messages.map((message) => {
+            if (message.id !== messageId || message.role !== "assistant") {
+              return message;
+            }
+            let toolCallChanged = false;
+            const toolCalls = message.toolCalls?.map((toolCall) => {
+              if (toolCall.id !== toolCallId) {
+                return toolCall;
+              }
+              const currentText =
+                toolCall.output?.content.map((item) => item.text).join("\n") ??
+                "";
+              const nextIsError = isError ?? toolCall.output?.isError;
+              if (
+                currentText === text &&
+                toolCall.output?.isError === nextIsError
+              ) {
+                return toolCall;
+              }
+              toolCallChanged = true;
+              textChanged ||= currentText !== text;
+              return {
+                ...toolCall,
+                output: {
+                  content: [{ type: "text" as const, text }],
+                  isError: nextIsError,
+                },
+              };
+            });
+            if (!toolCallChanged) {
+              return message;
+            }
+            changed = true;
+            return { ...message, toolCalls };
+          });
+          if (!changed) {
             return;
           }
-          if (!message.toolCalls?.some((tc) => tc.id === toolCallId)) {
-            return;
-          }
-          updateMessage(messageId, (m) => {
-            const assistant = m as AssistantMessage;
-            return {
-              ...assistant,
-              toolCalls: assistant.toolCalls?.map((toolCall) =>
-                toolCall.id === toolCallId
-                  ? {
-                      ...toolCall,
-                      output: {
-                        content: [{ type: "text", text }],
-                        isError: isError ?? toolCall.output?.isError,
-                      },
-                    }
-                  : toolCall
-              ),
-            };
+          patchContext({
+            messages: nextMessages,
+            ...(textChanged
+              ? {
+                  snapshot: removePromptVariableSnapshotPlaces(
+                    context.snapshot,
+                    [
+                      createToolResultPromptVariablePlaceKey(
+                        messageId,
+                        toolCallId
+                      ),
+                    ]
+                  ),
+                }
+              : {}),
           });
         },
         toggleMessageRole(id: string) {
@@ -780,14 +864,15 @@ export function createThreadStore(
             toast.error("Error", { description: RUN_LAST_MESSAGE_ERROR });
             return;
           }
-          let renderedSystemPrompt = get().thread.context?.systemPrompt ?? "";
+          let promptSnapshot: ThreadContext["snapshot"] =
+            get().thread.context?.snapshot;
+          let preparedContext: ThreadContext | null = null;
           try {
-            renderedSystemPrompt = (
-              await renderSystemPromptVariables({
-                systemPrompt: renderedSystemPrompt,
-                context: get().thread.context,
-              })
-            ).systemPrompt;
+            const rendered = await renderThreadPromptVariables({
+              context: { ...get().thread.context, messages },
+            });
+            preparedContext = rendered.context;
+            promptSnapshot = rendered.snapshot;
           } catch (error) {
             toast.error("Unable to render prompt variables", {
               description:
@@ -891,14 +976,18 @@ export function createThreadStore(
             // thread is unchanged.
             const finalThread = get().thread;
             if (sawEvent && !failed) {
+              const threadWithSnapshot = threadWithPromptSnapshot(
+                finalThread,
+                promptSnapshot
+              );
               const runUsage = aggregateMessageUsage(
-                (finalThread.context?.messages ?? []).slice(
+                (threadWithSnapshot.context?.messages ?? []).slice(
                   runStartMessageCount
                 )
               );
               const runHistory = recordRun(
                 get().runHistory,
-                finalThread,
+                threadWithSnapshot,
                 Date.now(),
                 { usage: runUsage }
               );
@@ -907,7 +996,7 @@ export function createThreadStore(
                 runHistory
               );
               const thread = withRunHistory(
-                finalThread,
+                threadWithSnapshot,
                 runHistory,
                 evaluations
               );
@@ -949,13 +1038,22 @@ export function createThreadStore(
             streamingMessage = null;
             content = [];
             try {
+              const context = preparedContext
+                ? preparedContext
+                : (
+                    await renderThreadPromptVariables({
+                      context: {
+                        ...get().thread.context,
+                        messages,
+                        snapshot: promptSnapshot,
+                      },
+                    })
+                  ).context;
+              preparedContext = null;
+              promptSnapshot = context.snapshot;
               const response = streamThread(
                 {
-                  context: {
-                    ...get().thread.context,
-                    systemPrompt: renderedSystemPrompt,
-                    messages,
-                  },
+                  context,
                   model,
                 },
                 {

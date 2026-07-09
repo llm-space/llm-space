@@ -59,6 +59,19 @@ export const ThreadVariableVariants = Type.Object({
 export type ThreadVariableVariants = Static<typeof ThreadVariableVariants>;
 
 /**
+ * Per-context runtime snapshot data. Prompt variable values are keyed by a
+ * stable prompt place (for example `systemPrompt`, `message:<id>:text`, or a
+ * tool result key) so old conversation prefixes keep using the value they were
+ * first run with.
+ */
+export const ThreadContextSnapshot = Type.Object({
+  variables: Type.Optional(
+    Type.Record(Type.String(), Type.Record(Type.String(), Type.String()))
+  ),
+});
+export type ThreadContextSnapshot = Static<typeof ThreadContextSnapshot>;
+
+/**
  * The context of a thread, including the system prompt, messages, and tools.
  */
 export const ThreadContext = Type.Object({
@@ -81,6 +94,11 @@ export const ThreadContext = Type.Object({
    * Custom-variable values keyed by the built-in `default` bucket.
    */
   variableVariants: Type.Optional(ThreadVariableVariants),
+
+  /**
+   * Runtime snapshot values captured while running the thread.
+   */
+  snapshot: Type.Optional(ThreadContextSnapshot),
 
   /**
    * The messages of the thread.

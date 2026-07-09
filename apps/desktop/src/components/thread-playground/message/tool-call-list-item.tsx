@@ -1,5 +1,6 @@
 import {
   isExecutableTool,
+  type ThreadContext,
   type ToolCall,
   type ToolCallInput,
 } from "@llm-space/core";
@@ -16,34 +17,44 @@ import { toast } from "sonner";
 
 import { openFirecrawlLimitDialog } from "@/components/firecrawl-limit-dialog";
 import { PreviewDialog } from "@/components/preview-dialog-lazy";
+import { useRenderingFidelity } from "@/components/theme-provider";
 import { Tooltip } from "@/components/tooltip";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import { cn } from "@/lib/utils";
 
-import { CodeEditor } from "../../code-editor";
+import { CodeEditor, type CodeEditorProps } from "../../code-editor";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
+import { createToolResultPromptVariablePlaceKey } from "../prompt-variables";
 import { useThreadStoreActions } from "../stores";
+import { usePromptVariableExtensionForContext } from "../use-prompt-variable-extension";
 
 import { ToolCallInputView } from "./tool-call-input-view";
 import { getToolCallOutputText } from "./tool-call-status";
 import { useToolCallRunner } from "./use-tool-call-runner";
 
 function _ToolCallListItem({
+  context,
   messageId,
   toolCall,
   canContinue,
   onContinue,
   readonly = false,
 }: {
+  context?: ThreadContext;
   messageId: string;
   toolCall: ToolCall;
   canContinue: boolean;
   onContinue: () => void;
   readonly?: boolean;
 }) {
+  const { fidelity } = useRenderingFidelity();
   const { updateToolCallOutputText } = useThreadStoreActions();
   const { resolveTool, runToolCall } = useToolCallRunner(messageId);
+  const variableExtension = usePromptVariableExtensionForContext(
+    createToolResultPromptVariablePlaceKey(messageId, toolCall.id),
+    context
+  );
   const tool = resolveTool(toolCall.input.name);
   const executable = tool !== undefined && isExecutableTool(tool);
   const [calling, setCalling] = useState(false);
@@ -187,8 +198,10 @@ function _ToolCallListItem({
         />
         <ToolCallResponseEditor
           input={toolCall.input}
+          plain={fidelity === "lite"}
           readonly={readonly}
           value={outputText}
+          extraExtensions={variableExtension}
           onChange={handleOutputChange}
           onKeyDown={handleKeyDown}
         />
@@ -211,14 +224,18 @@ function formatJson(value: unknown): string {
  */
 function _ToolCallResponseEditor({
   input,
+  plain,
   value,
   readonly,
+  extraExtensions,
   onChange,
   onKeyDown,
 }: {
   input: ToolCallInput;
+  plain: boolean;
   value: string;
   readonly: boolean;
+  extraExtensions: CodeEditorProps["extraExtensions"];
   onChange: (value: string) => void;
   onKeyDown: (event: React.KeyboardEvent) => void;
 }) {
@@ -245,12 +262,11 @@ function _ToolCallResponseEditor({
       hideBorder
       hideFocusRing
       scrollOnFocus
-      // Tool responses are edited as plain text (no CodeMirror), regardless of
-      // rendering fidelity.
-      plain
+      plain={plain}
       placeholder={`Enter the response of ${input.name}()`}
       readonly={readonly}
       value={value}
+      extraExtensions={extraExtensions}
       onChange={onChange}
       onKeyDown={onKeyDown}
     />
