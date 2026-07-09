@@ -200,15 +200,15 @@ ApplicationMenu.setApplicationMenu([
         action: "openGitHubProject",
       },
       {
-        type: "divider",
-      },
-      {
         label: "Visit Harness 101 - English",
         action: "openHarness101English",
       },
       {
         label: "Visit Harness 101 - Chinese",
         action: "openHarness101Chinese",
+      },
+      {
+        type: "divider",
       },
       {
         label: "Report Bug",

@@ -75,9 +75,11 @@ bun run build:canary
 
 ## User guide
 
-The full user manual lives here:
+The user guide lives in this repository:
 
-**[LLM Space User Guide →](https://my.feishu.cn/wiki/QnGGwGkoti8nwok2cEOc2oMvnrd)**
+- [Documentation index](./docs/index.md)
+- [Quick start](./docs/get-started.md)
+- [Core concepts](./docs/core-concepts.md)
 
 ## Contributing
 

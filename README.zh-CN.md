@@ -75,9 +75,11 @@ bun run build:canary
 
 ## 用户指南
 
-完整用户手册在这里：
+中文用户指南在这个仓库中：
 
-**[LLM Space 用户指南 →](https://my.feishu.cn/wiki/QnGGwGkoti8nwok2cEOc2oMvnrd)**
+- [文档索引](./docs/index.zh-CN.md)
+- [快速开始](./docs/get-started.zh-CN.md)
+- [核心概念](./docs/core-concepts.zh-CN.md)
 
 ## 参与贡献
 
