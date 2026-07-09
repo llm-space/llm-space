@@ -203,7 +203,7 @@ async function generalAgentMessages(): Promise<Message[]> {
     ensureRootDir("tmp/deep-research"),
   ]);
   const reminder = `<system-reminder>
-<today>{{current_date}}</today>
+<current_date>{{current_date}}</current_date>
 <workspace>
 <root path="${rootPath}" />
 </workspace>
