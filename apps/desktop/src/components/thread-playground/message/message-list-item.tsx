@@ -4,6 +4,7 @@ import {
   isExecutableTool,
   type ImageDataContent,
   type Message,
+  type ThreadContext,
   type ToolCall,
 } from "@llm-space/core";
 import { PlusIcon } from "lucide-react";
@@ -21,7 +22,9 @@ import { CollapsibleContent } from "../../ui/collapsible-content";
 import { Marker, MarkerContent } from "../../ui/marker";
 import { ShineBorder } from "../../ui/shine-border";
 import { Skeleton } from "../../ui/skeleton";
+import { createMessagePromptVariablePlaceKey } from "../prompt-variables";
 import { useThreadStore, useThreadStoreActions } from "../stores";
+import { usePromptVariableExtensionForContext } from "../use-prompt-variable-extension";
 
 import { ImageContentList } from "./image-content-view";
 import { MessageListItemHeader } from "./message-list-item-header";
@@ -32,6 +35,7 @@ import { useToolCallRunner } from "./use-tool-call-runner";
 
 function _MessageListItem({
   className,
+  context,
   message,
   placeholder,
   readonly = false,
@@ -41,6 +45,7 @@ function _MessageListItem({
   dragHandleProps,
 }: {
   className?: string;
+  context?: ThreadContext;
   message: Message;
   placeholder?: string;
   readonly?: boolean;
@@ -51,6 +56,10 @@ function _MessageListItem({
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
 }) {
   const { fidelity } = useRenderingFidelity();
+  const variableExtension = usePromptVariableExtensionForContext(
+    createMessagePromptVariablePlaceKey(message.id),
+    context
+  );
   const text = useMemo(() => getMessageText(message), [message]);
   const imageContents = useMemo(() => {
     const result: { content: ImageDataContent; contentIndex: number }[] = [];
@@ -214,6 +223,7 @@ function _MessageListItem({
               streaming={streaming}
               readonly={readonly}
               value={text}
+              extraExtensions={variableExtension}
               onChange={handleTextContentChange}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
@@ -226,6 +236,7 @@ function _MessageListItem({
                 {message.toolCalls.map((toolCall) => (
                   <ToolCallListItem
                     key={toolCall.id}
+                    context={context}
                     messageId={message.id}
                     canContinue={toolCallSummary?.canContinue ?? false}
                     onContinue={handleContinue}

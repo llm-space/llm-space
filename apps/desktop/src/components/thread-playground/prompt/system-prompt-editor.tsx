@@ -8,22 +8,29 @@ import metaPrompt from "../examples/meta-prompt.md?raw";
 import { PROMPT_EXAMPLES, resolveSeed } from "../examples/prompts";
 import { ExamplesMenu } from "../examples-menu";
 import { GeneratePopoverButton } from "../generate-popover-button";
+import { SYSTEM_PROMPT_PLACE_KEY } from "../prompt-variables";
 import { useThreadStore, useThreadStoreActions } from "../stores";
+import { usePromptVariableExtension } from "../use-prompt-variable-extension";
 import { useStreamText } from "../use-stream-text";
+
+interface SystemPromptEditorProps {
+  className?: string;
+  readonly?: boolean;
+  onStreamingChange?: (streaming: boolean) => void;
+}
 
 function _SystemPromptEditor({
   className,
   readonly,
-}: {
-  className?: string;
-  readonly?: boolean;
-}) {
+  onStreamingChange,
+}: SystemPromptEditorProps) {
   const systemPrompt = useThreadStore(
     (s) => s.thread.context?.systemPrompt ?? ""
   );
   const tools = useThreadStore((s) => s.thread.context?.tools);
   const threadModel = useThreadStore((s) => s.thread.model);
   const { updateSystemPrompt } = useThreadStoreActions();
+  const variableExtension = usePromptVariableExtension(SYSTEM_PROMPT_PLACE_KEY);
   const handleChange = useCallback(
     (value: string) => {
       updateSystemPrompt(value);
@@ -50,6 +57,14 @@ function _SystemPromptEditor({
       updateSystemPrompt(generated);
     }
   }, [generated, updateSystemPrompt]);
+
+  useEffect(() => {
+    onStreamingChange?.(streaming);
+  }, [onStreamingChange, streaming]);
+
+  useEffect(() => {
+    return () => onStreamingChange?.(false);
+  }, [onStreamingChange]);
 
   const handleExampleSelect = useCallback(
     (content: string) => {
@@ -117,6 +132,7 @@ function _SystemPromptEditor({
         language="markdown"
         readonly={readonly || streaming}
         placeholder="Enter system prompt here"
+        extraExtensions={variableExtension}
         onChange={handleChange}
       />
     </div>

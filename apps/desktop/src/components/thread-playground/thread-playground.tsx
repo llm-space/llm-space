@@ -53,6 +53,7 @@ import { MessageListView } from "./message/message-list-view";
 import { ThreadPlaygroundSkeleton } from "./misc/skeleton";
 import { TitleEditor, type TitleValidator } from "./misc/title-editor";
 import { ModelConfigEditor } from "./model/model-config-editor";
+import { PromptVariablesListView } from "./prompt/prompt-variables-list-view";
 import { SystemPromptEditor } from "./prompt/system-prompt-editor";
 import { RunHistoryListView } from "./run-history-list-view";
 import {
@@ -187,6 +188,7 @@ function ThreadPlaygroundContent({
   const { effectiveAutoRunTools, reactLoop, setAutoRunTools, setReactLoop } =
     useRunMode();
   const { run, abort, undo, redo, syncTitle } = useThreadStoreActions();
+  const [systemPromptStreaming, setSystemPromptStreaming] = useState(false);
   const title = useMemo(
     () => titleFromProps ?? threadTitleFromPath(path),
     [path, titleFromProps]
@@ -402,32 +404,42 @@ function ThreadPlaygroundContent({
             className="flex min-h-0 grow"
             orientation="horizontal"
           >
-            <ResizablePanel
-              className="px-3 pb-3"
-              defaultSize="50%"
-              minSize="300px"
-            >
+            <ResizablePanel className="pb-3" defaultSize="50%" minSize="300px">
               <div className="flex size-full flex-col">
-                <div className={"flex w-full border-b py-2"}>
-                  <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                    Models
+                <div className="px-3">
+                  <div className={"flex w-full border-b py-2"}>
+                    <div className="text-muted-foreground w-20 shrink-0 text-sm">
+                      Models
+                    </div>
+                    <div className="flex grow items-center">
+                      <ModelConfigEditor readonly={readonly} />
+                    </div>
                   </div>
-                  <div className="flex grow items-center">
-                    <ModelConfigEditor readonly={readonly} />
+                  <div className={"flex w-full border-b py-2"}>
+                    <div className="text-muted-foreground w-20 shrink-0 text-sm">
+                      Tools
+                    </div>
+                    <div className="flex grow items-center">
+                      <ToolListView readonly={readonly} />
+                    </div>
                   </div>
-                </div>
-                <div className={"flex w-full border-b py-2"}>
-                  <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                    Tools
-                  </div>
-                  <div className="flex grow items-center">
-                    <ToolListView readonly={readonly} />
+                  <div className={"flex w-full border-b py-2"}>
+                    <div className="text-muted-foreground w-20 shrink-0 text-sm">
+                      Variables
+                    </div>
+                    <div className="flex grow items-center">
+                      <PromptVariablesListView
+                        disabled={readonly || systemPromptStreaming}
+                        active={active}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="flex min-h-0 w-full grow flex-col">
                   <SystemPromptEditor
-                    className="min-h-0 grow"
+                    className="size-full min-h-0 px-3"
                     readonly={readonly}
+                    onStreamingChange={setSystemPromptStreaming}
                   />
                 </div>
               </div>
