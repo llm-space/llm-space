@@ -34,7 +34,9 @@ function _SystemPromptVariablesDialog({
         <DialogHeader className="border-border/70 shrink-0 border-b px-4 py-3 pr-10">
           <DialogTitle>Variables</DialogTitle>
           <DialogDescription>
-            Manage system prompt variables for this thread.
+            Use `{"{{variable_name}}"}` as placeholder in your prompt, messages
+            and tool results to reference the variable. e.g. `
+            {"{{current_date}}"}` will be replaced with the current date.
           </DialogDescription>
         </DialogHeader>
         <SystemPromptVariablesPanel

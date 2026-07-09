@@ -327,7 +327,7 @@ function _SystemPromptVariablesPanel({
           className={cn(
             "min-h-0",
             detailFillsAvailableHeight &&
-              "[&_[data-radix-scroll-area-viewport]>div]:!flex [&_[data-radix-scroll-area-viewport]>div]:!min-h-full"
+              "[&_[data-radix-scroll-area-viewport]>div]:!flex [&_[data-radix-scroll-area-viewport]>div]:!h-full"
           )}
         >
           <VariableDetail
@@ -575,7 +575,7 @@ function CurrentDateVariableDetail({
       title="Current date"
       disabled={disabled}
     >
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
         <Field label="Name">
           <VariableNameInput
             name={name}
@@ -607,7 +607,9 @@ function CurrentDateVariableDetail({
           </Select>
         </Field>
       </div>
-      <PreviewBlock value={formatCurrentDateVariable(variable.format)} />
+      <Field label="Example">
+        <PreviewBlock value={formatCurrentDateVariable(variable.format)} />
+      </Field>
     </DetailShell>
   );
 }
@@ -672,10 +674,10 @@ function SkillsVariableDetail({
           </Button>
         </Tooltip>
       }
-      className="flex min-h-full flex-col"
+      className="flex h-full flex-col"
       contentClassName="flex min-h-0 grow flex-col"
     >
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_9rem]">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem_9rem]">
         <Field label="Name">
           <VariableNameInput
             name={name}
@@ -725,15 +727,17 @@ function SkillsVariableDetail({
           </Select>
         </Field>
       </div>
-      <PreviewBlock
-        className="max-h-none min-h-32 grow"
-        muted={
-          skillsLoading ||
-          Boolean(skillsError) ||
-          selectedSkills.length !== variable.skillNames.length
-        }
-        value={skillsLoading ? "Loading skills..." : preview}
-      />
+      <Field label="Example" className="flex min-h-0 grow flex-col">
+        <PreviewBlock
+          className="max-h-none min-h-32 grow"
+          muted={
+            skillsLoading ||
+            Boolean(skillsError) ||
+            selectedSkills.length !== variable.skillNames.length
+          }
+          value={skillsLoading ? "Loading skills..." : preview}
+        />
+      </Field>
       <SkillSelectionDialog
         open={skillsDialogOpen}
         disabled={disabled}
@@ -833,22 +837,30 @@ function DetailShell({
   contentClassName?: string;
 }) {
   return (
-    <div className={cn("grid w-full gap-3 p-2", className)}>
-      <div className="flex min-w-0 items-center gap-2">
+    <div className={cn("grid w-full gap-5 p-5", className)}>
+      <div className="flex min-w-0 items-center gap-2.5">
         {icon}
         <div className="min-w-0 grow">
-          <div className="truncate text-sm font-medium">{title}</div>
+          <div className="truncate text-base font-medium">{title}</div>
         </div>
         {action}
       </div>
-      <div className={cn("grid gap-2", contentClassName)}>{children}</div>
+      <div className={cn("grid gap-4", contentClassName)}>{children}</div>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <label className="grid min-w-0 gap-1">
+    <label className={cn("grid min-w-0 gap-1.5", className)}>
       <span className="text-muted-foreground text-xs">{label}</span>
       {children}
     </label>
