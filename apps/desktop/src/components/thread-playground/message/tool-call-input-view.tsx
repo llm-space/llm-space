@@ -15,7 +15,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+import { parseTodoWriteInput, TodoWriteView } from "./todo-write-view";
+
 function _ToolCallInputView({ input }: { input: ToolCallInput }) {
+  const todos = parseTodoWriteInput(input);
+  if (todos) {
+    return <TodoWriteView todos={todos} input={input} />;
+  }
+
   const args = input.arguments as Record<string, unknown>;
   const entries = Object.entries(args);
   return (
