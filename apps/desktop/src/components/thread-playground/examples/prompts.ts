@@ -7,6 +7,7 @@ import {
   ImageIcon,
   LanguagesIcon,
   SparklesIcon,
+  TelescopeIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,11 +16,12 @@ import { getSkillsSettings, listSkills } from "@/client/skills";
 import type { SkillInfo } from "@/shared/skills";
 
 import compactMemoryPrompt from "./compact-memory.md?raw";
+import deepResearchPrompt from "./deep-research.md?raw";
 import deepWikiPrompt from "./deep-wiki.md?raw";
 import generalAgentPrompt from "./general-agent.md?raw";
 import metaImagePrompt from "./meta-image-prompt.md?raw";
 import metaPromptWithTools from "./meta-prompt-with-tools.md?raw";
-import { ASK_USER_QUESTION_BUILTIN_TOOL, TOOL_EXAMPLES } from "./tools";
+import { TOOL_EXAMPLES } from "./tools";
 import translationPrompt from "./translation.md?raw";
 
 /**
@@ -173,6 +175,15 @@ function userPrompt(text: string): Message[] {
   ];
 }
 
+/** Build one user message per text, each as its own turn. */
+function userPrompts(texts: string[]): Message[] {
+  return texts.map((text) => ({
+    id: uuid(),
+    role: "user",
+    content: [{ type: "text", text }],
+  }));
+}
+
 /**
  * Enabled skills across every configured discovery folder, de-duplicated by
  * name (first folder wins) and sorted. Reads live settings, so callers get the
@@ -223,7 +234,7 @@ async function generalAgentMessages(): Promise<Message[]> {
       content: [
         {
           type: "text",
-          text: "Perform a deep research of the open source project DeerFlow 2.0",
+          text: "Perform a deep research of Loop Engineering",
         },
       ],
     },
@@ -238,15 +249,14 @@ async function generalAgentMessages(): Promise<Message[]> {
 export const PROMPT_EXAMPLES: readonly PromptExampleItem[] = [
   {
     type: "example",
-    id: "hello-world",
-    label: "Hello World",
-    fileStem: "hello-world",
-    description: "A classic, helpful and harmless assistant.",
+    id: "blank",
+    label: "Blank",
+    fileStem: "untitled",
+    description: "",
     content:
-      "You're a helpful and harmless assistant that can help with tasks like daily work and writing code, answering questions, and more.",
+      "You're a helpful and harmless assistant, answering questions, and more.",
     icon: FileIcon,
-    tools: HELLO_WORLD_BUILT_IN_TOOLS,
-    messages: userPrompt("What's the weather in Tokyo and Kyoto?"),
+    messages: userPrompt("What's the capital of France?"),
   },
   { type: "separator" },
   {
@@ -259,8 +269,8 @@ export const PROMPT_EXAMPLES: readonly PromptExampleItem[] = [
     content: generalAgentPrompt,
     icon: BotIcon,
     tools: [
-      ASK_USER_QUESTION_BUILTIN_TOOL,
       ...pickBuiltInTools([
+        "ask_user_question",
         "web_search",
         "web_fetch",
         "ls",
@@ -271,11 +281,27 @@ export const PROMPT_EXAMPLES: readonly PromptExampleItem[] = [
         "grep",
         "glob",
         "bash",
+        "todo_write",
+        "present_files",
       ]),
       ...pickTools(["agent"]),
-      ...pickBuiltInTools(["todo_write", "present_files"]),
     ],
     messages: generalAgentMessages,
+  },
+  {
+    type: "example",
+    id: "deep-research",
+    label: "Deep Research",
+    fileStem: "deep-research",
+    description:
+      "A structured investigator that plans and researches a topic in depth.",
+    content: deepResearchPrompt,
+    icon: TelescopeIcon,
+    tools: pickBuiltInTools(["web_search", "web_fetch", "todo_write"]),
+    messages: userPrompts([
+      "<system-reminder>\n<current-date>{{current_date}}</current-date>\n</system-reminder>",
+      "What is Loop Engineering?",
+    ]),
   },
   {
     type: "example",
