@@ -867,7 +867,7 @@ function ToolSummaryRow({ tool }: { tool: McpToolSummary }) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium">{label}</label>
+      <span className="text-sm font-medium">{label}</span>
       {children}
     </div>
   );
@@ -895,7 +895,7 @@ function KeyValueRows({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium">{label}</label>
+      <span className="text-sm font-medium">{label}</span>
       {rows.map((row, index) => (
         <div key={index} className="flex items-center gap-2">
           <Input
