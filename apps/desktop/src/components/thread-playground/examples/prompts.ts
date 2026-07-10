@@ -250,7 +250,7 @@ export const PROMPT_EXAMPLES: readonly PromptExampleItem[] = [
   {
     type: "example",
     id: "blank",
-    label: "Blank",
+    label: "Blank - Create from scratch",
     fileStem: "untitled",
     description: "",
     content:
