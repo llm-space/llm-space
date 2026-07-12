@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Embedded into bin\bun.exe and bin\launcher.exe by scripts/brand-win-binaries.ts
+  (electrobun postBuild hook, Windows only).
+
+  This is stock bun.exe's manifest (asInvoker + longPathAware + SegmentHeap —
+  keep those: bun relies on them) plus DPI awareness. The app window is created
+  inside the bun.exe process (libNativeWrapper via FFI), which ships DPI-unaware,
+  so Windows bitmap-stretches the UI at >100% scaling (blurry). PerMonitorV2
+  makes rendering crisp; the native wrapper already queries GetDpiForMonitor,
+  which returns real values once the process is DPI-aware. dpiAware true/pm is
+  the pre-1703 fallback.
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" manifestVersion="1.0">
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+      <heapType xmlns="http://schemas.microsoft.com/SMI/2020/WindowsSettings">SegmentHeap</heapType>
+    </asmv3:windowsSettings>
+  </asmv3:application>
+</assembly>

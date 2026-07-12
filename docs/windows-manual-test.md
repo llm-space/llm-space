@@ -18,9 +18,9 @@ Environment: Windows 11 x64 (§8 has one optional Win10 smoke item). The system 
 | # | Step | Expected |
 |---|---|---|
 | 1.1 | Double-click `LLMSpace-Setup-canary.exe` | A SmartScreen warning is expected (unsigned build): "More info → Run anyway" continues normally |
-| 1.2 | Installer window | A GUI install progress page runs (no console window flashes), then a finish page with a "Launch LLM Space" checkbox (default on) and a "Create desktop shortcut" checkbox (default on) |
-| 1.3 | Click Finish with "Launch" checked | The app starts with the dark main UI (welcome screen or workspace), no console window |
-| 1.4 | Start Menu | A "LLM Space" entry exists at the root of Start Menu → Programs (and a desktop shortcut if the checkbox was left on); both launch the app |
+| 1.2 | Installer wizard | Welcome page → options page ("Create a desktop shortcut" checkbox, default on) → install progress → finish page ("Launch LLM Space" checkbox, default on). No directory page (the install path is fixed by the updater contract — deliberate). **No console window flashes at any point** |
+| 1.3 | Click Finish with "Launch" checked | The app starts with the dark main UI (welcome screen or workspace), no console window. If a Windows Firewall prompt appears on first run, it names "LLM Space" (not "Bun"); the prompt itself is a known upstream behavior |
+| 1.4 | Start Menu | A "LLM Space" entry exists at the root of Start Menu → Programs (and a desktop shortcut if the checkbox was left on); both show the LLM Space icon and launch the app |
 | 1.5 | Add/Remove Programs | Settings → Apps → Installed apps lists "LLM Space (canary)" with the right version, publisher and icon, and offers Uninstall |
 | 1.6 | Taskbar icon | Shows the LLM Space icon (not the default exe icon), crisp at 16px |
 | 1.7 | Data directory | `%APPDATA%\llm-space` is created, containing `workspace/` and `settings/` |

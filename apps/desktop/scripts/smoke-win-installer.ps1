@@ -60,12 +60,33 @@ Write-Host "ok: silent install exit code 0"
 Assert-True (Test-Path $launcher) "launcher at updater-contract path: $launcher"
 Assert-True ((Get-ChildItem (Join-Path $root "self-extraction") -Filter "*.tar" -ErrorAction SilentlyContinue).Count -ge 1) "self-extraction\<hash>.tar present (delta-update seed)"
 Assert-True (Test-Path (Join-Path $root "uninstall.exe")) "uninstall.exe in channel dir"
+Assert-True (Test-Path (Join-Path $root "app.ico")) "standalone app.ico at channel root (survives app-folder swaps)"
 Assert-True (Test-Path $startMenuLnk) "Start Menu shortcut"
 Assert-True (Test-Path $desktopLnk) "desktop shortcut"
 
 $shell = New-Object -ComObject WScript.Shell
-$target = $shell.CreateShortcut($startMenuLnk).TargetPath
-Assert-True ($target -eq $launcher) "Start Menu shortcut targets launcher (got '$target')"
+$smShortcut = $shell.CreateShortcut($startMenuLnk)
+Assert-True ($smShortcut.TargetPath -eq $launcher) "Start Menu shortcut targets launcher (got '$($smShortcut.TargetPath)')"
+Assert-True ($smShortcut.IconLocation -like "*app.ico*") "Start Menu shortcut icon is app.ico (got '$($smShortcut.IconLocation)')"
+Assert-True ($shell.CreateShortcut($desktopLnk).IconLocation -like "*app.ico*") "desktop shortcut icon is app.ico"
+
+# The extractor must have been run with USERPROFILE stripped: its own
+# PowerShell shortcut-creation spawns flash visible console windows (the CI
+# runner cannot see windows, so assert the code path was skipped instead).
+$installLog = Join-Path $root "install.log"
+Assert-True (Test-Path $installLog) "extractor install.log persisted in channel dir"
+Assert-True ([bool](Select-String -Path $installLog -Pattern "Could not get USERPROFILE" -Quiet)) "extractor shortcut step (console-flashing PowerShell spawns) was skipped"
+
+# Branding from scripts/brand-win-binaries.ts (postBuild hook): the firewall
+# prompt is attributed to bun.exe, and bun.exe owns the app window, so its
+# VERSIONINFO and DPI manifest are what users see.
+$bunExe = Join-Path $root "app\bin\bun.exe"
+$bunInfo = (Get-Item $bunExe).VersionInfo
+Assert-True ($bunInfo.FileDescription -eq "LLM Space") "bun.exe FileDescription branded (got '$($bunInfo.FileDescription)')"
+Assert-True ($bunInfo.ProductName -eq "LLM Space") "bun.exe ProductName branded (got '$($bunInfo.ProductName)')"
+Assert-True ([bool](Select-String -Path $bunExe -Pattern "PerMonitorV2" -Quiet)) "bun.exe embeds a PerMonitorV2 DPI manifest"
+& $bunExe --version | Out-Null
+Assert-True ($LASTEXITCODE -eq 0) "bun.exe still executes after rcedit branding"
 
 $reg = Get-ItemProperty -Path $regPath
 foreach ($name in "DisplayName", "DisplayVersion", "Publisher", "DisplayIcon", "InstallLocation", "UninstallString", "QuietUninstallString") {

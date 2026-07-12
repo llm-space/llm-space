@@ -90,9 +90,12 @@ export default {
     },
   },
   scripts: {
-    // Both run right before their respective codesign step. Workaround for
-    // electrobun#485 (x64-only, no-op elsewhere); see the script header.
-    postBuild: "scripts/fix-x64-headerpad.ts",
+    // postBuild runs after bundle assembly, before tar/hash and codesign:
+    // the headerpad workaround for electrobun#485 (mac-x64-only) plus
+    // Windows binary branding (VERSIONINFO + PerMonitorV2 manifest — see
+    // scripts/brand-win-binaries.ts). postWrap re-runs only the headerpad
+    // fix on the self-extracting wrapper right before its codesign.
+    postBuild: "scripts/post-build.ts",
     postWrap: "scripts/fix-x64-headerpad.ts",
   },
   release: {

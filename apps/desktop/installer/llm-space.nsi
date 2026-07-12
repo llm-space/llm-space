@@ -34,6 +34,7 @@ SetCompress off
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
+!include "nsDialogs.nsh"
 
 !if "${CHANNEL}" == "stable"
   !define DISPLAY_NAME "${APP_NAME}"
@@ -68,20 +69,43 @@ VIAddVersionKey "LegalCopyright" "${PUBLISHER}"
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Launch ${APP_NAME}"
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchApp
-# The finish page's "readme" checkbox repurposed as the optional desktop
-# shortcut (standard NSIS pattern for one-click installers). Default checked.
-!define MUI_FINISHPAGE_SHOWREADME
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "Create desktop shortcut"
-!define MUI_FINISHPAGE_SHOWREADME_FUNCTION CreateDesktopShortcut
 
+# Minimal assisted wizard: welcome/confirm → options (desktop shortcut) →
+# progress → finish (launch checkbox). Deliberately NO directory page: the
+# install location is the updater's hardcoded contract path and must not be
+# user-configurable. /S skips all pages (options default: desktop shortcut on).
+!insertmacro MUI_PAGE_WELCOME
+Page custom OptionsPageCreate OptionsPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
+Var DesktopCheckbox
+Var CreateDesktopShortcutChoice
+
 Function .onInit
   StrCpy $INSTDIR "${CHANNEL_DIR}"
+  # Default for silent installs; the options page overrides it in GUI runs.
+  StrCpy $CreateDesktopShortcutChoice 1
+FunctionEnd
+
+Function OptionsPageCreate
+  !insertmacro MUI_HEADER_TEXT "Installation options" "Choose additional tasks for the ${DISPLAY_NAME} setup."
+  nsDialogs::Create 1018
+  Pop $0
+  ${If} $0 == error
+    Abort
+  ${EndIf}
+  ${NSD_CreateCheckbox} 0 12u 100% 12u "Create a &desktop shortcut"
+  Pop $DesktopCheckbox
+  ${NSD_SetState} $DesktopCheckbox ${BST_CHECKED}
+  nsDialogs::Show
+FunctionEnd
+
+Function OptionsPageLeave
+  ${NSD_GetState} $DesktopCheckbox $CreateDesktopShortcutChoice
 FunctionEnd
 
 Function un.onInit
@@ -105,7 +129,7 @@ FunctionEnd
 
 Function CreateDesktopShortcut
   SetOutPath "$INSTDIR\app\bin"
-  CreateShortCut "$DESKTOP\${SHORTCUT_NAME}" "${LAUNCHER}" "" "${LAUNCHER}" 0
+  CreateShortCut "$DESKTOP\${SHORTCUT_NAME}" "${LAUNCHER}" "" "$INSTDIR\app.ico" 0
 FunctionEnd
 
 Section "Install"
@@ -127,8 +151,20 @@ Section "Install"
   # self-extraction\<hash>.tar for future delta updates. Its output goes to a
   # log file: nsExec's log window is invisible in silent installs, and the
   # extractor's diagnostics are the only clue when it fails.
+  #
+  # USERPROFILE is stripped deliberately: the extractor's own shortcut step
+  # (its ONLY consumer of USERPROFILE) spawns console-subsystem PowerShell
+  # children that flash visible console windows outside nsExec's reach, and
+  # its .lnk creation is redundant — this installer owns the shortcuts. With
+  # USERPROFILE unset that step logs a warning and returns before spawning
+  # anything; extraction itself keys off LOCALAPPDATA and is unaffected.
+  FileOpen $1 "$PLUGINSDIR\run-extractor.cmd" w
+  FileWrite $1 '@echo off$\r$\n'
+  FileWrite $1 'set "USERPROFILE="$\r$\n'
+  FileWrite $1 '"$PLUGINSDIR\payload\${PAYLOAD_STEM}.exe" > "$PLUGINSDIR\extractor.log" 2>&1$\r$\n'
+  FileClose $1
   DetailPrint "Extracting ${APP_NAME} ${VERSION}..."
-  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /C ""$PLUGINSDIR\payload\${PAYLOAD_STEM}.exe" > "$PLUGINSDIR\extractor.log" 2>&1"'
+  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /C ""$PLUGINSDIR\run-extractor.cmd""'
   Pop $0
   DetailPrint "Extractor finished (exit code $0)"
 
@@ -145,17 +181,27 @@ Section "Install"
     Abort "Extraction failed — launcher.exe missing."
   extraction_ok:
 
-  # Shortcuts: the extractor's own PowerShell .lnk creation has silent-failure
-  # semantics — delete whatever it did (or didn't) create, then create ours
-  # deterministically. Same name, so nothing ever duplicates.
+  # Keep the extractor's output around for support/CI: install.log sits in
+  # the channel dir (outside the updater-swapped app\ folder) and is removed
+  # with it on uninstall.
+  CopyFiles /SILENT "$PLUGINSDIR\extractor.log" "$INSTDIR\install.log"
+
+  # Standalone icon for shortcuts and Add/Remove Programs. launcher.exe ships
+  # without an icon resource, and anything inside app\ is swapped wholesale by
+  # the updater — a copy at the channel root survives self-updates.
+  SetOutPath "$INSTDIR"
+  File "/oname=app.ico" "${ICON_FILE}"
+
+  # Shortcuts: the extractor's own .lnk creation is neutralized (USERPROFILE
+  # strip above), but keep delete-then-create so upgrades over an install made
+  # by a raw extractor never leave duplicates or stale icons.
   SetOutPath "$INSTDIR\app\bin"
   Delete "$SMPROGRAMS\${SHORTCUT_NAME}"
-  CreateShortCut "$SMPROGRAMS\${SHORTCUT_NAME}" "${LAUNCHER}" "" "${LAUNCHER}" 0
+  CreateShortCut "$SMPROGRAMS\${SHORTCUT_NAME}" "${LAUNCHER}" "" "$INSTDIR\app.ico" 0
   Delete "$DESKTOP\${SHORTCUT_NAME}"
-  # GUI installs recreate the desktop shortcut from the finish-page checkbox;
-  # silent installs honor the checkbox default (on).
-  IfSilent 0 +2
+  ${If} $CreateDesktopShortcutChoice = 1
     Call CreateDesktopShortcut
+  ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
@@ -164,7 +210,7 @@ Section "Install"
   WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayName" "${DISPLAY_NAME}"
   WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "${REG_UNINSTALL}" "Publisher" "${PUBLISHER}"
-  WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayIcon" "${LAUNCHER}"
+  WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayIcon" "$INSTDIR\app.ico"
   WriteRegStr HKCU "${REG_UNINSTALL}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${REG_UNINSTALL}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKCU "${REG_UNINSTALL}" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
