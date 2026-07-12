@@ -198,15 +198,13 @@ jobs:
           }
           pkill -f "$APP/Contents/MacOS/" || true
 
-      # Windows launch/behavior verification is manual for now (the wrapper
-      # exe pops the extraction UI, which a headless runner can't exercise
-      # meaningfully); this validates the artifact set instead.
-      - name: Smoke test artifacts (Windows)
+      # The update feed consumes the raw electrobun artifacts unchanged; the
+      # NSIS installer below only replaces the Setup zip as the human-facing
+      # download. Validate the feed artifact set first.
+      - name: Validate update-feed artifacts (Windows)
         if: matrix.os == 'win'
         shell: pwsh
         working-directory: apps/desktop
-        env:
-          CHANNEL: ${{ needs.meta.outputs.channel }}
         run: |
           $setupZip = Get-ChildItem artifacts -Filter "*-Setup*.zip"
           $tarZst = Get-ChildItem artifacts -Filter "*.tar.zst"
@@ -215,13 +213,40 @@ jobs:
             Write-Error "missing Windows artifacts (Setup zip / tar.zst / update.json)"
             exit 1
           }
-          Expand-Archive -Path $setupZip[0].FullName -DestinationPath "$env:RUNNER_TEMP/setup-check"
-          $exe = Get-ChildItem "$env:RUNNER_TEMP/setup-check" -Recurse -Filter "*.exe"
-          if (-not $exe) {
-            Write-Error "Setup zip contains no exe"
-            exit 1
-          }
           Get-Content $updateJson[0].FullName | ConvertFrom-Json | Out-Null
+
+      # windows-latest images ship NSIS, but don't depend on that quietly.
+      - name: Ensure NSIS
+        if: matrix.os == 'win'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            choco install nsis -y --no-progress
+            Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\NSIS"
+          }
+          makensis /VERSION
+
+      # Wrap the electrobun console self-extractor in the GUI installer
+      # (shortcuts, Add/Remove Programs entry, uninstaller); see
+      # apps/desktop/installer/llm-space.nsi.
+      - name: Package NSIS installer (Windows)
+        if: matrix.os == 'win'
+        shell: pwsh
+        working-directory: apps/desktop
+        env:
+          CHANNEL: ${{ needs.meta.outputs.channel }}
+        run: bun run build:win-installer --channel $env:CHANNEL
+
+      # Silent install must establish the exact updater-contract layout +
+      # shortcuts + uninstall entry; silent uninstall must remove all of it
+      # while preserving user data.
+      - name: Smoke test installer (Windows)
+        if: matrix.os == 'win'
+        shell: pwsh
+        working-directory: apps/desktop
+        env:
+          CHANNEL: ${{ needs.meta.outputs.channel }}
+        run: ./scripts/smoke-win-installer.ps1 -Channel $env:CHANNEL
 
       - uses: actions/upload-artifact@v7
         with:
@@ -275,7 +300,7 @@ jobs:
           # Static notes only. No changelog extraction and no --generate-notes:
           # both list commits/authors and a "New Contributors" section, which
           # we deliberately don't surface.
-          NOTES="Download the DMG (macOS) or the -Setup.zip (Windows) below. Existing installs update in place. Windows builds are unsigned for now: SmartScreen may show a warning on first install — choose \"More info\" → \"Run anyway\"."
+          NOTES="Download the DMG (macOS) or the LLMSpace-Setup exe (Windows) below. Existing installs update in place. Windows builds are unsigned for now: SmartScreen may show a warning on first install — choose \"More info\" → \"Run anyway\"."
           PRERELEASE_ARGS=()
           if [ "$CHANNEL" = "canary" ]; then
             PRERELEASE_ARGS=(--prerelease)
@@ -291,9 +316,11 @@ jobs:
           fi
           gh release upload "$TAG" artifacts/*.dmg \
             --repo "$GITHUB_REPOSITORY" --clobber
-          # Windows installer (zip wrapping the Setup exe).
+          # Windows: the NSIS installer (LLMSpace-Setup*.exe) is the
+          # human-facing download; the raw electrobun Setup zip stays a
+          # build-artifact-only debugging aid.
           shopt -s nullglob
-          WIN_SETUP=(artifacts/*-Setup*.zip)
+          WIN_SETUP=(artifacts/LLMSpace-Setup*.exe)
           if [ ${#WIN_SETUP[@]} -gt 0 ]; then
             gh release upload "$TAG" "${WIN_SETUP[@]}" \
               --repo "$GITHUB_REPOSITORY" --clobber

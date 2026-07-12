@@ -10,6 +10,7 @@ import {
   setLastSeenHash,
   setUpdateMode as persistUpdateMode,
 } from "./state";
+import { refreshWindowsUninstallEntry } from "./windows-uninstall-entry";
 
 const INITIAL_CHECK_DELAY_MS = 30_000;
 const CHECK_INTERVAL_MS = 4 * 60 * 60_000;
@@ -160,6 +161,10 @@ function _applySchedule(mode: UpdateMode) {
 export async function startUpdaterService() {
   const { channel, hash, version } = await Updater.getLocalInfo();
   if (channel === "dev") return;
+
+  // Self-updates bypass the Windows installer, so its Add/Remove Programs
+  // version drifts unless refreshed here (win32 no-op elsewhere).
+  refreshWindowsUninstallEntry(channel, version);
 
   const lastSeen = await getLastSeenHash();
   if (lastSeen && lastSeen !== hash) installedVersion = version;

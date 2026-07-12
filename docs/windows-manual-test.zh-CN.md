@@ -8,8 +8,8 @@
 ## 0. 获取被测包
 
 1. 打开仓库 GitHub → Actions → **Windows branch build** workflow → 最新一次成功 run。
-2. 下载 artifact `llm-space-win-x64-canary`，解压得到 `canary-win-x64-LLMSpace-Setup-canary.zip` 等文件。
-3. 再解压 `*-Setup*.zip` 得到 Setup exe。
+2. 下载 artifact `llm-space-win-x64-canary`，解压得到 GUI 安装器 `LLMSpace-Setup-canary.exe`。
+   （electrobun 原始产物——Setup zip、tar.zst、update.json——在次级 artifact `llm-space-win-x64-canary-electrobun-raw` 里，仅调试打包本身时需要。）
 
 环境要求：Windows 11 x64（§8 有一条可选的 Win10 冒烟项）。系统需有 WebView2 Runtime（Win11 自带）。
 
@@ -17,12 +17,16 @@
 
 | # | 步骤 | 预期 |
 |---|---|---|
-| 1.1 | 双击 Setup exe | SmartScreen 警告属预期（未签名）：「更多信息 → 仍要运行」后正常继续 |
-| 1.2 | 完成自解压安装并启动 | 应用启动，出现深色主界面（欢迎页或工作区），无控制台窗口 |
-| 1.3 | 任务栏图标 | 显示 LLM Space 图标（非默认 exe 图标），16px 下不模糊 |
-| 1.4 | 数据目录 | `%APPDATA%\llm-space` 被创建，含 `workspace/`、`settings/` |
+| 1.1 | 双击 `LLMSpace-Setup-canary.exe` | SmartScreen 警告属预期（未签名）：「更多信息 → 仍要运行」后正常继续 |
+| 1.2 | 安装器窗口 | 出现 GUI 安装进度页（不闪控制台窗口），随后是完成页，含默认勾选的「Launch LLM Space」和「Create desktop shortcut」复选框 |
+| 1.3 | 保持「Launch」勾选点 Finish | 应用启动，出现深色主界面（欢迎页或工作区），无控制台窗口 |
+| 1.4 | 开始菜单 | 开始菜单 → 程序根目录存在「LLM Space」项（未取消勾选则桌面也有快捷方式）；两者均可启动应用 |
+| 1.5 | 应用管理 | 设置 → 应用 → 安装的应用里能看到「LLM Space (canary)」，版本号、发布者、图标正确，且提供卸载入口 |
+| 1.6 | 任务栏图标 | 显示 LLM Space 图标（非默认 exe 图标），16px 下不模糊 |
+| 1.7 | 数据目录 | `%APPDATA%\llm-space` 被创建，含 `workspace/`、`settings/` |
+| 1.8 | 安装布局 | `%LOCALAPPDATA%\tech.deerflow.llm-space\canary\` 下有 `app\bin\launcher.exe`、`self-extraction\`、`uninstall.exe`（应用内更新器依赖这一精确布局） |
 
-启动失败时：PowerShell 里 `$env:ELECTROBUN_CONSOLE=1; & "<安装路径>\LLM Space.exe"` 抓控制台输出附在报告里。
+启动失败时：PowerShell 里 `$env:ELECTROBUN_CONSOLE=1; & "$env:LOCALAPPDATA\tech.deerflow.llm-space\canary\app\bin\launcher.exe"` 抓控制台输出附在报告里。
 
 ## 2. 窗口 chrome（本移植的最大风险面）
 
@@ -101,6 +105,16 @@
 | 8.1 | Win10 x64 虚拟机重复 §1 + §2.1-2.6 | 尽力兼容项：能跑最好，问题记录为已知限制，不阻塞 |
 | 8.2 | 150% 系统 DPI 缩放显示器 | 界面清晰不模糊 |
 | 8.3 | 浅色系统主题下观察窗口阴影/边框 | 无明显视觉瑕疵 |
+
+## 9. 卸载验证（最后执行——会移除安装）
+
+| # | 步骤 | 预期 |
+|---|---|---|
+| 9.1 | 退出应用，设置 → 应用 → 安装的应用 → 「LLM Space (canary)」→ 卸载 | 弹出 NSIS 卸载器确认页，确认后正常执行完毕 |
+| 9.2 | 安装目录 | `%LOCALAPPDATA%\tech.deerflow.llm-space\canary\` 整体消失（app、self-extraction、uninstall.exe） |
+| 9.3 | 快捷方式 | 开始菜单项与桌面快捷方式均被移除 |
+| 9.4 | 应用管理 | 「LLM Space (canary)」条目消失 |
+| 9.5 | **用户数据保留** | `%APPDATA%\llm-space`（workspace、settings、已配置模型）原样保留；重装后此前的工作区恢复 |
 
 ## 报告格式
 

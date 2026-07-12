@@ -57,9 +57,45 @@ jobs:
           }
           Get-ChildItem artifacts | Format-Table Name, Length
 
+      # windows-latest images ship NSIS, but don't depend on that quietly.
+      - name: Ensure NSIS
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            choco install nsis -y --no-progress
+            Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\NSIS"
+          }
+          makensis /VERSION
+
+      # Wrap the electrobun console self-extractor in the GUI installer
+      # (shortcuts, Add/Remove Programs entry, uninstaller); see
+      # apps/desktop/installer/llm-space.nsi.
+      - name: Package NSIS installer
+        shell: pwsh
+        working-directory: apps/desktop
+        run: bun run build:win-installer --channel canary
+
+      # The machine-verifiable acceptance gate: silent install must establish
+      # the exact updater-contract layout + shortcuts + uninstall entry, and
+      # silent uninstall must remove all of it while preserving user data.
+      - name: Smoke test installer (silent install/uninstall)
+        shell: pwsh
+        working-directory: apps/desktop
+        run: ./scripts/smoke-win-installer.ps1 -Channel canary
+
+      # Primary artifact: the NSIS installer testers should download.
       - uses: actions/upload-artifact@v7
         with:
           name: llm-space-win-x64-canary
+          path: apps/desktop/artifacts/LLMSpace-Setup-canary.exe
+          if-no-files-found: error
+          retention-days: 14
+
+      # Secondary: the raw electrobun output (Setup zip, tar.zst, update.json)
+      # for debugging the packaging itself.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: llm-space-win-x64-canary-electrobun-raw
           path: apps/desktop/artifacts/
           if-no-files-found: error
           retention-days: 14

@@ -8,8 +8,8 @@
 ## 0. Get the build under test
 
 1. Open the repository on GitHub → Actions → **Windows branch build** workflow → the latest successful run.
-2. Download the `llm-space-win-x64-canary` artifact and unzip it; it contains `canary-win-x64-LLMSpace-Setup-canary.zip` and friends.
-3. Unzip `*-Setup*.zip` to get the Setup exe.
+2. Download the `llm-space-win-x64-canary` artifact and unzip it; it contains the GUI installer `LLMSpace-Setup-canary.exe`.
+   (The raw electrobun output — Setup zip, tar.zst, update.json — is in the secondary `llm-space-win-x64-canary-electrobun-raw` artifact, only needed for debugging the packaging itself.)
 
 Environment: Windows 11 x64 (§8 has one optional Win10 smoke item). The system needs the WebView2 Runtime (bundled with Windows 11).
 
@@ -17,12 +17,16 @@ Environment: Windows 11 x64 (§8 has one optional Win10 smoke item). The system 
 
 | # | Step | Expected |
 |---|---|---|
-| 1.1 | Double-click the Setup exe | A SmartScreen warning is expected (unsigned build): "More info → Run anyway" continues normally |
-| 1.2 | Finish the self-extracting install and launch | The app starts with the dark main UI (welcome screen or workspace), no console window |
-| 1.3 | Taskbar icon | Shows the LLM Space icon (not the default exe icon), crisp at 16px |
-| 1.4 | Data directory | `%APPDATA%\llm-space` is created, containing `workspace/` and `settings/` |
+| 1.1 | Double-click `LLMSpace-Setup-canary.exe` | A SmartScreen warning is expected (unsigned build): "More info → Run anyway" continues normally |
+| 1.2 | Installer window | A GUI install progress page runs (no console window flashes), then a finish page with a "Launch LLM Space" checkbox (default on) and a "Create desktop shortcut" checkbox (default on) |
+| 1.3 | Click Finish with "Launch" checked | The app starts with the dark main UI (welcome screen or workspace), no console window |
+| 1.4 | Start Menu | A "LLM Space" entry exists at the root of Start Menu → Programs (and a desktop shortcut if the checkbox was left on); both launch the app |
+| 1.5 | Add/Remove Programs | Settings → Apps → Installed apps lists "LLM Space (canary)" with the right version, publisher and icon, and offers Uninstall |
+| 1.6 | Taskbar icon | Shows the LLM Space icon (not the default exe icon), crisp at 16px |
+| 1.7 | Data directory | `%APPDATA%\llm-space` is created, containing `workspace/` and `settings/` |
+| 1.8 | Install layout | `%LOCALAPPDATA%\tech.deerflow.llm-space\canary\` contains `app\bin\launcher.exe`, `self-extraction\`, and `uninstall.exe` (this exact layout is what the in-app updater expects) |
 
-If launch fails: in PowerShell run `$env:ELECTROBUN_CONSOLE=1; & "<install path>\LLM Space.exe"` and attach the console output to your report.
+If launch fails: in PowerShell run `$env:ELECTROBUN_CONSOLE=1; & "$env:LOCALAPPDATA\tech.deerflow.llm-space\canary\app\bin\launcher.exe"` and attach the console output to your report.
 
 ## 2. Window chrome (the biggest risk area of this port)
 
@@ -101,6 +105,16 @@ Configure a working model in Settings → Models, then create a Thread:
 | 8.1 | Repeat §1 + §2.1–2.6 in a Win10 x64 VM | Best-effort support: working is great, problems are recorded as known limitations, non-blocking |
 | 8.2 | A display at 150% system DPI scaling | UI stays sharp, no blurriness |
 | 8.3 | Observe window shadow/border under a light system theme | No obvious visual glitches |
+
+## 9. Uninstall verification (run last — removes the install)
+
+| # | Step | Expected |
+|---|---|---|
+| 9.1 | Quit the app, then Settings → Apps → Installed apps → "LLM Space (canary)" → Uninstall | The NSIS uninstaller opens with a confirm page; confirming runs to completion |
+| 9.2 | Install directory | `%LOCALAPPDATA%\tech.deerflow.llm-space\canary\` is gone entirely (app, self-extraction, uninstall.exe) |
+| 9.3 | Shortcuts | The Start Menu entry and the desktop shortcut are both removed |
+| 9.4 | Add/Remove Programs | The "LLM Space (canary)" entry is gone |
+| 9.5 | **User data survives** | `%APPDATA%\llm-space` (workspace, settings, configured models) is untouched; reinstalling brings the previous workspace back |
 
 ## Report format
 
