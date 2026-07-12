@@ -16,7 +16,14 @@
  * CI-wise that's a Windows runner, but the script itself is cross-platform
  * so the .nsi can be compile-checked on macOS/Linux too.
  */
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
 import packageJson from "../package.json";
@@ -98,6 +105,43 @@ const payload = {
 for (const [kind, path] of Object.entries(payload)) {
   if (!existsSync(path)) fail(`payload ${kind} missing: ${path}`);
 }
+
+/**
+ * electrobun's zig self-extractor only handles ustar entries of type normal /
+ * directory / symlink; a pax extended header ('x'/'g') or GNU longname ('L')
+ * aborts extraction mid-install with TarUnsupportedFileType. Those appear
+ * whenever the tar is created without `--format=ustar` and any path exceeds
+ * 100 chars (hashed font assets do) — CI prepends a tar shim before
+ * `electrobun build` to force ustar; this guard makes any regression fail
+ * here, at packaging time, instead of on end-user machines.
+ */
+function validateTarSupportedByExtractor(archivePath: string) {
+  const tar = Bun.zstdDecompressSync(readFileSync(archivePath));
+  const decoder = new TextDecoder();
+  let offset = 0;
+  while (offset + 512 <= tar.length) {
+    const block = tar.subarray(offset, offset + 512);
+    if (block.every((byte) => byte === 0)) break; // end-of-archive marker
+    const typeflag = block[156];
+    const supported =
+      typeflag === 0 || // old-style normal file
+      typeflag === 0x30 || // '0' normal file
+      typeflag === 0x32 || // '2' symlink
+      typeflag === 0x35; // '5' directory
+    if (!supported) {
+      const name = decoder.decode(block.subarray(0, 100)).split("\0")[0];
+      fail(
+        `payload tar has a type-'${String.fromCharCode(typeflag)}' entry ("${name}") that electrobun's self-extractor cannot parse — ` +
+          `the tar must be created with --format=ustar (the Windows CI workflows prepend a tar shim before \`electrobun build\` for this)`
+      );
+    }
+    const sizeField = decoder.decode(block.subarray(124, 136));
+    const size = parseInt(sizeField.replace(/[^0-7]/g, " ").trim() || "0", 8);
+    offset += 512 + Math.ceil(size / 512) * 512;
+  }
+}
+
+validateTarSupportedByExtractor(payload.archive);
 
 const version = packageJson.version;
 const numericMatch = /^(\d+)\.(\d+)\.(\d+)/.exec(version);

@@ -155,6 +155,30 @@ jobs:
           printf '%s' "$ASC_API_KEY_P8" > "$KEY_PATH"
           echo "ELECTROBUN_APPLEAPIKEYPATH=$KEY_PATH" >> "$GITHUB_ENV"
 
+      # electrobun's createTar shells out to `tar -cf` with no format flag, and
+      # the runner's bsdtar defaults to "restricted pax": any path >100 chars
+      # (e.g. hashed font assets) gets a pax extended header, which electrobun's
+      # zig self-extractor cannot parse (TarUnsupportedFileType — install dies
+      # mid-extraction). Force ustar, whose prefix field covers those paths and
+      # which the extractor fully supports; build-win-installer.ts validates
+      # the payload tar so any regression fails loudly at packaging time.
+      - name: Force ustar tar creation (Windows extractor compat)
+        if: matrix.os == 'win'
+        shell: pwsh
+        run: |
+          $shimDir = Join-Path $env:RUNNER_TEMP "tar-ustar-shim"
+          New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
+          $lines = @(
+            '@echo off',
+            'if "%~1"=="-cf" (',
+            '  C:\Windows\System32\tar.exe --format=ustar %*',
+            ') else (',
+            '  C:\Windows\System32\tar.exe %*',
+            ')'
+          )
+          Set-Content -Path (Join-Path $shimDir "tar.cmd") -Value $lines -Encoding ascii
+          Add-Content $env:GITHUB_PATH $shimDir
+
       # Windows ships unsigned for now (SmartScreen shows "More info → Run
       # anyway" on first install; auto-updates never re-prompt). SignPath
       # Foundation OSS signing lands with the first stable Windows release.

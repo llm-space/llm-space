@@ -41,6 +41,29 @@ jobs:
           Copy-Item "$env:RUNNER_TEMP/rg/$zip/rg.exe" resources/win/rg.exe
           & resources/win/rg.exe --version
 
+      # electrobun's createTar shells out to `tar -cf` with no format flag, and
+      # the runner's bsdtar defaults to "restricted pax": any path >100 chars
+      # (e.g. hashed font assets) gets a pax extended header, which electrobun's
+      # zig self-extractor cannot parse (TarUnsupportedFileType — install dies
+      # mid-extraction). Force ustar, whose prefix field covers those paths and
+      # which the extractor fully supports; build-win-installer.ts validates
+      # the payload tar so any regression fails loudly at packaging time.
+      - name: Force ustar tar creation (extractor compat)
+        shell: pwsh
+        run: |
+          $shimDir = Join-Path $env:RUNNER_TEMP "tar-ustar-shim"
+          New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
+          $lines = @(
+            '@echo off',
+            'if "%~1"=="-cf" (',
+            '  C:\Windows\System32\tar.exe --format=ustar %*',
+            ') else (',
+            '  C:\Windows\System32\tar.exe %*',
+            ')'
+          )
+          Set-Content -Path (Join-Path $shimDir "tar.cmd") -Value $lines -Encoding ascii
+          Add-Content $env:GITHUB_PATH $shimDir
+
       - name: Build (unsigned canary)
         working-directory: apps/desktop
         shell: bash
