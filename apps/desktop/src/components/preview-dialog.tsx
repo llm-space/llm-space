@@ -69,9 +69,14 @@ function _PreviewDialog({
               />
             </TabsContent>
             <TabsContent value="markdown" className="min-h-0 p-3">
-              <Markdown className="size-full overflow-auto rounded-lg bg-(--textarea) px-3 py-2">
-                {value}
-              </Markdown>
+              <div className="size-full overflow-auto rounded-lg bg-(--textarea)">
+                <Markdown
+                  variant="article"
+                  className="mx-auto max-w-3xl px-8 py-6"
+                >
+                  {value}
+                </Markdown>
+              </div>
             </TabsContent>
             <TabsContent value="html" className="min-h-0 p-3">
               <iframe
