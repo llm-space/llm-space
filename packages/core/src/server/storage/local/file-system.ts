@@ -8,6 +8,7 @@ import {
   type Thread,
   type ThreadStorage,
 } from "../../../types";
+import { packThreadImages, unpackThreadImages } from "../blob";
 
 /**
  * A {@link FileSystem} and {@link ThreadStorage} backed by the local
@@ -82,17 +83,15 @@ export class LocalFileSystem implements FileSystem, ThreadStorage {
 
   async read(p: string): Promise<Thread> {
     const text = await fs.readFile(this._resolve(p), "utf8");
-    return normalizeThread(JSON.parse(text) as Thread);
+    const parsed = JSON.parse(text) as Thread;
+    return normalizeThread(unpackThreadImages(parsed));
   }
 
   async write(p: string, thread: Thread): Promise<void> {
     const real = this._resolve(p);
     await fs.mkdir(path.dirname(real), { recursive: true });
-    await fs.writeFile(
-      real,
-      JSON.stringify(normalizeThread(thread), null, 2),
-      "utf8"
-    );
+    const serializable = packThreadImages(normalizeThread(thread));
+    await fs.writeFile(real, JSON.stringify(serializable, null, 2), "utf8");
   }
 
   /**
