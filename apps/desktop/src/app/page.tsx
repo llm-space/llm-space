@@ -191,8 +191,12 @@ function PageInner() {
   const { tracingEnabled } = useExperimental();
 
   // The active tab is read through a ref so command handlers never go stale.
+  // The ref is read only inside post-commit command handlers, so the sync
+  // lives in a passive effect rather than the render body.
   const activeTabIdRef = useRef(tabs.activeId);
-  activeTabIdRef.current = tabs.activeId;
+  useEffect(() => {
+    activeTabIdRef.current = tabs.activeId;
+  });
   const {
     close,
     closeOthers,
