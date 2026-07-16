@@ -4,6 +4,18 @@ All notable changes to LLM Space are documented here. This project follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.1] - 2026-07-16
+
+A small UX release focused on the tool import dialogs.
+
+### Changed
+
+- The built-in and MCP tool import dialogs now show per-category / per-server
+  actions in the sidebar, including **Enable all** and **Disable all** for
+  quickly toggling every tool in a group.
+- The tools row in the thread playground now scrolls instead of pushing the
+  layout when many tools are added.
+
 ## [4.1.0] - 2026-07-16
 
 A maintenance release: no major new features, a handful of bug fixes, and three
@@ -34,5 +46,6 @@ Baseline for this changelog. See the
 [GitHub releases](https://github.com/deer-flow/llm-space/releases) for earlier
 history.
 
+[4.1.1]: https://github.com/deer-flow/llm-space/releases/tag/v4.1.1
 [4.1.0]: https://github.com/deer-flow/llm-space/releases/tag/v4.1.0
 [4.0.1]: https://github.com/deer-flow/llm-space/releases/tag/v4.0.1
