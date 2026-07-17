@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
+import { useHostServices } from "@llm-space/ui/host";
 import { useAutoAnimation } from "@llm-space/ui/lib/use-auto-animation";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
@@ -39,6 +40,7 @@ export function ToolListView({
 }) {
   const tools = useThreadStore((s) => s.thread.context?.tools);
   const { addTool, removeTool } = useThreadStoreActions();
+  const { presentational } = useHostServices();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [builtInOpen, setBuiltInOpen] = useState(false);
@@ -102,48 +104,50 @@ export function ToolListView({
             onRemove={handleRemoveTool}
           />
         ))}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              className={cn(
-                "-ml-1 px-0 transition-opacity hover:bg-transparent!",
-                readonly ? "opacity-30!" : "opacity-50"
-              )}
-              variant="ghost"
-              size="sm"
-              disabled={readonly}
-            >
-              <PlusIcon className="size-3" />
-              Add
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem
-              onSelect={() => {
-                setInitialBuiltInToolName(null);
-                setBuiltInOpen(true);
-              }}
-            >
-              <PackageCheckIcon />
-              Add Built-in Tools
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                setInitialMcpServerId(null);
-                setInitialMcpToolName(null);
-                setMcpOpen(true);
-              }}
-            >
-              <CableIcon />
-              Add MCP Tools
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={openAddDialog}>
-              <FunctionSquareIcon />
-              Add Custom Function Tool
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!presentational && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className={cn(
+                  "-ml-1 px-0 transition-opacity hover:bg-transparent!",
+                  readonly ? "opacity-30!" : "opacity-50"
+                )}
+                variant="ghost"
+                size="sm"
+                disabled={readonly}
+              >
+                <PlusIcon className="size-3" />
+                Add
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => {
+                  setInitialBuiltInToolName(null);
+                  setBuiltInOpen(true);
+                }}
+              >
+                <PackageCheckIcon />
+                Add Built-in Tools
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setInitialMcpServerId(null);
+                  setInitialMcpToolName(null);
+                  setMcpOpen(true);
+                }}
+              >
+                <CableIcon />
+                Add MCP Tools
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={openAddDialog}>
+                <FunctionSquareIcon />
+                Add Custom Function Tool
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         <McpToolImportDialog
           open={mcpOpen}
           onOpenChange={(open) => {

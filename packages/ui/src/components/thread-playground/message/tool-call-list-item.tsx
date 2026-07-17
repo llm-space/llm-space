@@ -24,11 +24,11 @@ import { openFirecrawlLimitDialog } from "@llm-space/ui/components/firecrawl-lim
 import { PreviewDialog } from "@llm-space/ui/components/preview-dialog-lazy";
 import { useRenderingFidelity } from "@llm-space/ui/components/theme-provider";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useHostServices } from "@llm-space/ui/host";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import { Input } from "@llm-space/ui/ui/input";
 import { Marker, MarkerContent } from "@llm-space/ui/ui/marker";
-
 
 import { useThreadStoreActions } from "../stores";
 import { usePromptVariableExtensionForContext } from "../variable/use-prompt-variable-extension";
@@ -56,6 +56,7 @@ function _ToolCallListItem({
   readonly?: boolean;
 }) {
   const { fidelity } = useRenderingFidelity();
+  const { presentational } = useHostServices();
   const { updateToolCallOutputText } = useThreadStoreActions();
   const { resolveTool, runToolCall } = useToolCallRunner(messageId);
   const variableExtension = usePromptVariableExtensionForContext(
@@ -146,7 +147,7 @@ function _ToolCallListItem({
               <CopyIcon className="size-3" />
             </Button>
           </Tooltip>
-          {executable ? (
+          {executable && !presentational ? (
             <Tooltip content="Call this tool">
               <Button
                 className="invisible shrink-0 group-hover/message:visible"
@@ -184,18 +185,20 @@ function _ToolCallListItem({
               </Tooltip>
             </MarkerContent>
           </Marker>
-          <div className="flex items-center">
-            <Button
-              className="invisible shrink-0 group-hover/message:visible"
-              size="xs"
-              variant={isError ? "destructive" : "ghost"}
-              disabled={readonly}
-              onClick={toggleError}
-            >
-              <AlertCircleIcon />
-              {isError ? "Clear error" : "Mark as error"}
-            </Button>
-          </div>
+          {!presentational && (
+            <div className="flex items-center">
+              <Button
+                className="invisible shrink-0 group-hover/message:visible"
+                size="xs"
+                variant={isError ? "destructive" : "ghost"}
+                disabled={readonly}
+                onClick={toggleError}
+              >
+                <AlertCircleIcon />
+                {isError ? "Clear error" : "Mark as error"}
+              </Button>
+            </div>
+          )}
         </div>
         <PreviewDialog
           open={previewOpen}

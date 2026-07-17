@@ -168,6 +168,8 @@ describe("GistThreadReader.readShared", () => {
           id: GIST_ID,
           description: "A general-purpose agent.",
           html_url: `https://gist.github.com/MagicCube/${GIST_ID}`,
+          created_at: "2026-07-17T09:04:14Z",
+          updated_at: "2026-07-17T10:00:00Z",
           owner: {
             login: "MagicCube",
             avatar_url: "https://avatars.githubusercontent.com/u/1?v=4",
@@ -202,6 +204,8 @@ describe("GistThreadReader.readShared", () => {
         profileUrl: "https://github.com/MagicCube",
       },
       sourceUrl: `https://gist.github.com/MagicCube/${GIST_ID}`,
+      createdAt: "2026-07-17T09:04:14Z",
+      updatedAt: "2026-07-17T10:00:00Z",
     });
   });
 });

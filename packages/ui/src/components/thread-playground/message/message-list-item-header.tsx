@@ -14,10 +14,9 @@ import { memo, useCallback, useMemo, useState } from "react";
 
 import { PreviewDialog } from "@llm-space/ui/components/preview-dialog-lazy";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useHostServices } from "@llm-space/ui/host";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
-
-
 
 import { useThreadStoreActions } from "../stores";
 
@@ -39,6 +38,10 @@ function _MessageListItemHeader({
 }) {
   const { run, removeMessage, toggleMessageRole, toggleMessageCollapsed } =
     useThreadStoreActions();
+  // `presentational` is the web shared-viewer flag (never set in desktop). Use
+  // it — not `readonly` — to strip edit chrome, so desktop's own readonly views
+  // (run history, evaluations) keep their controls.
+  const { presentational } = useHostServices();
   const textContent = useMemo(() => getMessageText(message), [message]);
   const hasTextContent = textContent.trim().length > 0;
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -171,7 +174,9 @@ function _MessageListItemHeader({
       <div
         className={cn(
           "flex shrink-0 items-center opacity-0",
-          !readonly && "group-hover:opacity-100"
+          // Reveal on hover while editing (desktop) or in the web viewer; a
+          // desktop readonly snapshot keeps the cluster hidden as before.
+          (!readonly || presentational) && "group-hover:opacity-100"
         )}
       >
         <Tooltip
@@ -187,10 +192,10 @@ function _MessageListItemHeader({
             <EyeIcon className="size-4" />
           </Button>
         </Tooltip>
-        {message.role === "user" && (
+        {message.role === "user" && !presentational && (
           <AddImagesMenu messageId={message.id} disabled={readonly} />
         )}
-        {showRun && (
+        {showRun && !presentational && (
           <Tooltip content={runTooltip}>
             <Button
               variant="ghost"
@@ -203,32 +208,36 @@ function _MessageListItemHeader({
             </Button>
           </Tooltip>
         )}
-        <Tooltip content="Remove message">
+        {!presentational && (
+          <Tooltip content="Remove message">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Remove message"
+              disabled={readonly}
+              onClick={handleRemove}
+            >
+              <MinusCircle className="size-4" />
+            </Button>
+          </Tooltip>
+        )}
+        {!presentational && (
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Remove message"
+            aria-label={collapsed ? "Expand message" : "Collapse message"}
+            aria-expanded={!collapsed}
             disabled={readonly}
-            onClick={handleRemove}
+            onClick={handleToggleMessageCollapse}
           >
-            <MinusCircle className="size-4" />
+            <ChevronDownIcon
+              className={cn(
+                "size-4 motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-in-out",
+                collapsed && "-rotate-90"
+              )}
+            />
           </Button>
-        </Tooltip>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={collapsed ? "Expand message" : "Collapse message"}
-          aria-expanded={!collapsed}
-          disabled={readonly}
-          onClick={handleToggleMessageCollapse}
-        >
-          <ChevronDownIcon
-            className={cn(
-              "size-4 motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-in-out",
-              collapsed && "-rotate-90"
-            )}
-          />
-        </Button>
+        )}
       </div>
       <PreviewDialog
         open={previewOpen}

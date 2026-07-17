@@ -105,7 +105,7 @@ export function PromptVariablesListView({
   const [initialSelection, setInitialSelection] =
     useState<PromptVariableSelection | null>(null);
   const [animationContainerRef] = useAutoAnimation({ duration: 150 });
-  const { actions } = useHostServices();
+  const { actions, presentational } = useHostServices();
 
   // The single opener: everything (chips, "Add", the editor hover tooltip) goes
   // through the host's `openVariables` action so the dialog has one entry point.
@@ -149,19 +149,21 @@ export function PromptVariablesListView({
             onOpen={openVariable}
           />
         ))}
-        <Button
-          className={cn(
-            "-ml-1 px-0 transition-opacity hover:bg-transparent!",
-            disabled ? "opacity-30!" : "opacity-50"
-          )}
-          variant="ghost"
-          size="sm"
-          disabled={disabled}
-          onClick={openManage}
-        >
-          <PlusIcon className="size-3" />
-          Add
-        </Button>
+        {!presentational && (
+          <Button
+            className={cn(
+              "-ml-1 px-0 transition-opacity hover:bg-transparent!",
+              disabled ? "opacity-30!" : "opacity-50"
+            )}
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            onClick={openManage}
+          >
+            <PlusIcon className="size-3" />
+            Add
+          </Button>
+        )}
         <PromptVariablesDialog
           open={dialogOpen}
           disabled={disabled}

@@ -33,6 +33,7 @@ function _SystemPromptEditor({
   const tools = useThreadStore((s) => s.thread.context?.tools);
   const threadModel = useThreadStore((s) => s.thread.model);
   const seedHost = useHostServices();
+  const { presentational } = seedHost;
   const { updateSystemPrompt } = useThreadStoreActions();
   const variableExtension = usePromptVariableExtension(SYSTEM_PROMPT_PLACE_KEY);
   const handleChange = useCallback(
@@ -115,20 +116,22 @@ function _SystemPromptEditor({
     <div className={cn("flex size-full flex-col", className)}>
       <div className="flex shrink-0 items-center justify-between py-2">
         <div className="text-muted-foreground text-sm">System prompt</div>
-        <div className="flex items-center gap-2">
-          <GeneratePopoverButton
-            placeholder="Describe the assistant you want (its role, tone, and rules), and we'll generate a system prompt."
-            onGenerate={handleGenerate}
-          />
-          <ExamplesMenu
-            items={PROMPT_EXAMPLES}
-            onSelect={(example) =>
-              void resolveSeed(example.content, seedHost).then((content) => {
-                if (content !== undefined) handleExampleSelect(content);
-              })
-            }
-          />
-        </div>
+        {!presentational && (
+          <div className="flex items-center gap-2">
+            <GeneratePopoverButton
+              placeholder="Describe the assistant you want (its role, tone, and rules), and we'll generate a system prompt."
+              onGenerate={handleGenerate}
+            />
+            <ExamplesMenu
+              items={PROMPT_EXAMPLES}
+              onSelect={(example) =>
+                void resolveSeed(example.content, seedHost).then((content) => {
+                  if (content !== undefined) handleExampleSelect(content);
+                })
+              }
+            />
+          </div>
+        )}
       </div>
       <CodeEditor
         className="hover:border-accent-foreground/20 grow transition-[border-color]"

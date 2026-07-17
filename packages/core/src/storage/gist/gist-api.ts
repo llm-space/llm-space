@@ -49,6 +49,8 @@ export interface GistResponse {
   id?: string;
   description?: string;
   html_url?: string;
+  created_at?: string;
+  updated_at?: string;
   owner?: GistOwner;
   files?: Record<string, GistFile>;
   history?: GistRevision[];

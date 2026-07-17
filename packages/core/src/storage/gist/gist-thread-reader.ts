@@ -130,6 +130,8 @@ export class GistThreadReader
           }
         : undefined,
       sourceUrl: gist.html_url,
+      createdAt: gist.created_at,
+      updatedAt: gist.updated_at,
     };
     return { thread, meta };
   }

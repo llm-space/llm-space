@@ -40,6 +40,12 @@ export interface SharedThreadMeta {
 
   /** A canonical link to the underlying source (e.g. the gist's html_url). */
   sourceUrl?: string;
+
+  /** ISO timestamp when the thread was first shared (gist `created_at`). */
+  createdAt?: string;
+
+  /** ISO timestamp of the latest revision (gist `updated_at`). */
+  updatedAt?: string;
 }
 
 /** A thread paired with its shared-viewer display metadata. */

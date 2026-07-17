@@ -19,6 +19,7 @@ import { CodeEditor } from "@llm-space/ui/components/code-editor";
 import { openFirecrawlLimitDialog } from "@llm-space/ui/components/firecrawl-limit-dialog";
 import { useRenderingFidelity } from "@llm-space/ui/components/theme-provider";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useHostServices } from "@llm-space/ui/host";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import { CollapsibleContent } from "@llm-space/ui/ui/collapsible-content";
@@ -275,6 +276,7 @@ function _ToolStepContinuation({
 }) {
   const status = useThreadStore((state) => state.status);
   const { run } = useThreadStoreActions();
+  const { presentational } = useHostServices();
   const { resolveTool, runToolCall } = useToolCallRunner(messageId);
   const callableToolCalls = useMemo(
     () =>
@@ -339,6 +341,11 @@ function _ToolStepContinuation({
       setCallingTools(false);
     }
   }, [callableToolCalls, canCallTools, runToolCall]);
+
+  // The web shared viewer hides the whole run-continuation block.
+  if (presentational) {
+    return null;
+  }
 
   return (
     <div className="bg-foreground/4 flex min-w-0 items-center justify-between gap-3 rounded-md px-3 py-1">

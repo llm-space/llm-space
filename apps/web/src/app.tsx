@@ -17,6 +17,16 @@ const CONNECTORS: Record<string, ThreadConnector> = {
   [GIST_CONNECTOR_ID]: createGistConnector(),
 };
 
+// Dev-only offline fixture: `#/shared/gist/threads/mock` serves a bundled sample
+// thread with no GitHub API call (handy when rate-limited). Dead-code-eliminated
+// from production builds, so the mock module + fixture never ship.
+if (import.meta.env.DEV) {
+  const { withMockThread } = await import("@/dev/mock-thread");
+  CONNECTORS[GIST_CONNECTOR_ID] = withMockThread(
+    CONNECTORS[GIST_CONNECTOR_ID]
+  );
+}
+
 /**
  * The shared-thread route: `#/shared/:connectorId/threads/:threadId`. Hash
  * routing keeps deep links working on GitHub Pages at HTTP 200 with no

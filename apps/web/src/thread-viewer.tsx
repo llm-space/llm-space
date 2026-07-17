@@ -6,6 +6,7 @@ import type {
 } from "@llm-space/core";
 import { readLatestThread } from "@llm-space/core/storage";
 import { ThreadPlayground } from "@llm-space/ui/components/thread-playground";
+import { Tooltip } from "@llm-space/ui/components/tooltip";
 import { Button } from "@llm-space/ui/ui/button";
 import { ExternalLinkIcon, FileJsonIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,6 +19,24 @@ import { NotFound } from "@/not-found";
 /** `llm-space://shared/{connectorId}/threads/{threadId}` — desktop deep link. */
 function deepLink(connectorId: string, threadId: string): string {
   return `llm-space://shared/${connectorId}/threads/${threadId}`;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function hasReadShared(
@@ -160,6 +179,19 @@ function SharedThreadMetaBlock({
       </div>
 
       <div className="flex flex-col items-start gap-4 sm:items-end">
+        {meta.updatedAt ? (
+          <Tooltip
+            content={
+              meta.createdAt
+                ? `Created ${formatDateTime(meta.createdAt)}`
+                : undefined
+            }
+          >
+            <span className="text-xs text-neutral-500">
+              Last updated {formatDate(meta.updatedAt)}
+            </span>
+          </Tooltip>
+        ) : null}
         {meta.author ? (
           <a
             href={meta.author.profileUrl}
