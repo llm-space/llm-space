@@ -69,7 +69,7 @@ Bun-workspace monorepo. Workspaces are `packages/*`, `apps/*`, and `web`.
 - **`@llm-space/desktop`** (`apps/desktop`) — the Electrobun app. Built with Vite (React 19) for the renderer and `electrobun` for the shell. Two runtime contexts bridged by a single typed RPC channel:
   - **bun main process** (`src/bun/`) — owns the native window, menu, filesystem, model config, and agent streaming.
   - **webview renderer** (`src/app`, `src/components`, `src/mainview`) — the React UI. The Thread Playground and design system now live in `@llm-space/ui`; the renderer imports them and provides the desktop `HostServices`/`ModelClient`.
-- **`@llm-space/web`** (`web/`) — the **static site**: the marketing **landing page** at `/llm-space/` and a **display-only shared-thread viewer** at `/llm-space/#/thread/<user>/<gist-id>` (fetches a gist's JSON, renders `@llm-space/ui`'s `ThreadPlayground` with a stub `HostServices`, `presentational: true`). No Electrobun, no backend. `base: "/llm-space/"`; CodeMirror is **not** deduped in `web/vite.config.ts` (no direct dep — one copy already resolves through the package). The landing page is **vendored** under `web/src/landing/` (migrated from the old `gh-pages` branch, its own single-quote style — ESLint-ignored, still typechecked); its extra CSS is additive in `web/src/landing/index.css` (the shadcn tokens live in `@llm-space/ui/styles/globals.css`; the near-black bg is scoped to the landing root). **Deploy:** `.github/workflows/pages.yml` builds `web/` on push to `main` and publishes via `actions/deploy-pages` (repo Pages Source must be **GitHub Actions**); the old `gh-pages` branch + `scripts/deploy.ts` are retired. CI (`ci.yml`) also builds `web/` so PRs catch breakage.
+- **`@llm-space/web`** (`web/`) — the **static site**: the marketing **landing page** at `/llm-space/` and a **display-only shared-thread viewer** at `/llm-space/#/thread/<user>/<gist-id>` (fetches a gist's JSON, renders `@llm-space/ui`'s `ThreadPlayground` with a stub `HostServices`, `presentational: true`). No Electrobun, no backend. `base: "/llm-space/"`; CodeMirror is **not** deduped in `web/vite.config.ts` (no direct dep — one copy already resolves through the package). The landing page is **vendored** under `web/src/landing/` (self-contained, its own single-quote style — ESLint-ignored, still typechecked); its extra CSS is additive in `web/src/landing/index.css` (the shadcn tokens live in `@llm-space/ui/styles/globals.css`; the near-black bg is scoped to the landing root). **Deploy:** `.github/workflows/pages.yml` builds `web/` on push to `main` and publishes via `actions/deploy-pages` (repo Pages Source is **GitHub Actions**). CI (`ci.yml`) also builds `web/` so PRs catch breakage.
 
 ### The RPC bridge
 
@@ -151,13 +151,12 @@ Every cross-boundary user action (menus, context menus, toolbar buttons, shortcu
 
 ### Web site (GitHub Pages) — how it publishes
 
-The site at **`deer-flow.github.io/llm-space/`** (landing page + shared-thread viewer) is the `@llm-space/web` app (`web/`). Publishing is **fully automated via GitHub Actions** — there is no manual deploy and no `gh-pages` branch anymore:
+The site at **`deer-flow.github.io/llm-space/`** (landing page + shared-thread viewer) is the `@llm-space/web` app (`web/`). Publishing is **fully automated via GitHub Actions** — there is no manual deploy step:
 
 - **`.github/workflows/pages.yml`** runs on every push to `main` (and `workflow_dispatch`): `bun --filter @llm-space/web build` → `actions/upload-pages-artifact` (`web/dist`) → `actions/deploy-pages`. So **merging to `main` publishes the site** — nothing else to do.
 - **One-time repo setting (already done once):** Settings → Pages → **Source = "GitHub Actions"**. If Pages ever reverts to "Deploy from a branch", the workflow's `deploy-pages` step fails until it's set back.
 - `web/` uses `base: "/llm-space/"`; absolute asset refs in JSX must go through `import.meta.env.BASE_URL`. No `.nojekyll` is needed (the Actions artifact bypasses Jekyll).
 - CI (`ci.yml`) also runs `build:web` on PRs, so a Vite break is caught before it reaches Pages.
-- **The old model is retired:** the `gh-pages` branch and its `scripts/deploy.ts` (which committed a built `/docs` folder and pushed the branch) are gone. Don't recreate them; publish by merging to `main`.
 
 ### Static assets (images, etc.)
 
