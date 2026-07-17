@@ -324,6 +324,13 @@ export const Thread = Type.Object({
    * list. Never used by the desktop app, which resolves the live model instead.
    */
   modelName: Type.Optional(Type.String()),
+
+  /**
+   * Provenance pointer for an imported thread — typically the
+   * `llm-space://shared/{connectorId}/threads/{threadId}` deep link it was
+   * imported from. Set on import; absent for locally-authored threads.
+   */
+  originalURL: Type.Optional(Type.String()),
 });
 export type Thread = Static<typeof Thread>;
 

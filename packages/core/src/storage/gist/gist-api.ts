@@ -1,4 +1,4 @@
-import type { ThreadLocator } from "../types/storage/thread-storage";
+import type { ThreadLocator } from "../../types/storage/thread-storage";
 
 /**
  * Internal GitHub Gist API helpers shared by {@link GistThreadReader} and
@@ -37,9 +37,19 @@ export interface GistRevision {
   committed_at?: string;
 }
 
+/** The gist owner (present on public/secret gist reads). */
+export interface GistOwner {
+  login?: string;
+  avatar_url?: string;
+  html_url?: string;
+}
+
 /** The (subset of the) gist API response shape we depend on. */
 export interface GistResponse {
   id?: string;
+  description?: string;
+  html_url?: string;
+  owner?: GistOwner;
   files?: Record<string, GistFile>;
   history?: GistRevision[];
 }

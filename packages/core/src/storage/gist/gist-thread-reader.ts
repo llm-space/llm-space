@@ -1,21 +1,25 @@
 import type {
+  SharedThread,
+  SharedThreadMeta,
+  SharedThreadSource,
+} from "../../types/storage/connector";
+import type {
   ReadableThreadStorage,
   ThreadLocator,
   VersionedThreadStorage,
-} from "../types/storage/thread-storage";
-import {
-  normalizeThread,
-  type Thread,
-} from "../types/threads/thread";
+} from "../../types/storage/thread-storage";
+import { normalizeThread, type Thread } from "../../types/threads/thread";
 
 import {
   GITHUB_API_BASE,
   gistRequest,
-  resolveLatestLocator,
   selectThreadFile,
+  resolveLatestLocator,
+  type GistFile,
   type GistResponse,
   type TokenProvider,
 } from "./gist-api";
+import { GIST_CONNECTOR_ID } from "./gist-connector";
 
 export interface GistThreadReaderOptions {
   /**
@@ -39,14 +43,16 @@ export interface GistThreadReaderOptions {
  * storage seam; writing lives in {@link GistThreadWriter}.
  */
 export class GistThreadReader
-  implements ReadableThreadStorage, VersionedThreadStorage
+  implements ReadableThreadStorage, VersionedThreadStorage, SharedThreadSource
 {
   private readonly _fetch: typeof fetch;
   private readonly _baseUrl: string;
   private readonly _getToken?: TokenProvider;
 
   constructor(options: GistThreadReaderOptions = {}) {
-    this._fetch = options.fetch ?? fetch;
+    // Bind to the global: native `fetch` throws "Illegal invocation" when called
+    // as a method (`this._fetch(...)`) with `this` set to the instance.
+    this._fetch = options.fetch ?? fetch.bind(globalThis);
     this._baseUrl = options.baseUrl ?? GITHUB_API_BASE;
     this._getToken = options.getToken;
   }
@@ -86,12 +92,55 @@ export class GistThreadReader
       );
     }
 
+    return normalizeThread(await this._readThreadFile(file));
+  }
+
+  /**
+   * Read the latest thread of a gist together with the display metadata the
+   * shared-viewer page needs (title, description, author, source link) — a
+   * single `GET /gists/{id}`.
+   */
+  async readShared(threadId: string): Promise<SharedThread> {
+    const gist = await gistRequest<GistResponse>(
+      this._fetch,
+      this._baseUrl,
+      `/gists/${threadId}`,
+      { token: await this._token() }
+    );
+
+    const file = selectThreadFile(gist.files);
+    if (!file?.filename) {
+      throw new Error(`Gist ${threadId} has no readable file.`);
+    }
+
+    const thread = normalizeThread(await this._readThreadFile(file));
+    const meta: SharedThreadMeta = {
+      connectorId: GIST_CONNECTOR_ID,
+      threadId,
+      filename: file.filename,
+      rawUrl: file.raw_url,
+      version: gist.history?.[0]?.version,
+      title: thread.title,
+      description: gist.description || undefined,
+      author: gist.owner?.login
+        ? {
+            name: gist.owner.login,
+            avatarUrl: gist.owner.avatar_url,
+            profileUrl: gist.owner.html_url,
+          }
+        : undefined,
+      sourceUrl: gist.html_url,
+    };
+    return { thread, meta };
+  }
+
+  /** Read a gist file's content, following `raw_url` when truncated (>1 MB). */
+  private async _readThreadFile(file: GistFile): Promise<Thread> {
     const content =
       file.truncated && file.raw_url
         ? await this._fetch(file.raw_url).then((r) => r.text())
         : (file.content ?? "");
-
-    return normalizeThread(_parseThread(content));
+    return _parseThread(content);
   }
 
   private async _token(): Promise<string | null> {

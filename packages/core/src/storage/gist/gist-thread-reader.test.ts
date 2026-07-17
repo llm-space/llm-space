@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import type { Thread } from "../types/threads/thread";
+import type { Thread } from "../../types/threads/thread";
+import { readLatestThread } from "../read-latest";
 
 import { GistThreadReader } from "./gist-thread-reader";
-import { readLatestThread } from "./read-latest";
 
 const GIST_ID = "113dadfadb8a0839de50e882f82b17dd";
 const VERSION = "6ae1efbfd7d1197767166a88e61fe245def4135e";
@@ -157,5 +157,51 @@ describe("GistThreadReader.read", () => {
       error = e;
     }
     expect((error as Error | undefined)?.message).toMatch(/rate limit/i);
+  });
+});
+
+describe("GistThreadReader.readShared", () => {
+  test("returns the thread plus display metadata", async () => {
+    const { fetch } = _stubFetch({
+      [`https://api.github.com/gists/${GIST_ID}`]: () =>
+        _json({
+          id: GIST_ID,
+          description: "A general-purpose agent.",
+          html_url: `https://gist.github.com/MagicCube/${GIST_ID}`,
+          owner: {
+            login: "MagicCube",
+            avatar_url: "https://avatars.githubusercontent.com/u/1?v=4",
+            html_url: "https://github.com/MagicCube",
+          },
+          files: {
+            "general-agent.json": {
+              filename: "general-agent.json",
+              content: JSON.stringify({ title: "General Agent" }),
+              raw_url: `https://gist.githubusercontent.com/MagicCube/${GIST_ID}/raw/${VERSION}/general-agent.json`,
+            },
+          },
+          history: [{ version: VERSION }],
+        }),
+    });
+    const reader = new GistThreadReader({ fetch });
+
+    const { thread, meta } = await reader.readShared(GIST_ID);
+
+    expect(thread.title).toBe("General Agent");
+    expect(meta).toEqual({
+      connectorId: "gist",
+      threadId: GIST_ID,
+      filename: "general-agent.json",
+      rawUrl: `https://gist.githubusercontent.com/MagicCube/${GIST_ID}/raw/${VERSION}/general-agent.json`,
+      version: VERSION,
+      title: "General Agent",
+      description: "A general-purpose agent.",
+      author: {
+        name: "MagicCube",
+        avatarUrl: "https://avatars.githubusercontent.com/u/1?v=4",
+        profileUrl: "https://github.com/MagicCube",
+      },
+      sourceUrl: `https://gist.github.com/MagicCube/${GIST_ID}`,
+    });
   });
 });

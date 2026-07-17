@@ -1,8 +1,8 @@
 import type {
   ThreadLocator,
   WritableThreadStorage,
-} from "../types/storage/thread-storage";
-import { normalizeThread, type Thread } from "../types/threads/thread";
+} from "../../types/storage/thread-storage";
+import { normalizeThread, type Thread } from "../../types/threads/thread";
 
 import {
   GITHUB_API_BASE,
@@ -48,7 +48,8 @@ export class GistThreadWriter implements WritableThreadStorage {
   private readonly _public: boolean;
 
   constructor(options: GistThreadWriterOptions) {
-    this._fetch = options.fetch ?? fetch;
+    // Bind to the global so a method call never trips "Illegal invocation".
+    this._fetch = options.fetch ?? fetch.bind(globalThis);
     this._baseUrl = options.baseUrl ?? GITHUB_API_BASE;
     this._getToken = options.getToken;
     this._public = options.public ?? false;

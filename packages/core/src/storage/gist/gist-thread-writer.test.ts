@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { Thread } from "../types/threads/thread";
+import type { Thread } from "../../types/threads/thread";
 
 import { GistThreadWriter } from "./gist-thread-writer";
 
