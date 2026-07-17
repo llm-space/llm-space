@@ -197,9 +197,10 @@ function ThreadPlaygroundContent({
   useEffect(() => {
     syncTitle(title);
   }, [syncTitle, title]);
+  const { presentational } = useHostServices();
   const readonly = useMemo(() => {
-    return readonlyFromProps || status === "running";
-  }, [readonlyFromProps, status]);
+    return readonlyFromProps || presentational || status === "running";
+  }, [readonlyFromProps, presentational, status]);
   const handleRun = useCallback(async () => {
     await run();
   }, [run]);

@@ -144,7 +144,30 @@
         "tailwindcss": "^4.0.15",
         "timeago.js": "^4.0.2",
         "tw-animate-css": "^1.4.0",
+        "typebox": "catalog:",
         "zustand": "^5.0.14",
+      },
+    },
+    "web": {
+      "name": "@llm-space/web",
+      "version": "4.0.1",
+      "dependencies": {
+        "@fontsource-variable/geist": "^5.2.9",
+        "@fontsource-variable/geist-mono": "^5.2.8",
+        "@llm-space/core": "workspace:*",
+        "@llm-space/ui": "workspace:*",
+        "lucide-react": "^1.22.0",
+        "react": "catalog:",
+        "react-dom": "catalog:",
+      },
+      "devDependencies": {
+        "@tailwindcss/postcss": "^4.0.15",
+        "@vitejs/plugin-react": "^4.3.4",
+        "autoprefixer": "^10.4.20",
+        "postcss": "^8.5.3",
+        "tailwindcss": "^4.0.15",
+        "typescript": "^5.7.2",
+        "vite": "^6.0.3",
       },
     },
   },
@@ -593,6 +616,8 @@
     "@llm-space/desktop": ["@llm-space/desktop@workspace:apps/desktop"],
 
     "@llm-space/ui": ["@llm-space/ui@workspace:packages/ui"],
+
+    "@llm-space/web": ["@llm-space/web@workspace:web"],
 
     "@lobehub/emojilib": ["@lobehub/emojilib@1.0.0", "https://registry.npmmirror.com/@lobehub/emojilib/-/emojilib-1.0.0.tgz", {}, "sha512-s9KnjaPjsEefaNv150G3aifvB+J3P4eEKG+epY9zDPS2BeB6+V2jELWqAZll+nkogMaVovjEE813z3V751QwGw=="],
 
@@ -3449,6 +3474,8 @@
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "https://registry.npmmirror.com/eslint-visitor-keys/-/eslint-visitor-keys-3.4.3.tgz", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
     "@llm-space/desktop/typescript": ["typescript@5.9.3", "https://registry.npmmirror.com/typescript/-/typescript-5.9.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@llm-space/web/typescript": ["typescript@5.9.3", "https://registry.npmmirror.com/typescript/-/typescript-5.9.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "@lobehub/fluent-emoji/emoji-regex": ["emoji-regex@10.6.0", "https://registry.npmmirror.com/emoji-regex/-/emoji-regex-10.6.0.tgz", {}, "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="],
 

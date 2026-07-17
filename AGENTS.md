@@ -17,9 +17,9 @@ A workbench for prompt and agent development — build, trace, debug, evaluate, 
 | Local packaging / update test          | `mise run pack` · `pack:perf` · `pack:adhoc` · `pack:signed` · `pack:feed` + `feed:serve` | env combinations over `build:canary` (skip signing / CEF Performance edition / ad-hoc sign / local update feed on :8321); defined in `mise.toml` |
 | Cut a release                          | `mise run release` / `mise run release:canary`                              | → `bun scripts/release.ts`; see "Releases & auto-update"                                                               |
 | Lint                                   | `mise run lint` / `mise run lint:fix`                                       | `lint` = `eslint .` (read-only), `lint:fix` = `eslint --fix .`; flat config at repo root                               |
-| Typecheck                              | `mise run typecheck`                                                        | `tsc --noEmit` over the root + `apps/desktop` tsconfigs                                                                |
+| Typecheck                              | `mise run typecheck`                                                        | `tsc --noEmit` over four projects: root, `packages/ui`, `apps/desktop`, `web`. `packages/ui`/`web` are React/DOM code, so they need their own DOM tsconfigs (the root config is Bun-flavored and excludes `packages/ui`); add a project here when you add a workspace. |
 | Add a dependency                       | `bun add <pkg>`                                                             | run inside the target package (`apps/desktop` or `packages/core`)                                                      |
-| Add a shadcn/ui component              | `bunx --bun shadcn@latest add <component>`                                  | run inside `apps/desktop`                                                                                              |
+| Add a shadcn/ui component              | `bunx --bun shadcn@latest add <component>`                                  | run inside `packages/ui` (the shared design system now lives there, not `apps/desktop`)                                |
 | Run a script from root                 | `bun --filter <pkg> <script>`                                               | e.g. `bun --filter @llm-space/desktop start`                                                                           |
 
 There is **no test framework**. CI (`.github/workflows/ci.yml`) runs lint + typecheck + a production `vite build` + workflow-YAML validation on PRs and pushes to main. The last two exist because both failure modes are invisible until a release tag is pushed, and then take the release down with them: a renderer bundle that outgrows the runner's V8 heap (`build:view` sets `--max-old-space-size=4096`; the default ~2 GB stopped being enough at 14701 modules) and a malformed workflow file. Keep the renderer bundle in mind — if `vite build` starts OOMing again, raise the ceiling in `build:view` or cut the bundle down, and don't discover it at release time.
@@ -53,7 +53,7 @@ fixture is intentionally preserved for review and the reason is documented.
 
 ## Architecture
 
-Bun-workspace monorepo. Workspaces are `packages/*` and `apps/*`.
+Bun-workspace monorepo. Workspaces are `packages/*`, `apps/*`, and `web`.
 
 - **`@llm-space/core`** (`packages/core`) — domain library, **no build step**; its TypeScript is consumed directly via the `exports` map. Entrypoints:
   - `.` → re-exports the internal `client`, `parsers`, `types`, and `utils` directories (all browser-safe).
@@ -61,9 +61,12 @@ Bun-workspace monorepo. Workspaces are `packages/*` and `apps/*`.
   - `./thread` — headless thread semantics shared by both runtime contexts: run history (`thread/history`), prompt variables (`thread/prompt-variables`), and usage aggregation (`thread/usage`).
   - `./server` — Node/Bun-only implementations: `streamAgent()` (`server/agent/stream`), filesystem paths (`server/paths` — `getLlmSpaceHomePath()`, `getSettingsDir()`), `LocalFileSystem` thread storage (`server/storage`), and window-state persistence (`server/window-state`).
   - `./types` — `Thread`/`Message`/`ModelConfig`/`Tool`/`FileNode`/`ModelProviderGroup` and the converters to/from the `@earendil-works/pi-*` formats.
+- **`@llm-space/ui`** (`packages/ui`) — the shared React design system + **Thread Playground**, **no build step** (consumed as TS via the `exports` map), and **Electrobun-free** so both the desktop renderer and the static web app render the same UI. Holds: shadcn primitives (`./ui/*`), `cn` + pure helpers (`./lib/*`), design tokens (`./styles/globals.css`, Tailwind v4), app-level components (`./components/*` — thread-playground, model-provider, code-editor, tooltip, confirm-dialog, markdown, preview-dialog, …), and the **`HostServices` seam** (`./host`). Internal files use **relative imports** (never `@/`, which the desktop bundler would hijack); `exports` uses a `.tsx` wildcard for `./components/*` plus explicit entries for the `thread-playground` barrel, `examples/prompts` (a `.ts` subpath), and `code-editor` (both tsc and Vite must resolve them). shadcn `ui/` is ESLint-ignored (`packages/ui/src/ui/**`); add components with a `packages/ui/components.json`.
+  - **The `HostServices` seam** (`packages/ui/src/host/`) is how the playground stays decoupled: everything host-specific — `transport`, `executeTool`, `skills`/`mcp`/`builtinTools`/`paths` clients, `actions` (navigation, replacing the desktop command bus), and a `presentational` flag — is injected via `HostServicesProvider` + `useHostServices()`. Model access is a separate injected `ModelClient` fed to `ModelProvider`. **Desktop** supplies the real, Electrobun-backed impls in `apps/desktop/src/host/host-services.tsx` (`DesktopHostProvider` + `createElectrobunModelClient`); **web** supplies display-only no-op stubs. Never import `@/client`/`@/commands`/`electrobun` from inside `packages/ui`.
 - **`@llm-space/desktop`** (`apps/desktop`) — the Electrobun app. Built with Vite (React 19) for the renderer and `electrobun` for the shell. Two runtime contexts bridged by a single typed RPC channel:
   - **bun main process** (`src/bun/`) — owns the native window, menu, filesystem, model config, and agent streaming.
-  - **webview renderer** (`src/app`, `src/components`, `src/mainview`) — the React UI.
+  - **webview renderer** (`src/app`, `src/components`, `src/mainview`) — the React UI. The Thread Playground and design system now live in `@llm-space/ui`; the renderer imports them and provides the desktop `HostServices`/`ModelClient`.
+- **`@llm-space/web`** (`web/`) — a **static, display-only** Vite app that renders a shared thread read-only from a gist (`/#/thread/<user>/<gist-id>`), reusing `@llm-space/ui`'s `ThreadPlayground` with a stub `HostServices` (`presentational: true`). No Electrobun, no backend. `base: "/llm-space/"` for GitHub Pages; CodeMirror is **not** deduped in `web/vite.config.ts` (no direct dep — one copy already resolves through the package).
 
 ### The RPC bridge
 
@@ -138,9 +141,10 @@ Every cross-boundary user action (menus, context menus, toolbar buttons, shortcu
 
 > **GitHub calls go through the proxy.** GitHub auth (`bun/auth/`) and any future gist calls run from the **bun process** using the global `fetch`, which `NetworkSettingsManager` (`bun/network/`) routes through the user's configured proxy by writing `HTTP(S)_PROXY` onto `process.env`. Just call `fetch` — never add a bypassing custom dispatcher, or corporate/proxied users' GitHub requests will fail.
 - `client/` — renderer-side RPC callers: `rpc-transport.ts` (streaming) and `local-file-system.ts` (the `fs*` requests).
+- `host/` — `host-services.tsx`: the desktop `HostServices` + `ModelClient` impls (`DesktopHostProvider`, `createElectrobunModelClient`) feeding the shared `@llm-space/ui` playground.
 - `shared/` — code used by both contexts: `rpc.ts`, `commands.ts`.
-- `components/` — the UI: `thread-playground/` (main editor: messages, model config, system prompt, tools, run history; Zustand store + change history under `stores/`), `thread-tabs/`, `file-system-tree-view/`, `settings/`, `command-palette.tsx`, `onboard-dialog.tsx`, `model-provider.tsx`, `code-editor/` (CodeMirror wrapper), and `ui/` (generated shadcn/ui — **don't hand-edit**, also ESLint-ignored).
-- `styles/globals.css` — Tailwind v4 + OKLch design tokens. The app is dark-themed.
+- `components/` — desktop-only UI: `thread-tabs/`, `file-system-tree-view/`, `settings/`, `command-palette.tsx`, `onboard-dialog.tsx`, and the account/update/github widgets. **The Thread Playground, model-provider, code-editor, shadcn `ui/`, and design tokens moved to `@llm-space/ui`** — import them from there, not from `@/components`.
+- Design tokens live in `@llm-space/ui/styles/globals.css` (Tailwind v4 + OKLch), imported once by `app/layout.tsx`. The app is dark-themed.
 
 ### Static assets (images, etc.)
 

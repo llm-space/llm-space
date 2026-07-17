@@ -317,6 +317,13 @@ export const Thread = Type.Object({
 
   /** Reusable manual evaluation rubrics owned by this thread. */
   evaluationRubrics: Type.Optional(Type.Array(ThreadEvaluationRubric)),
+
+  /**
+   * A resolved, human-readable model name, written when a thread is shared so a
+   * display-only viewer (the web reader) can show it without the model provider
+   * list. Never used by the desktop app, which resolves the live model instead.
+   */
+  modelName: Type.Optional(Type.String()),
 });
 export type Thread = Static<typeof Thread>;
 

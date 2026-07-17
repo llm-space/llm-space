@@ -25,6 +25,8 @@ export default defineConfig([
       "packages/ui/src/**/*.test.ts",
       "packages/ui/src/**/*.test.tsx",
       "apps/desktop/vite.config.ts",
+      "web/vite.config.ts",
+      "web/postcss.config.js",
     ],
   },
 
