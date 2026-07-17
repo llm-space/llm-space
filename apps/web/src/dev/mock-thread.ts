@@ -18,7 +18,7 @@ import sampleThreadRaw from "./sample-thread.json?raw";
  */
 export const MOCK_THREAD_ID = "mock";
 
-const FILENAME = "sample-thread.json";
+const FILENAME = "general-agent-with-vision.json";
 
 function mockShared(connectorId: string): SharedThread {
   const thread = normalizeThread(JSON.parse(sampleThreadRaw) as Thread);
@@ -29,7 +29,7 @@ function mockShared(connectorId: string): SharedThread {
       threadId: MOCK_THREAD_ID,
       filename: FILENAME,
       title: thread.title,
-      description: "Local fixture — served offline for viewer development.",
+      description: "General Agent with Vision",
       author: {
         name: "MagicCube",
         avatarUrl: "https://avatars.githubusercontent.com/u/1003147?v=4",
