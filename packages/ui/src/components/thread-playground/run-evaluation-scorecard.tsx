@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@llm-space/ui/ui/select";
 
+import { useI18n } from "../../i18n";
+
 
 const NO_RUBRIC = "none";
 const SAVED_RUBRIC = "saved";
@@ -49,6 +51,7 @@ export function RunEvaluationScorecard({
   onCreateRubric: () => void;
   onEditRubric: (rubric: EvaluationRubricRecord) => void;
 }) {
+  const { t, fmt, plural } = useI18n();
   const currentDefinition = rubric
     ? (rubrics.find((value) => value.id === rubric.id) ?? null)
     : null;
@@ -103,9 +106,9 @@ export function RunEvaluationScorecard({
     <section className="flex flex-col gap-3 rounded-lg border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-medium">Rubric</div>
+          <div className="text-xs font-medium">{t.thread.evaluation.rubricLabel}</div>
           <div className="text-muted-foreground text-[0.625rem]">
-            Score each run consistently, or keep the legacy verdict-only flow.
+            {t.thread.evaluation.rubricHint}
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -127,14 +130,22 @@ export function RunEvaluationScorecard({
               );
             }}
           >
-            <SelectTrigger className="w-52" aria-label="Evaluation rubric">
+            <SelectTrigger
+              className="w-52"
+              aria-label={t.thread.evaluation.rubricAria}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NO_RUBRIC}>No rubric</SelectItem>
+              <SelectItem value={NO_RUBRIC}>
+                {t.thread.evaluation.noRubricOption}
+              </SelectItem>
               {showSavedRubric && savedRubric && (
                 <SelectItem value={SAVED_RUBRIC}>
-                  {savedRubric.name} (saved v{savedRubric.revision})
+                  {fmt(t.thread.evaluation.savedRubricOption, {
+                    name: savedRubric.name,
+                    revision: savedRubric.revision,
+                  })}
                 </SelectItem>
               )}
               {rubrics
@@ -145,7 +156,10 @@ export function RunEvaluationScorecard({
                     key={definition.id}
                     value={`${DEFINITION_PREFIX}${definition.id}`}
                   >
-                    {definition.name} · v{definition.revision}
+                    {fmt(t.thread.evaluation.definitionRubricOption, {
+                      name: definition.name,
+                      revision: definition.revision,
+                    })}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -158,15 +172,19 @@ export function RunEvaluationScorecard({
                 onRubricChange(snapshotEvaluationRubric(currentDefinition))
               }
             >
-              Use current v{currentDefinition.revision}
+              {fmt(t.thread.evaluation.useCurrentVersion, {
+                revision: currentDefinition.revision,
+              })}
             </Button>
           )}
           {currentDefinition && (
-            <Tooltip content="Edit rubric">
+            <Tooltip content={t.thread.evaluation.editRubricTooltip}>
               <Button
                 size="icon-sm"
                 variant="ghost"
-                aria-label={`Edit rubric ${currentDefinition.name}`}
+                aria-label={fmt(t.thread.evaluation.editRubricAria, {
+                  name: currentDefinition.name,
+                })}
                 onClick={() => onEditRubric(currentDefinition)}
               >
                 <Edit3Icon className="size-3" />
@@ -176,8 +194,10 @@ export function RunEvaluationScorecard({
           <Tooltip
             content={
               rubrics.length >= MAX_EVALUATION_RUBRICS
-                ? `Maximum ${MAX_EVALUATION_RUBRICS} rubrics per thread`
-                : "Create rubric"
+                ? fmt(t.thread.evaluation.maxRubricsTooltip, {
+                    max: MAX_EVALUATION_RUBRICS,
+                  })
+                : t.thread.evaluation.createRubricTooltip
             }
           >
             <span
@@ -187,14 +207,16 @@ export function RunEvaluationScorecard({
               }
               aria-label={
                 rubrics.length >= MAX_EVALUATION_RUBRICS
-                  ? `Maximum ${MAX_EVALUATION_RUBRICS} rubrics per thread`
+                  ? fmt(t.thread.evaluation.maxRubricsAria, {
+                      max: MAX_EVALUATION_RUBRICS,
+                    })
                   : undefined
               }
             >
               <Button
                 size="icon-sm"
                 variant="ghost"
-                aria-label="Create rubric"
+                aria-label={t.thread.evaluation.createRubricAria}
                 disabled={rubrics.length >= MAX_EVALUATION_RUBRICS}
                 onClick={onCreateRubric}
               >
@@ -208,9 +230,9 @@ export function RunEvaluationScorecard({
       {rubric && (
         <>
           <div className="bg-muted/20 hidden grid-cols-[minmax(12rem,1fr)_minmax(13rem,auto)_minmax(13rem,auto)] items-center gap-3 rounded-md px-3 py-2 text-[0.625rem] font-medium md:grid">
-            <span>Criterion</span>
-            <span className="text-center">Run A</span>
-            <span className="text-center">Run B</span>
+            <span>{t.thread.evaluation.criterionHeader}</span>
+            <span className="text-center">{t.thread.evaluation.runLabelA}</span>
+            <span className="text-center">{t.thread.evaluation.runLabelB}</span>
           </div>
           <div className="flex flex-col gap-2">
             {rubric.criteria.map((criterion) => (
@@ -229,7 +251,7 @@ export function RunEvaluationScorecard({
                   )}
                 </div>
                 <_ScoreButtons
-                  label="Run A"
+                  label={t.thread.evaluation.runLabelA}
                   criterionName={criterion.name}
                   value={scoreDraft[leftRunId]?.[criterion.id]}
                   onChange={(score) =>
@@ -237,7 +259,7 @@ export function RunEvaluationScorecard({
                   }
                 />
                 <_ScoreButtons
-                  label="Run B"
+                  label={t.thread.evaluation.runLabelB}
                   criterionName={criterion.name}
                   value={scoreDraft[rightRunId]?.[criterion.id]}
                   onChange={(score) =>
@@ -249,11 +271,18 @@ export function RunEvaluationScorecard({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs">
             <span className="text-muted-foreground">
-              1 = poor · 5 = excellent
+              {t.thread.evaluation.scoreLegend}
             </span>
             {delta === null ? (
               <span className="text-muted-foreground">
-                {missingCount} score{missingCount === 1 ? "" : "s"} remaining
+                {fmt(
+                  plural(
+                    missingCount,
+                    t.thread.evaluation.scoresRemainingOne,
+                    t.thread.evaluation.scoresRemainingOther
+                  ),
+                  { count: missingCount }
+                )}
               </span>
             ) : (
               <span className="font-mono tabular-nums">
@@ -280,10 +309,17 @@ function _ScoreButtons({
   value: number | undefined;
   onChange: (score: number) => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-muted-foreground text-[0.625rem]">{label}</span>
-      <ButtonGroup role="radiogroup" aria-label={`${label}, ${criterionName}`}>
+      <ButtonGroup
+        role="radiogroup"
+        aria-label={fmt(t.thread.evaluation.scoreRadiogroupAria, {
+          label,
+          criterionName,
+        })}
+      >
         {[1, 2, 3, 4, 5].map((score) => (
           <Button
             key={score}
@@ -291,7 +327,11 @@ function _ScoreButtons({
             size="icon-sm"
             variant={value === score ? "default" : "outline"}
             role="radio"
-            aria-label={`${label}, ${criterionName}, score ${score} of 5`}
+            aria-label={fmt(t.thread.evaluation.scoreAria, {
+              label,
+              criterionName,
+              score,
+            })}
             aria-checked={value === score}
             data-score={score}
             tabIndex={

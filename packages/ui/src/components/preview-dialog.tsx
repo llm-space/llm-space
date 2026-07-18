@@ -3,6 +3,7 @@ import { memo } from "react";
 
 import { CodeEditor } from "@llm-space/ui/components/code-editor";
 import { Markdown } from "@llm-space/ui/components/markdown";
+import { useI18n } from "@llm-space/ui/i18n";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ export type PreviewMode = "code" | "markdown" | "html";
 function _PreviewDialog({
   open,
   onOpenChange,
-  title = "Preview",
+  title,
   value,
   type = "text",
   mode = "code",
@@ -30,11 +31,13 @@ function _PreviewDialog({
   type?: PreviewType;
   mode?: PreviewMode;
 }) {
+  const { t, fmt } = useI18n();
+  const resolvedTitle = title ?? t.common.preview.title;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[85vh] w-[85vw] max-w-none! flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{resolvedTitle}</DialogTitle>
         </DialogHeader>
         {type === "json" ? (
           <div className="min-h-0 flex-1 p-3">
@@ -56,9 +59,11 @@ function _PreviewDialog({
           >
             <div className="border-b px-4 py-2">
               <TabsList variant="line">
-                <TabsTrigger value="raw">Raw</TabsTrigger>
-                <TabsTrigger value="markdown">Markdown</TabsTrigger>
-                <TabsTrigger value="html">HTML</TabsTrigger>
+                <TabsTrigger value="raw">{t.common.preview.raw}</TabsTrigger>
+                <TabsTrigger value="markdown">
+                  {t.common.preview.markdown}
+                </TabsTrigger>
+                <TabsTrigger value="html">{t.common.preview.html}</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="raw" className="min-h-0 p-3">
@@ -86,7 +91,9 @@ function _PreviewDialog({
                 referrerPolicy="no-referrer"
                 sandbox=""
                 srcDoc={value}
-                title={`${title} HTML preview`}
+                title={fmt(t.common.preview.htmlPreviewTitle, {
+                  title: resolvedTitle,
+                })}
               />
             </TabsContent>
           </Tabs>

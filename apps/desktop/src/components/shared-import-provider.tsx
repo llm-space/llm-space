@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   Dialog,
@@ -27,6 +28,7 @@ import type { SharedImportStatusPayload } from "@/shared/shared-import";
 export function SharedImportProvider() {
   const { executeCommand } = useCommands();
   const [importing, setImporting] = useState(false);
+  const { t, fmt } = useI18n();
   // Set on Cancel so a racing `success` from bun is ignored.
   const cancelledRef = useRef(false);
 
@@ -48,7 +50,9 @@ export function SharedImportProvider() {
           args: { path: payload.path },
         });
         toast.success(
-          payload.title ? `Imported "${payload.title}"` : "Thread imported"
+          payload.title
+            ? fmt(t.share.importedTitle, { title: payload.title })
+            : t.share.importedFallback
         );
       } else {
         toast.error(payload.message);
@@ -57,7 +61,7 @@ export function SharedImportProvider() {
 
     rpc.addMessageListener("sharedImportStatusChanged", handle);
     return () => rpc.removeMessageListener("sharedImportStatusChanged", handle);
-  }, [executeCommand]);
+  }, [executeCommand, fmt, t.share.importedFallback, t.share.importedTitle]);
 
   const handleCancel = useCallback(() => {
     cancelledRef.current = true;
@@ -74,9 +78,9 @@ export function SharedImportProvider() {
     >
       <DialogContent showCloseButton={false} className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Importing shared thread</DialogTitle>
+          <DialogTitle>{t.share.importDialogTitle}</DialogTitle>
           <DialogDescription>
-            Fetching and saving it to your workspace…
+            {t.share.importDialogDescription}
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center justify-center py-4">
@@ -84,7 +88,7 @@ export function SharedImportProvider() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
-            Cancel
+            {t.common.cancel}
           </Button>
         </DialogFooter>
       </DialogContent>

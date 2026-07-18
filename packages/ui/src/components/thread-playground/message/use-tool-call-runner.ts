@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useHostServices } from "@llm-space/ui/host";
 import { isFirecrawlLimitError } from "@llm-space/ui/lib/firecrawl";
 
+import { useI18n } from "../../../i18n";
 import { useThreadStore, useThreadStoreActions } from "../stores";
 
 export interface ToolCallOutcome {
@@ -21,6 +22,7 @@ export function useToolCallRunner(messageId: string) {
   const { executeTool } = useHostServices();
   const tools = useThreadStore((state) => state.thread.context?.tools);
   const { updateToolCallOutputText } = useThreadStoreActions();
+  const { t } = useI18n();
 
   const toolsByName = useMemo(
     () => new Map((tools ?? []).map((tool) => [tool.name, tool])),
@@ -48,12 +50,15 @@ export function useToolCallRunner(messageId: string) {
           isFirecrawlLimit: isError && isFirecrawlLimitError(contentText),
         };
       } catch (error) {
-        const text = error instanceof Error ? error.message : "Tool call failed";
+        const text =
+          error instanceof Error
+            ? error.message
+            : t.thread.message.toolCallFailedFallback;
         updateToolCallOutputText(messageId, toolCall.id, text, true);
         return { isError: true, isFirecrawlLimit: isFirecrawlLimitError(text) };
       }
     },
-    [executeTool, messageId, resolveTool, updateToolCallOutputText]
+    [executeTool, messageId, resolveTool, t, updateToolCallOutputText]
   );
 
   return { resolveTool, runToolCall };

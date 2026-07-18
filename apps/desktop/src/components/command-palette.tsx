@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@llm-space/ui/i18n";
 import {
   Command,
   CommandDialog,
@@ -10,11 +11,7 @@ import {
 } from "@llm-space/ui/ui/command";
 
 import { useCommands } from "@/commands";
-import {
-  COMMAND_META,
-  type Command as AppCommand,
-  type CommandType,
-} from "@/shared/commands";
+import { COMMAND_META, type Command as AppCommand, type CommandType } from "@/shared/commands";
 
 /**
  * The ⌘⇧P command palette. Lists every registered command (from
@@ -32,6 +29,7 @@ export function CommandPalette({
   blacklist?: string[];
 }) {
   const { executeCommand } = useCommands();
+  const { t } = useI18n();
 
   const types = (Object.keys(COMMAND_META) as CommandType[]).filter(
     (type) => !blacklist.includes(type)
@@ -47,12 +45,12 @@ export function CommandPalette({
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <Command>
-        <CommandInput placeholder="Search commands..." />
+        <CommandInput placeholder={t.command.palette.searchPlaceholder} />
         <CommandList>
-          <CommandEmpty>No commands found.</CommandEmpty>
+          <CommandEmpty>{t.command.palette.empty}</CommandEmpty>
           {types.map((type) => (
             <CommandItem key={type} onSelect={() => run(type)}>
-              {COMMAND_META[type].label}
+              {t.commandMeta[type] ?? COMMAND_META[type].label}
             </CommandItem>
           ))}
         </CommandList>

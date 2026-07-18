@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { ConfirmDialog } from "@llm-space/ui/components/confirm-dialog";
 import { useHostServices } from "@llm-space/ui/host";
+import { useI18n } from "@llm-space/ui/i18n";
 
 interface FirecrawlLimitDialogState {
   open: boolean;
@@ -33,14 +34,15 @@ export function FirecrawlLimitDialog() {
   const open = useFirecrawlLimitDialogStore((state) => state.open);
   const setOpen = useFirecrawlLimitDialogStore((state) => state.setOpen);
   const { actions } = useHostServices();
+  const { t } = useI18n();
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={setOpen}
-      title="Firecrawl daily limit reached"
-      description="The built-in web tools hit Firecrawl's daily limit of free, unauthenticated credits. Add a Firecrawl API key to raise the limit and keep using web fetch and search."
-      cancelLabel="Not now"
-      confirmLabel="Configure API key"
+      title={t.common.firecrawlLimit.title}
+      description={t.common.firecrawlLimit.description}
+      cancelLabel={t.common.firecrawlLimit.cancel}
+      confirmLabel={t.common.firecrawlLimit.configure}
       confirmVariant="default"
       onConfirm={() => {
         actions.openSettings("search");

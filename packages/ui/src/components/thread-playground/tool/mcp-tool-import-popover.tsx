@@ -23,6 +23,8 @@ import {
 } from "@llm-space/ui/ui/dialog";
 import { Switch } from "@llm-space/ui/ui/switch";
 
+import { useI18n, type Messages } from "../../../i18n";
+
 import { ToolImportSidebarActions } from "./tool-import-sidebar-actions";
 
 function _McpToolImportDialog({
@@ -43,6 +45,7 @@ function _McpToolImportDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { actions, mcp } = useHostServices();
+  const { t, fmt } = useI18n();
   const [servers, setServers] = useState<McpServerView[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>("");
   const [tools, setTools] = useState<McpToolSummary[]>([]);
@@ -75,14 +78,14 @@ function _McpToolImportDialog({
             : (next[0]?.id ?? "")
       );
     } catch (error) {
-      toast.error("Failed to load MCP servers", {
+      toast.error(t.thread.tool.failedToLoadMcpServers, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     } finally {
       setLoadingServers(false);
     }
-  }, [initialServerId, mcp]);
+  }, [initialServerId, mcp, t]);
 
   const refreshTools = useCallback(
     async (serverId: string) => {
@@ -102,15 +105,15 @@ function _McpToolImportDialog({
       } catch (error) {
         setTools([]);
         await refreshServers();
-        toast.error("Failed to load MCP tools", {
+        toast.error(t.thread.tool.failedToLoadMcpTools, {
           description:
-            error instanceof Error ? error.message : "Please try again.",
+            error instanceof Error ? error.message : t.common.toasts.tryAgain,
         });
       } finally {
         setLoadingTools(false);
       }
     },
-    [mcp, refreshServers]
+    [mcp, refreshServers, t]
   );
 
   useEffect(() => {
@@ -199,9 +202,9 @@ function _McpToolImportDialog({
         }}
       >
         <DialogHeader className="border-b px-4 py-3">
-          <DialogTitle>Add MCP tools</DialogTitle>
+          <DialogTitle>{t.thread.tool.addMcpToolsTitle}</DialogTitle>
           <DialogDescription>
-            Choose a server, then add one or more MCP tools to this thread.
+            {t.thread.tool.addMcpToolsDescription}
           </DialogDescription>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -209,7 +212,7 @@ function _McpToolImportDialog({
             <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
               {servers.length === 0 ? (
                 <div className="text-muted-foreground px-2 py-6 text-center text-xs">
-                  {loadingServers ? "Loading…" : "No servers"}
+                  {loadingServers ? t.common.loading : t.thread.tool.noServers}
                 </div>
               ) : (
                 servers.map((server) => {
@@ -279,16 +282,16 @@ function _McpToolImportDialog({
               onClick={openMcpSettings}
             >
               <Settings2 className="size-3.5" />
-              Configure MCP
+              {t.thread.tool.configureMcp}
             </Button>
           </aside>
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden pl-4">
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
               {servers.length === 0 ? (
                 <div className="text-muted-foreground flex flex-col items-center gap-3 px-3 py-8 text-center text-sm">
-                  <span>No MCP servers configured.</span>
+                  <span>{t.thread.tool.noMcpServersConfigured}</span>
                   <Button size="sm" variant="outline" onClick={openMcpSettings}>
-                    Open settings
+                    {t.thread.tool.openSettings}
                   </Button>
                 </div>
               ) : tools.length === 0 ? (
@@ -299,7 +302,7 @@ function _McpToolImportDialog({
                     )}
                   >
                     {errorText ??
-                      `${_serverReadinessLabel(selectedServer)} · no tools loaded`}
+                      `${_serverReadinessLabel(selectedServer, t)} · ${t.thread.tool.noToolsLoaded}`}
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
@@ -313,10 +316,10 @@ function _McpToolImportDialog({
                       ) : (
                         <RefreshCw className="size-4" />
                       )}
-                      Test server
+                      {t.thread.tool.testServer}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={openMcpSettings}>
-                      Open settings
+                      {t.thread.tool.openSettings}
                     </Button>
                   </div>
                 </div>
@@ -371,7 +374,15 @@ function _McpToolImportDialog({
                       <Switch
                         checked={exists}
                         disabled={!tool.available}
-                        aria-label={`${exists ? "Remove" : "Add"} ${tool.directName}`}
+                        aria-label={
+                          exists
+                            ? fmt(t.thread.tool.removeToolAriaMcp, {
+                                name: tool.directName,
+                              })
+                            : fmt(t.thread.tool.addToolAriaMcp, {
+                                name: tool.directName,
+                              })
+                        }
                         onCheckedChange={(checked) =>
                           handleToggleTool(tool, checked)
                         }
@@ -390,15 +401,18 @@ function _McpToolImportDialog({
 
 export const McpToolImportDialog = memo(_McpToolImportDialog);
 
-function _serverReadinessLabel(server: McpServerView | null): string {
+function _serverReadinessLabel(
+  server: McpServerView | null,
+  t: Messages
+): string {
   if (!server) {
-    return "Untested";
+    return t.thread.tool.untested;
   }
   const readiness = server.readiness;
   const label = getMcpReadinessLabel(readiness);
   const parts = [label];
   if (readiness?.testedAt) {
-    parts.push(`tested ${format(readiness.testedAt)}`);
+    parts.push(`${t.thread.tool.testedPrefix} ${format(readiness.testedAt)}`);
   }
   return parts.join(" · ");
 }

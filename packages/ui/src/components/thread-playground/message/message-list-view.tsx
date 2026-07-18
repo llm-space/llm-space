@@ -13,6 +13,7 @@ import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import { ScrollArea } from "@llm-space/ui/ui/scroll-area";
 
+import { useI18n } from "../../../i18n";
 import { useThreadStore, useThreadStoreActions } from "../stores";
 
 import { MessageListItem } from "./message-list-item";
@@ -34,6 +35,7 @@ export function MessageListView({
   const autoFocusMessageId = useThreadStore((s) => s.autoFocusMessageId);
   const storeMessages = useThreadStore((s) => s.thread.context?.messages);
   const { appendMessage, moveMessage } = useThreadStoreActions();
+  const { t } = useI18n();
   const [dragging, setDragging] = useState(false);
   const messages = messagesFromProps ?? storeMessages ?? [];
   const readonly = useMemo(() => {
@@ -115,7 +117,7 @@ export function MessageListView({
           onClick={appendMessage}
         >
           <PlusIcon className="size-4" />
-          Add message
+          {t.thread.message.addMessage}
         </Button>
       </div>
     </ScrollArea>

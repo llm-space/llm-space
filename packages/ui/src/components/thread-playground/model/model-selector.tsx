@@ -19,6 +19,7 @@ import {
   ComboboxSeparator,
 } from "@llm-space/ui/ui/combobox";
 
+import { useI18n } from "../../../i18n";
 import { useModels, useRefreshModels } from "../../model-provider";
 import { ModelAvatar } from "../model-avatar";
 import { ProviderAvatar } from "../provider-avatar";
@@ -53,6 +54,7 @@ export function ModelSelector({
   const refreshModels = useRefreshModels();
   const { updateModel } = useThreadStoreActions();
   const { actions } = useHostServices();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   const items = useMemo(
@@ -122,7 +124,8 @@ export function ModelSelector({
     const trigger = inputRef.current
       ?.closest<HTMLElement>('[data-slot="input-group"]')
       ?.querySelector<HTMLElement>('[data-slot="input-group-button"]');
-    trigger?.setAttribute("aria-label", "Open model selector");
+    trigger?.setAttribute("aria-label", t.thread.model.openModelSelectorAria);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot mount; the aria-label is set once and `t` is stable per language
   }, []);
 
   return (
@@ -149,17 +152,17 @@ export function ModelSelector({
     >
       <ComboboxInput
         ref={inputRef}
-        aria-label="Model selector"
+        aria-label={t.thread.model.modelSelectorAria}
         className={cn(
           "hover:bg-secondary! group/model-select h-6! w-75 border-0 bg-transparent! font-mono",
           !readonly && "cursor:pointer hover:bg-secondary"
         )}
         triggerClassName="opacity-0! group-hover/model-select:opacity-100"
-        placeholder="(No model selected)"
+        placeholder={t.thread.model.noModelSelectedPlaceholder}
         disabled={readonly}
       />
       <ComboboxContent className="w-96">
-        <ComboboxEmpty>No models found.</ComboboxEmpty>
+        <ComboboxEmpty>{t.thread.model.noModelsFound}</ComboboxEmpty>
         <ComboboxList>
           {(provider: {
             id: string;
@@ -213,7 +216,7 @@ export function ModelSelector({
             className="hover:bg-accent hover:text-accent-foreground text-muted-foreground flex min-h-7 w-full cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs/relaxed outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5"
           >
             <SettingsIcon />
-            Configure models...
+            {t.thread.model.configureModels}
           </button>
         </div>
       </ComboboxContent>

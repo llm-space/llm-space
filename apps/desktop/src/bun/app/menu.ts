@@ -5,26 +5,33 @@ import {
 } from "electrobun/bun";
 
 import type { Command } from "../../shared/commands";
+import type { Lang } from "../../shared/i18n";
 
-import { isChineseLocale } from "./locales";
+import { getMenuLabels } from "./menu-labels";
 
 /**
  * The app (first) submenu. Its update item is the one dynamic piece: normally
  * "Check for Updates…"; once an update is downloaded it becomes
  * "Restart to Update" (VS Code pattern). `setUpdateReadyInMenu` rebuilds the
  * whole menu — `setApplicationMenu` is idempotent and can be re-called anytime.
+ *
+ * Labels are localized; the menu rebuilds on a language change via
+ * {@link setMenuLanguage}.
  */
-function _appSubmenu(updateReady: boolean): ApplicationMenuItemConfig {
+function _appSubmenu(
+  labels: ReturnType<typeof getMenuLabels>,
+  updateReady: boolean
+): ApplicationMenuItemConfig {
   const updateItem = updateReady
-    ? { label: "Restart to Update", action: "restartToUpdate" }
-    : { label: "Check for Updates...", action: "checkForUpdates" };
+    ? { label: labels.app.restartToUpdate, action: "restartToUpdate" }
+    : { label: labels.app.checkForUpdates, action: "checkForUpdates" };
   return {
     submenu: [
-      { label: "About LLM Space", role: "about" },
+      { label: labels.app.about, role: "about" },
       updateItem,
       { type: "divider" },
       {
-        label: "Settings...",
+        label: labels.app.settings,
         action: "settings",
         accelerator: "CommandOrControl+,",
       },
@@ -34,7 +41,7 @@ function _appSubmenu(updateReady: boolean): ApplicationMenuItemConfig {
       { role: "showAll" },
       { type: "divider" },
       {
-        label: "Quit LLM Space",
+        label: labels.app.quit,
         role: "quit",
         accelerator: "CommandOrControl+Q",
       },
@@ -42,50 +49,54 @@ function _appSubmenu(updateReady: boolean): ApplicationMenuItemConfig {
   };
 }
 
-function _buildMenu(updateReady: boolean): ApplicationMenuItemConfig[] {
+function _buildMenu(
+  lang: Lang,
+  updateReady: boolean
+): ApplicationMenuItemConfig[] {
+  const labels = getMenuLabels(lang);
   return [
-    _appSubmenu(updateReady),
+    _appSubmenu(labels, updateReady),
     {
-      label: "File",
+      label: labels.file.title,
       submenu: [
         {
-          label: "New File",
+          label: labels.file.newFile,
           action: "newThread",
           accelerator: "CommandOrControl+N",
         },
-        { label: "New from Examples...", action: "newFromExamples" },
+        { label: labels.file.newFromExamples, action: "newFromExamples" },
         { type: "divider" },
         {
-          label: "New Folder",
+          label: labels.file.newFolder,
           action: "newFolder",
           accelerator: "CommandOrControl+Shift+N",
         },
         { type: "divider" },
-        { label: "Import from Files...", action: "importFiles" },
-        { label: "Import from Clipboard", action: "importFromClipboard" },
+        { label: labels.file.importFromFiles, action: "importFiles" },
+        { label: labels.file.importFromClipboard, action: "importFromClipboard" },
         { type: "divider" },
-        { label: "Share...", action: "shareThread" },
+        { label: labels.file.share, action: "shareThread" },
         { type: "divider" },
-        { label: "Refresh Workspace", action: "refreshTree" },
-        { label: "Reveal Workspace Folder", action: "revealWorkspaceFolder" },
+        { label: labels.file.refreshWorkspace, action: "refreshTree" },
+        { label: labels.file.revealWorkspaceFolder, action: "revealWorkspaceFolder" },
         { type: "divider" },
         {
-          label: "Close Tab",
+          label: labels.file.closeTab,
           action: "closeTab",
           accelerator: "CommandOrControl+W",
         },
-        { label: "Close Others", action: "closeOtherTabs" },
-        { label: "Close All Tabs", action: "closeAllTabs" },
+        { label: labels.file.closeOthers, action: "closeOtherTabs" },
+        { label: labels.file.closeAllTabs, action: "closeAllTabs" },
         { type: "divider" },
         {
-          label: "Reopen Closed Tabs",
+          label: labels.file.reopenClosedTabs,
           action: "reopenClosedTabs",
           accelerator: "CommandOrControl+Shift+T",
         },
       ],
     },
     {
-      label: "Edit",
+      label: labels.edit.title,
       submenu: [
         { role: "undo" },
         { role: "redo" },
@@ -99,57 +110,57 @@ function _buildMenu(updateReady: boolean): ApplicationMenuItemConfig[] {
       ],
     },
     {
-      label: "View",
+      label: labels.view.title,
       submenu: [
         {
-          label: "Command Palette...",
+          label: labels.view.commandPalette,
           action: "commandPalette",
           accelerator: "CommandOrControl+Shift+P",
         },
         { type: "divider" },
         {
-          label: "Toggle Sidebar",
+          label: labels.view.toggleSidebar,
           action: "toggleSidebar",
           accelerator: "CommandOrControl+B",
         },
         { type: "divider" },
         {
-          label: "Reload",
+          label: labels.view.reload,
           action: "reload",
           accelerator: "CommandOrControl+Shift+R",
         },
         { type: "divider" },
         {
-          label: "Zoom In",
+          label: labels.view.zoomIn,
           action: "zoomIn",
           accelerator: "CommandOrControl+Plus",
         },
         {
-          label: "Zoom Out",
+          label: labels.view.zoomOut,
           action: "zoomOut",
           accelerator: "CommandOrControl+-",
         },
         {
-          label: "Reset Zoom",
+          label: labels.view.resetZoom,
           action: "resetZoom",
           accelerator: "CommandOrControl+0",
         },
       ],
     },
     {
-      label: "Window",
+      label: labels.window.title,
       role: "window",
       submenu: [
         { role: "minimize" },
         { role: "bringAllToFront" },
         { type: "divider" },
         {
-          label: "Select Previous Tab",
+          label: labels.window.selectPreviousTab,
           action: "selectPreviousTab",
           accelerator: "CommandOrControl+Option+Left",
         },
         {
-          label: "Select Next Tab",
+          label: labels.window.selectNextTab,
           action: "selectNextTab",
           accelerator: "CommandOrControl+Option+Right",
         },
@@ -158,30 +169,59 @@ function _buildMenu(updateReady: boolean): ApplicationMenuItemConfig[] {
       ],
     },
     {
-      label: "Help",
+      label: labels.help.title,
       submenu: [
-        { label: "View Documentation", action: "openDocument" },
+        { label: labels.help.viewDocumentation, action: "openDocument" },
         { type: "divider" },
-        { label: "Visit Official Website", action: "openOfficialWebsite" },
-        { label: "Visit GitHub Project", action: "openGitHubProject" },
-        { label: "Visit Harness 101", action: "openHarness101" },
+        { label: labels.help.visitOfficialWebsite, action: "openOfficialWebsite" },
+        { label: labels.help.visitGitHubProject, action: "openGitHubProject" },
+        { label: labels.help.visitHarness101, action: "openHarness101" },
         { type: "divider" },
-        { label: "Report Bug", action: "reportBugs" },
-        { label: "Donate", action: "donate" },
+        { label: labels.help.reportBug, action: "reportBugs" },
+        { label: labels.help.donate, action: "donate" },
         { type: "divider" },
-        { label: "Onboard", action: "onboard" },
+        { label: labels.help.onboard, action: "onboard" },
       ],
     },
   ];
 }
 
+// Process-local menu state. The update-ready flag and the active language are
+// the only things that change the menu's shape; both rebuild it via
+// `setApplicationMenu`. Initialized when the menu is first registered.
+let _menuState: { lang: Lang; updateReady: boolean } = {
+  lang: "zh",
+  updateReady: false,
+};
+
+function _rebuild(): void {
+  ApplicationMenu.setApplicationMenu(
+    _buildMenu(_menuState.lang, _menuState.updateReady)
+  );
+}
+
 /**
  * Flip the app menu's update item between "Check for Updates…" and
  * "Restart to Update". Called by the updater service when a download becomes
- * ready. `null` restores the default item.
+ * ready. `null` restores the default item. Preserves the current language.
  */
 export function setUpdateReadyInMenu(version: string | null) {
-  ApplicationMenu.setApplicationMenu(_buildMenu(version !== null));
+  _menuState = { ..._menuState, updateReady: version !== null };
+  _rebuild();
+}
+
+/**
+ * Switch the native menu's language and rebuild it. Called when the user
+ * changes the language in Settings (the `setLanguage` RPC handler).
+ */
+export function setMenuLanguage(lang: Lang): void {
+  _menuState = { ..._menuState, lang };
+  _rebuild();
+}
+
+/** The current menu language (used by command handlers to pick locale URLs). */
+export function getMenuLanguage(): Lang {
+  return _menuState.lang;
 }
 
 /**
@@ -229,27 +269,47 @@ const MENU_ACTION_COMMANDS: Record<string, Command> = {
     args: { url: "https://my.feishu.cn/wiki/OvLBwVuSkiCR1ik5wGEcBXZfnye" },
   },
   onboard: { type: "openOnboard", args: {} },
-  openHarness101: {
-    type: "openLink",
-    args: {
-      url: isChineseLocale()
-        ? "https://my.feishu.cn/wiki/L082wubkdie8uMkRUjgceKYQnIe?fromScene=spaceOverview"
-        : "https://my.feishu.cn/docx/G8CGdg2PQoGjsRxspKAc9XZYnKT",
-    },
-  },
+  // Harness 101 links to a Chinese or English Feishu doc based on the active
+  // menu language (the user's chosen UI language, not just the OS locale).
+  // The entry here only tags the action; the URL is NOT baked into this map —
+  // `MENU_ACTION_COMMANDS` is built once at module load, when `_menuState.lang`
+  // is still the hardcoded default "zh", so freezing the URL here would forever
+  // open the zh doc even in an English UI. The handler below resolves it at
+  // click time via `getMenuLanguage()`, mirroring how `openDocument` resolves
+  // the docs URL in commands.ts.
+  openHarness101: { type: "openLink", args: { url: "" } },
+};
+
+/** Harness 101 URLs by language — resolved at click time, never at module load. */
+const HARNESS_101_URL: Record<Lang, string> = {
+  zh: "https://my.feishu.cn/wiki/L082wubkdie8uMkRUjgceKYQnIe?fromScene=spaceOverview",
+  en: "https://my.feishu.cn/docx/G8CGdg2PQoGjsRxspKAc9XZYnKT",
 };
 
 /**
  * Install the application menu and wire its actions to the main window. Called
- * once after the window exists.
+ * once after the window exists. `initialLang` seeds the menu's language (from
+ * the {@link LanguageManager}); subsequent changes go through
+ * {@link setMenuLanguage}.
  */
 export function registerMenuActions(
   window: BrowserWindow,
-  executeCommand: (command: Command, window: BrowserWindow) => void
+  executeCommand: (command: Command, window: BrowserWindow) => void,
+  initialLang: Lang
 ) {
-  ApplicationMenu.setApplicationMenu(_buildMenu(false));
+  _menuState = { lang: initialLang, updateReady: false };
+  _rebuild();
   ApplicationMenu.on("application-menu-clicked", (event) => {
     const { action } = (event as { data: { action: string } }).data;
+    // Harness 101 must resolve its per-language URL at click time — the static
+    // `MENU_ACTION_COMMANDS` entry can't carry it (see comment there).
+    if (action === "openHarness101") {
+      executeCommand(
+        { type: "openLink", args: { url: HARNESS_101_URL[getMenuLanguage()] } },
+        window
+      );
+      return;
+    }
     const command = MENU_ACTION_COMMANDS[action];
     if (command) executeCommand(command, window);
   });

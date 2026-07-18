@@ -5,7 +5,7 @@ import { Utils, type BrowserWindow } from "electrobun/bun";
 
 import { COMMAND_META, type Command } from "../shared/commands";
 
-import { isChineseLocale } from "./app/locales";
+import { getMenuLanguage } from "./app/menu";
 import { saveZoom } from "./app/window-state";
 import type { GitHubAuthManager } from "./auth";
 import {
@@ -91,8 +91,8 @@ export function executeCommandInBun(
     }
     case "openDocument": {
       // `path` is ignored for now — always open the docs home, picking the
-      // Chinese docs for Chinese locales and the English wiki otherwise.
-      Utils.openExternal(isChineseLocale() ? DOCS_ZH_CN_URL : DOCS_URL);
+      // Chinese docs for a Chinese UI language and the English wiki otherwise.
+      Utils.openExternal(getMenuLanguage() === "zh" ? DOCS_ZH_CN_URL : DOCS_URL);
       return;
     }
     case "reportBugs": {

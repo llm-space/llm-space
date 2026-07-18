@@ -8,6 +8,7 @@ import { TooltipProvider } from "@llm-space/ui/ui/tooltip";
 
 import { ExperimentalProvider } from "@/components/experimental-provider";
 import { createElectrobunModelClient } from "@/host/host-services";
+import { DesktopI18nProvider } from "@/host/i18n-provider";
 
 import { QueryProvider } from "./query-provider";
 
@@ -20,10 +21,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <QueryProvider>
           <ModelProvider client={modelClient}>
             <TooltipProvider delayDuration={1000}>
-              <div className="flex size-full flex-col">
-                <ThemedToaster />
-                {children}
-              </div>
+              <DesktopI18nProvider>
+                <div className="flex size-full flex-col">
+                  <ThemedToaster />
+                  {children}
+                </div>
+              </DesktopI18nProvider>
             </TooltipProvider>
           </ModelProvider>
         </QueryProvider>

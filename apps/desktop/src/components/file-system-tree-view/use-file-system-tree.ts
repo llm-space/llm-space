@@ -7,6 +7,7 @@ import {
   type Thread,
   type Tool,
 } from "@llm-space/core";
+import { useI18n } from "@llm-space/ui/i18n";
 import {
   basename,
   joinPath,
@@ -214,6 +215,7 @@ export interface FileSystemTree {
  */
 export function useFileSystemTree(): FileSystemTree {
   const qc = useQueryClient();
+  const { t } = useI18n();
   // Restore the directories that were open last session (shallowest-first, so
   // each parent loads before its children); entries whose directory no longer
   // exists are pruned once their parent's listing loads.
@@ -438,7 +440,7 @@ export function useFileSystemTree(): FileSystemTree {
     ): Promise<string | null> => {
       if (!src) return null;
       if (isSelfOrDescendant(src, destDir)) {
-        toast.error("Cannot move a folder into itself.");
+        toast.error(t.fileTree.toasts.cannotMoveIntoItself);
         return null;
       }
       const srcParent = parentOf(src);
@@ -525,7 +527,7 @@ export function useFileSystemTree(): FileSystemTree {
       }
       return ok ? dest : null;
     },
-    [qc]
+    [qc, t]
   );
 
   const rename = useCallback(

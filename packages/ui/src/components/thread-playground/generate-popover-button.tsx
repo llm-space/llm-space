@@ -10,6 +10,8 @@ import { Button } from "@llm-space/ui/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@llm-space/ui/ui/popover";
 import { Textarea } from "@llm-space/ui/ui/textarea";
 
+import { useI18n } from "../../i18n";
+
 interface GeneratePopoverButtonProps {
   className?: string;
   iconOnly?: boolean;
@@ -20,9 +22,11 @@ interface GeneratePopoverButtonProps {
 function _GeneratePopoverButton({
   className,
   iconOnly = false,
-  placeholder = "Describe what your function does (or paste your code), and we'll generate a definition.",
+  placeholder,
   onGenerate,
 }: GeneratePopoverButtonProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t.thread.prompt.generateFunctionHint;
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
 
@@ -53,18 +57,18 @@ function _GeneratePopoverButton({
       className={className}
       variant="ghost"
       size={iconOnly ? "icon" : "sm"}
-      aria-label="Generate"
+      aria-label={t.thread.prompt.generate}
       aria-expanded={open}
     >
       <WandSparkles data-icon={iconOnly ? undefined : "inline-start"} />
-      {iconOnly ? null : "Generate"}
+      {iconOnly ? null : t.thread.prompt.generate}
     </Button>
   );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       {iconOnly ? (
-        <Tooltip content="Generate">
+        <Tooltip content={t.thread.prompt.generate}>
           <PopoverTrigger asChild>{button}</PopoverTrigger>
         </Tooltip>
       ) : (
@@ -81,7 +85,7 @@ function _GeneratePopoverButton({
         <Textarea
           className="min-h-0 flex-1 border-0! bg-transparent! font-mono text-sm leading-relaxed shadow-none focus-visible:ring-0 md:text-base"
           value={prompt}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           autoFocus
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handleKeyDown}
@@ -93,7 +97,7 @@ function _GeneratePopoverButton({
             onClick={handleGenerate}
           >
             <SparklesIcon />
-            Generate
+            {t.thread.prompt.generate}
           </Button>
         </div>
       </PopoverContent>

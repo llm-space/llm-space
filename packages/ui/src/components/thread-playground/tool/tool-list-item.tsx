@@ -7,6 +7,8 @@ import React, { memo, useCallback, useMemo } from "react";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
 import { cn } from "@llm-space/ui/lib/utils";
 
+import { useI18n } from "../../../i18n";
+
 
 
 import { getBuiltInToolIcon } from "./built-in-tool-icon";
@@ -24,6 +26,7 @@ function _ToolListItem({
 
   onRemove: (tool: Tool) => void;
 }) {
+  const { t, fmt } = useI18n();
   const keys = useMemo(
     () =>
       Object.keys(
@@ -85,8 +88,14 @@ function _ToolListItem({
             className="focus-visible:ring-ring/30 text-muted-foreground group-hover/tool:text-foreground inline-flex h-full items-center gap-1 rounded-l-md pl-2 outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50"
             aria-label={
               tool.type === "function"
-                ? `Edit ${tool.name} tool`
-                : `Manage ${tool.name} ${tool.type === "mcp" ? "MCP" : "built-in"} tool`
+                ? fmt(t.thread.tool.editToolAria, { name: tool.name })
+                : fmt(t.thread.tool.manageToolAria, {
+                    name: tool.name,
+                    type:
+                      tool.type === "mcp"
+                        ? t.thread.tool.typeMcp
+                        : t.thread.tool.typeBuiltin,
+                  })
             }
             disabled={editDisabled}
             onClick={() => onEdit(tool)}
@@ -96,11 +105,11 @@ function _ToolListItem({
           </button>
         </span>
       </Tooltip>
-      <Tooltip content="Remove tool">
+      <Tooltip content={t.thread.tool.removeTool}>
         <button
           type="button"
           disabled={readonly}
-          aria-label={`Remove ${tool.name} tool`}
+          aria-label={fmt(t.thread.tool.removeToolAria, { name: tool.name })}
           className={cn(
             "text-muted-foreground hover:text-accent-foreground focus-visible:ring-ring/30 inline-flex h-full items-center rounded-r-md pr-1 pl-1 outline-none hover:opacity-100 focus-visible:ring-2",
             readonly ? "opacity-0!" : "opacity-0 group-hover/tool:opacity-100"

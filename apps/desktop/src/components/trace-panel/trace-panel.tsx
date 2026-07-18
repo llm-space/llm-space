@@ -3,6 +3,7 @@
 
 
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useI18n } from "@llm-space/ui/i18n";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import {
@@ -107,20 +108,26 @@ const DEFAULT_TRACE_SEARCH_FORM: TraceSearchFormState = {
   limit: "25",
 };
 
-const TRACE_SEARCH_ORDER_OPTIONS = [
-  { value: "timestamp.desc", label: "Newest" },
-  { value: "timestamp.asc", label: "Oldest" },
-  { value: "name.asc", label: "Name A-Z" },
-  { value: "userId.asc", label: "User A-Z" },
-  { value: "sessionId.asc", label: "Session A-Z" },
-  { value: "id.asc", label: "ID A-Z" },
-];
-
 const TRACE_SEARCH_LIMIT_OPTIONS = ["25", "50", "100"];
+
+function _traceSearchOrderOptions(t: ReturnType<typeof useI18n>["t"]) {
+  return [
+    { value: "timestamp.desc", label: t.trace.strings.newest },
+    { value: "timestamp.asc", label: t.trace.strings.oldest },
+    { value: "name.asc", label: t.trace.strings.nameAZ },
+    { value: "userId.asc", label: t.trace.strings.userAZ },
+    { value: "sessionId.asc", label: t.trace.strings.sessionAZ },
+    { value: "id.asc", label: t.trace.strings.idAZ },
+  ] satisfies {
+    value: TraceSearchFormState["orderBy"];
+    label: string;
+  }[];
+}
 
 export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
   const { executeCommand } = useCommands();
   const qc = useQueryClient();
+  const { t, fmt, plural } = useI18n();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
@@ -178,13 +185,15 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
         setSelectedProjectId(project.id);
         await qc.invalidateQueries({ queryKey: ["trace", "projects"] });
       } catch (error) {
-        toast.error("Could not create trace project", {
+        toast.error(t.trace.strings.createProjectFailed, {
           description:
-            error instanceof Error ? error.message : "Project creation failed.",
+            error instanceof Error
+              ? error.message
+              : t.trace.strings.projectCreationFailed,
         });
       }
     },
-    [qc]
+    [qc, t]
   );
 
   const createConnectedProject = useCallback(
@@ -195,19 +204,19 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
         setProjectDialogOpen(false);
         setSelectedProjectId(project.id);
         await qc.invalidateQueries({ queryKey: ["trace", "projects"] });
-        toast.success("Connected Langfuse project", {
+        toast.success(t.trace.strings.connectedProject, {
           description: project.source.langfuseProjectName ?? project.name,
         });
       } catch (error) {
-        toast.error("Could not connect Langfuse", {
+        toast.error(t.trace.strings.connectLangfuseFailed, {
           description:
-            error instanceof Error ? error.message : "Connection failed.",
+            error instanceof Error ? error.message : t.trace.strings.connectionFailed,
         });
       } finally {
         setConnectionPending(false);
       }
     },
-    [qc]
+    [qc, t]
   );
 
   const importLangfuseFiles = useCallback(
@@ -224,30 +233,35 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
         if (result.imported.length > 0) {
           setImportProjectId(null);
           toast.success(
-            `Imported ${result.imported.length} trace${
-              result.imported.length === 1 ? "" : "s"
-            }`,
+            plural(
+              result.imported.length,
+              fmt(t.trace.strings.importedTraceOne, {
+                count: result.imported.length,
+              }),
+              fmt(t.trace.strings.importedTraceOther, {
+                count: result.imported.length,
+              })
+            ),
             result.warnings.length > 0
               ? { description: result.warnings[0] }
               : undefined
           );
         } else {
-          toast.error("No Langfuse traces imported", {
+          toast.error(t.trace.strings.noLangfuseTracesImported, {
             description:
-              result.warnings[0] ??
-              "Select a Langfuse Observations JSON export.",
+              result.warnings[0] ?? t.trace.strings.selectLangfuseExport,
           });
         }
       } catch (error) {
-        toast.error("Import failed", {
+        toast.error(t.trace.strings.importFailed, {
           description:
-            error instanceof Error ? error.message : "Could not import traces.",
+            error instanceof Error ? error.message : t.trace.strings.couldNotImportTraces,
         });
       } finally {
         setImporting(false);
       }
     },
-    [qc]
+    [fmt, plural, qc, t]
   );
 
   const syncLangfuseTraceIds = useCallback(
@@ -266,17 +280,23 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
         ]);
         if (result.imported.length > 0) {
           toast.success(
-            `Synced ${result.imported.length} trace${
-              result.imported.length === 1 ? "" : "s"
-            }`,
+            plural(
+              result.imported.length,
+              fmt(t.trace.strings.syncedTraceOne, {
+                count: result.imported.length,
+              }),
+              fmt(t.trace.strings.syncedTraceOther, {
+                count: result.imported.length,
+              })
+            ),
             result.warnings.length > 0
               ? { description: result.warnings[0] }
               : undefined
           );
         } else {
-          toast.error("No traces synced", {
+          toast.error(t.trace.strings.noTracesSynced, {
             description:
-              result.warnings[0] ?? "Select a Langfuse trace id to sync.",
+              result.warnings[0] ?? t.trace.strings.selectTraceToSync,
           });
         }
       } catch (error) {
@@ -286,15 +306,15 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
             queryKey: ["trace", "traces", projectId],
           }),
         ]);
-        toast.error("Sync failed", {
+        toast.error(t.trace.strings.syncFailed, {
           description:
-            error instanceof Error ? error.message : "Could not sync traces.",
+            error instanceof Error ? error.message : t.trace.strings.couldNotSyncTraces,
         });
       } finally {
         setSyncingProjectId(null);
       }
     },
-    [qc]
+    [fmt, plural, qc, t]
   );
 
   useRegisterCommands({
@@ -373,11 +393,11 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
     <div className={cn("bg-sidebar flex h-full flex-col", className)}>
       <header className="electrobun-webkit-app-region-drag flex h-11.5 items-center justify-between px-3">
         <span className="ml-auto flex items-center gap-0.5">
-          <Tooltip content="Add Trace Project">
+          <Tooltip content={t.trace.strings.addTraceProject}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Add Trace Project"
+              aria-label={t.trace.strings.addTraceProject}
               onClick={openProjectDialog}
             >
               <PlusIcon className="size-4" />
@@ -445,18 +465,19 @@ export function TracePanel({ className, onOpenTrace }: TracePanelProps) {
 }
 
 function _EmptyProjects({ onAddProject }: { onAddProject: () => void }) {
+  const { t } = useI18n();
   return (
     <Empty className="h-full border-0 px-3">
       <EmptyHeader>
-        <EmptyTitle>No trace projects</EmptyTitle>
+        <EmptyTitle>{t.trace.strings.noTraceProjects}</EmptyTitle>
         <EmptyDescription>
-          Connect Langfuse or create a manual project for JSON exports.
+          {t.trace.strings.noTraceProjectsDescription}
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button className="w-full py-4" size="lg" onClick={onAddProject}>
           <PlusIcon className="size-3" />
-          Add trace project
+          {t.trace.strings.addTraceProjectButton}
         </Button>
       </EmptyContent>
     </Empty>
@@ -483,6 +504,7 @@ function _TraceProjectDialog({
   onCreate: (input: TraceConnectedProjectInput) => void;
 }) {
   const [tab, setTab] = useState<"langfuse" | "manual">("langfuse");
+  const { t } = useI18n();
 
   useEffect(() => {
     if (open) {
@@ -506,10 +528,9 @@ function _TraceProjectDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Add Trace Project</DialogTitle>
+          <DialogTitle>{t.trace.strings.addTraceProject}</DialogTitle>
           <DialogDescription>
-            Create a local project or connect a trace provider. More providers
-            can plug into this flow later.
+            {t.trace.strings.addProjectDescription}
           </DialogDescription>
         </DialogHeader>
         <Tabs
@@ -520,11 +541,11 @@ function _TraceProjectDialog({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="langfuse" disabled={pending}>
               <LinkIcon className="size-3.5" />
-              Langfuse
+              {t.trace.strings.langfuse}
             </TabsTrigger>
             <TabsTrigger value="manual" disabled={pending}>
               <FolderPlusIcon className="size-3.5" />
-              Manual
+              {t.trace.strings.manual}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="langfuse" className="mt-0">
@@ -559,12 +580,13 @@ function _ManualProjectForm({
   onCreate: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex w-full flex-col gap-4">
-      <_Field label="Project name">
+      <_Field label={t.trace.strings.projectName}>
         <Input
-          placeholder="Local traces"
-          aria-label="Trace project name"
+          placeholder={t.trace.strings.projectNamePlaceholder}
+          aria-label={t.trace.strings.traceProjectNameAria}
           value={projectName}
           onChange={(event) => onNameChange(event.target.value)}
           onKeyDown={(event) => {
@@ -582,16 +604,15 @@ function _ManualProjectForm({
       <div className="text-muted-foreground bg-muted/30 flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
         <FolderPlusIcon className="mt-0.5 size-3.5 shrink-0" />
         <span>
-          Manual projects are for Langfuse JSON exports and any provider import
-          we add later.
+          {t.trace.strings.manualProjectHint}
         </span>
       </div>
       <DialogFooter>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {t.trace.strings.cancel}
         </Button>
         <Button size="sm" disabled={!projectName.trim()} onClick={onCreate}>
-          Create
+          {t.trace.strings.create}
         </Button>
       </DialogFooter>
     </div>
@@ -607,6 +628,7 @@ function _ConnectProjectForm({
   onCancel: () => void;
   pending?: boolean;
 }) {
+  const { t } = useI18n();
   const [baseUrl, setBaseUrl] = useState("https://cloud.langfuse.com");
   const [publicKey, setPublicKey] = useState("");
   const [secretKey, setSecretKey] = useState("");
@@ -626,28 +648,28 @@ function _ConnectProjectForm({
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <_Field label="Langfuse base URL" className="sm:col-span-2">
+        <_Field label={t.trace.strings.langfuseBaseUrl} className="sm:col-span-2">
           <Input
             autoFocus
             placeholder="https://cloud.langfuse.com"
-            aria-label="Langfuse base URL"
+            aria-label={t.trace.strings.langfuseBaseUrlAria}
             value={baseUrl}
             onChange={(event) => setBaseUrl(event.target.value)}
           />
         </_Field>
-        <_Field label="Public key">
+        <_Field label={t.trace.strings.publicKey}>
           <Input
             placeholder="pk-lf-..."
-            aria-label="Langfuse public key"
+            aria-label={t.trace.strings.publicKeyAria}
             value={publicKey}
             onChange={(event) => setPublicKey(event.target.value)}
           />
         </_Field>
-        <_Field label="Secret key">
+        <_Field label={t.trace.strings.secretKey}>
           <Input
             type="password"
             placeholder="sk-lf-..."
-            aria-label="Langfuse secret key"
+            aria-label={t.trace.strings.secretKeyAria}
             value={secretKey}
             onChange={(event) => setSecretKey(event.target.value)}
             onKeyDown={(event) => {
@@ -666,17 +688,16 @@ function _ConnectProjectForm({
       <div className="text-muted-foreground bg-muted/30 flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
         <KeyRoundIcon className="mt-0.5 size-3.5 shrink-0" />
         <span>
-          The connection is tested before the project is created. Connecting
-          does not sync traces automatically.
+          {t.trace.strings.connectionHint}
         </span>
       </div>
       <DialogFooter>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {t.trace.strings.cancel}
         </Button>
         <Button size="sm" disabled={!canCreate || pending} onClick={submit}>
           {pending && <Spinner className="size-3" />}
-          Connect
+          {t.trace.strings.connectProject}
         </Button>
       </DialogFooter>
     </div>
@@ -715,6 +736,7 @@ function _TraceProjectGroup({
   onAddTrace: (project: TraceProject) => void;
   onOpenTrace: (trace: TraceRecord) => void;
 }) {
+  const { t } = useI18n();
   const { data: traces = [], isLoading } = useQuery({
     queryKey: ["trace", "traces", project.id],
     queryFn: () => traceClient.listTraces(project.id),
@@ -722,8 +744,8 @@ function _TraceProjectGroup({
   });
   const addLabel =
     project.source.mode === "connected"
-      ? "Sync Langfuse Traces"
-      : "Import Langfuse Export";
+      ? t.trace.strings.syncLangfuseTraces
+      : t.trace.strings.importLangfuseExport;
 
   return (
     <section className="flex flex-col gap-1">
@@ -746,7 +768,7 @@ function _TraceProjectGroup({
               {project.name}
             </span>
             <span className="text-muted-foreground block truncate text-[0.625rem]">
-              {_projectSourceSummary(project)}
+              {_projectSourceSummary(project, t)}
             </span>
           </span>
         </button>
@@ -776,8 +798,8 @@ function _TraceProjectGroup({
           ) : traces.length === 0 ? (
             <div className="text-muted-foreground bg-muted/20 rounded-md border border-dashed px-3 py-4 text-xs">
               {project.source.mode === "connected"
-                ? "No synced traces yet. Use Sync to pull selected Langfuse traces."
-                : "No imported traces yet. Import a Langfuse JSON export."}
+                ? t.trace.strings.noSyncedTraces
+                : t.trace.strings.noImportedTraces}
             </div>
           ) : (
             traces.map((trace) => (
@@ -805,6 +827,7 @@ function _ImportLangfuseDialog({
   onOpenChange: (open: boolean) => void;
   onImport: (projectId: string, files: TraceImportFile[]) => void;
 }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [reading, setReading] = useState(false);
@@ -835,14 +858,21 @@ function _ImportLangfuseDialog({
       );
       onImport(project.id, records);
     } catch (error) {
-      toast.error("Import failed", {
+      toast.error(t.trace.strings.importFailed, {
         description:
-          error instanceof Error ? error.message : "Could not read files.",
+          error instanceof Error ? error.message : t.trace.strings.couldNotReadFiles,
       });
     } finally {
       setReading(false);
     }
-  }, [onImport, pending, project, selectedFiles]);
+  }, [
+    onImport,
+    pending,
+    project,
+    selectedFiles,
+    t.trace.strings.couldNotReadFiles,
+    t.trace.strings.importFailed,
+  ]);
 
   return (
     <Dialog open={open && project !== null} onOpenChange={onOpenChange}>
@@ -861,9 +891,12 @@ function _ImportLangfuseDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>Import Langfuse Export</DialogTitle>
+            <DialogTitle>{t.trace.strings.importLangfuseExport}</DialogTitle>
             <DialogDescription>
-              {project.name} accepts JSON exports from one Langfuse project.
+              {t.trace.strings.importDialogDescription.replace(
+                "{project}",
+                project.name
+              )}
             </DialogDescription>
           </DialogHeader>
           <input
@@ -871,7 +904,7 @@ function _ImportLangfuseDialog({
             type="file"
             multiple
             accept=".json,application/json"
-            aria-label="Choose Langfuse JSON files"
+            aria-label={t.trace.strings.chooseJsonFilesAria}
             className="hidden"
             onChange={(event) => {
               selectFiles(event.target.files);
@@ -886,12 +919,12 @@ function _ImportLangfuseDialog({
               onClick={() => inputRef.current?.click()}
             >
               <ImportIcon className="size-4" />
-              Choose JSON Files
+              {t.trace.strings.chooseJsonFiles}
             </Button>
             <div className="bg-muted/30 border-border/70 min-h-24 rounded-md border p-3">
               {selectedFiles.length === 0 ? (
                 <div className="text-muted-foreground flex h-20 items-center justify-center text-center text-xs">
-                  Select Langfuse Observations JSON exports to import.
+                  {t.trace.strings.selectJsonExports}
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">
@@ -917,7 +950,7 @@ function _ImportLangfuseDialog({
               disabled={pending}
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t.trace.strings.cancel}
             </Button>
             <Button
               size="sm"
@@ -925,7 +958,7 @@ function _ImportLangfuseDialog({
               onClick={() => void submit()}
             >
               {pending && <Spinner className="size-3" />}
-              Import
+              {t.trace.strings.import}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -947,6 +980,7 @@ function _SyncProjectDialog({
   onOpenChange: (open: boolean) => void;
   onSyncTraceIds: (projectId: string, traceIds: string[]) => void;
 }) {
+  const { t, fmt } = useI18n();
   const [form, setForm] = useState<TraceSearchFormState>(
     DEFAULT_TRACE_SEARCH_FORM
   );
@@ -991,14 +1025,21 @@ function _SyncProjectDialog({
       setRemoteTraces(rows);
       setSelected(new Set());
     } catch (error) {
-      toast.error("Search failed", {
+      toast.error(t.trace.strings.searchFailed, {
         description:
-          error instanceof Error ? error.message : "Could not search traces.",
+          error instanceof Error
+            ? error.message
+            : t.trace.strings.couldNotSearchTraces,
       });
     } finally {
       setSearching(false);
     }
-  }, [project, searchFilters]);
+  }, [
+    project,
+    searchFilters,
+    t.trace.strings.couldNotSearchTraces,
+    t.trace.strings.searchFailed,
+  ]);
 
   const toggle = useCallback((id: string) => {
     setSelected((prev) => {
@@ -1025,8 +1066,12 @@ function _SyncProjectDialog({
 
   const searchSummary =
     remoteTraces.length > 0
-      ? `${remoteTraces.length} shown · ${selectedIds.length} selected`
-      : "Search remote traces without syncing them.";
+      ? fmt(t.trace.strings.shownSelected, {
+          shown: remoteTraces.length,
+          selected: selectedIds.length,
+        })
+      : t.trace.strings.searchRemoteHint;
+  const orderOptions = _traceSearchOrderOptions(t);
 
   return (
     <Dialog open={open && project !== null} onOpenChange={onOpenChange}>
@@ -1036,7 +1081,7 @@ function _SyncProjectDialog({
           onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader className="border-b px-4 py-3">
-            <DialogTitle>Sync Langfuse Traces</DialogTitle>
+            <DialogTitle>{t.trace.strings.syncLangfuseTraces}</DialogTitle>
             <DialogDescription>
               {project.name}
               {project.source.langfuseProjectName
@@ -1050,7 +1095,7 @@ function _SyncProjectDialog({
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-sm font-medium">
-                      Search Remote Traces
+                      {t.trace.strings.searchRemoteTraces}
                     </div>
                     <div className="text-muted-foreground truncate text-xs">
                       {searchSummary}
@@ -1058,10 +1103,10 @@ function _SyncProjectDialog({
                   </div>
                 </div>
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_7rem_auto]">
-                  <_Field label="Search">
+                  <_Field label={t.trace.strings.search}>
                     <Input
-                      placeholder="Trace ID, name, user, or session"
-                      aria-label="Search remote Langfuse traces"
+                      placeholder={t.trace.strings.searchPlaceholder}
+                      aria-label={t.trace.strings.searchRemoteAria}
                       value={form.query}
                       onChange={(event) =>
                         setFormValue("query", event.target.value)
@@ -1074,16 +1119,16 @@ function _SyncProjectDialog({
                       }}
                     />
                   </_Field>
-                  <_Field label="Sort">
+                  <_Field label={t.trace.strings.sort}>
                     <Select
                       value={form.orderBy}
                       onValueChange={(value) => setFormValue("orderBy", value)}
                     >
-                      <SelectTrigger aria-label="Sort remote Langfuse traces">
+                      <SelectTrigger aria-label={t.trace.strings.sortRemoteAria}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {TRACE_SEARCH_ORDER_OPTIONS.map((option) => (
+                        {orderOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -1091,12 +1136,12 @@ function _SyncProjectDialog({
                       </SelectContent>
                     </Select>
                   </_Field>
-                  <_Field label="Limit">
+                  <_Field label={t.trace.strings.limit}>
                     <Select
                       value={form.limit}
                       onValueChange={(value) => setFormValue("limit", value)}
                     >
-                      <SelectTrigger aria-label="Remote Langfuse trace limit">
+                      <SelectTrigger aria-label={t.trace.strings.limitRemoteAria}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1119,77 +1164,77 @@ function _SyncProjectDialog({
                     ) : (
                       <SearchIcon className="size-4" />
                     )}
-                    Search
+                    {t.trace.strings.search}
                   </Button>
                 </div>
                 {advancedFiltersOpen && (
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <_Field label="Trace ID">
+                    <_Field label={t.trace.strings.traceId}>
                       <Input
-                        placeholder="exact trace id"
+                        placeholder={t.trace.strings.exactTraceId}
                         value={form.traceId}
                         onChange={(event) =>
                           setFormValue("traceId", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="Name">
+                    <_Field label={t.trace.strings.name}>
                       <Input
-                        placeholder="trace name"
+                        placeholder={t.trace.strings.traceName}
                         value={form.name}
                         onChange={(event) =>
                           setFormValue("name", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="User ID">
+                    <_Field label={t.trace.strings.userId}>
                       <Input
-                        placeholder="user id"
+                        placeholder={t.trace.strings.userIdPlaceholder}
                         value={form.userId}
                         onChange={(event) =>
                           setFormValue("userId", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="Session ID">
+                    <_Field label={t.trace.strings.sessionId}>
                       <Input
-                        placeholder="session id"
+                        placeholder={t.trace.strings.sessionIdPlaceholder}
                         value={form.sessionId}
                         onChange={(event) =>
                           setFormValue("sessionId", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="Tags">
+                    <_Field label={t.trace.strings.tags}>
                       <Input
-                        placeholder="tag-a, tag-b"
+                        placeholder={t.trace.strings.tagsPlaceholder}
                         value={form.tags}
                         onChange={(event) =>
                           setFormValue("tags", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="Environment">
+                    <_Field label={t.trace.strings.environment}>
                       <Input
-                        placeholder="production"
+                        placeholder={t.trace.strings.environmentPlaceholder}
                         value={form.environment}
                         onChange={(event) =>
                           setFormValue("environment", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="Version">
+                    <_Field label={t.trace.strings.version}>
                       <Input
-                        placeholder="version"
+                        placeholder={t.trace.strings.versionPlaceholder}
                         value={form.version}
                         onChange={(event) =>
                           setFormValue("version", event.target.value)
                         }
                       />
                     </_Field>
-                    <_Field label="Release">
+                    <_Field label={t.trace.strings.release}>
                       <Input
-                        placeholder="release"
+                        placeholder={t.trace.strings.releasePlaceholder}
                         value={form.release}
                         onChange={(event) =>
                           setFormValue("release", event.target.value)
@@ -1199,7 +1244,7 @@ function _SyncProjectDialog({
                   </div>
                 )}
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto]">
-                  <_Field label="From">
+                  <_Field label={t.trace.strings.from}>
                     <Input
                       type="datetime-local"
                       value={form.fromTimestamp}
@@ -1208,7 +1253,7 @@ function _SyncProjectDialog({
                       }
                     />
                   </_Field>
-                  <_Field label="To">
+                  <_Field label={t.trace.strings.to}>
                     <Input
                       type="datetime-local"
                       value={form.toTimestamp}
@@ -1230,7 +1275,9 @@ function _SyncProjectDialog({
                           advancedFiltersOpen && "rotate-180"
                         )}
                       />
-                      {advancedFiltersOpen ? "Hide Filters" : "More Filters"}
+                      {advancedFiltersOpen
+                        ? t.trace.strings.hideFilters
+                        : t.trace.strings.moreFilters}
                     </Button>
                   </div>
                 </div>
@@ -1239,10 +1286,10 @@ function _SyncProjectDialog({
                     <div className="flex h-60 flex-col items-center justify-center px-6 text-center">
                       <SearchIcon className="text-muted-foreground/70 mb-2 size-5" />
                       <div className="text-sm font-medium">
-                        No remote traces loaded
+                        {t.trace.strings.noRemoteTracesLoaded}
                       </div>
                       <div className="text-muted-foreground mt-1 text-xs">
-                        Run a search, then select traces to sync.
+                        {t.trace.strings.runSearchThenSelect}
                       </div>
                     </div>
                   ) : (
@@ -1265,7 +1312,7 @@ function _SyncProjectDialog({
               disabled={syncing}
               onClick={() => onOpenChange(false)}
             >
-              Close
+              {t.trace.strings.close}
             </Button>
             <Button
               disabled={syncing || selectedIds.length === 0}
@@ -1277,8 +1324,10 @@ function _SyncProjectDialog({
                 <RefreshCwIcon className="size-4" />
               )}
               {selectedIds.length > 0
-                ? `Sync ${selectedIds.length} Selected`
-                : "Sync Selected"}
+                ? fmt(t.trace.strings.syncSelectedCount, {
+                    count: selectedIds.length,
+                  })
+                : t.trace.strings.syncSelected}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1287,15 +1336,18 @@ function _SyncProjectDialog({
   );
 }
 
-function _projectSourceSummary(project: TraceProject): string {
+function _projectSourceSummary(
+  project: TraceProject,
+  t: ReturnType<typeof useI18n>["t"]
+): string {
   if (project.source.mode === "connected") {
     return project.source.langfuseProjectName
-      ? `Connected · ${project.source.langfuseProjectName}`
-      : "Connected Langfuse";
+      ? `${t.trace.strings.connectedLangfuse} · ${project.source.langfuseProjectName}`
+      : t.trace.strings.connectedLangfuse;
   }
   return project.source.langfuseProjectName
-    ? `Manual import · ${project.source.langfuseProjectName}`
-    : "Manual import";
+    ? `${t.trace.strings.manualImport} · ${project.source.langfuseProjectName}`
+    : t.trace.strings.manualImport;
 }
 
 function _traceSearchFiltersFromForm(

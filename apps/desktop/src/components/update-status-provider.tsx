@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
 import {
@@ -52,24 +53,25 @@ function _UpdateReadyCard({
   onRestart: () => void;
   onDismiss: () => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="flex w-[356px] max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-white/15 bg-black/45 p-3.5 text-white shadow-2xl backdrop-blur-md">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-400/18 text-emerald-200">
         <CheckIcon className="size-4" />
       </div>
       <div className="min-w-0 grow">
-        <div className="text-sm font-medium">Update ready</div>
+        <div className="text-sm font-medium">{t.update.status.readyLabel}</div>
         <div className="truncate text-xs text-white/65">
-          v{version} is ready to install.
+          {fmt(t.update.status.readyHint, { version })}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Button size="sm" onClick={onRestart}>
-          Restart
+          {t.update.status.restart}
         </Button>
         <button
           type="button"
-          aria-label="Dismiss"
+          aria-label={t.update.status.dismissAriaLabel}
           onClick={onDismiss}
           className="flex size-6 items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-white"
         >
@@ -92,6 +94,7 @@ function _UpdateDownloadingCard({
   version: string;
   onDismiss: () => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="w-[356px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-black/45 p-3.5 text-white shadow-2xl backdrop-blur-md">
       <div className="flex items-center gap-3">
@@ -99,14 +102,16 @@ function _UpdateDownloadingCard({
           <Loader2Icon className="size-4 animate-spin" />
         </div>
         <div className="min-w-0 grow">
-          <div className="text-sm font-medium">Downloading update</div>
+          <div className="text-sm font-medium">
+            {t.update.status.downloadingTitle}
+          </div>
           <div className="truncate text-xs text-white/65">
-            v{version} — this continues in the background.
+            {fmt(t.update.status.downloadingHint, { version })}
           </div>
         </div>
         <button
           type="button"
-          aria-label="Dismiss"
+          aria-label={t.update.status.dismissAriaLabel}
           onClick={onDismiss}
           className="flex size-6 shrink-0 items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-white"
         >
@@ -139,6 +144,7 @@ const UpdateStatusContext = createContext<UpdateStatusValue | null>(null);
  */
 export function UpdateStatusProvider({ children }: { children: ReactNode }) {
   const { executeCommand } = useCommands();
+  const { t, fmt } = useI18n();
   const [readyVersion, setReadyVersion] = useState<string | null>(null);
   const lastNotifiedVersion = useRef<string | null>(null);
   // Manual "Check for Updates" flow.
@@ -251,9 +257,9 @@ export function UpdateStatusProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void rpc.request.pendingInstalledVersion({}).then((version) => {
       if (cancelled || !version) return;
-      toast.success(`Updated to v${version}`, {
+      toast.success(fmt(t.update.status.updatedToast, { version }), {
         action: {
-          label: "Release notes",
+          label: t.update.status.releaseNotesLabel,
           onClick: () =>
             executeCommand({
               type: "openLink",
@@ -265,7 +271,7 @@ export function UpdateStatusProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [executeCommand]);
+  }, [executeCommand, t, fmt]);
 
   return (
     <UpdateStatusContext.Provider value={{ readyVersion }}>

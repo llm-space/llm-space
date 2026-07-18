@@ -7,6 +7,8 @@ import { Tooltip } from "@llm-space/ui/components/tooltip";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 
+import { useI18n } from "../../../i18n";
+
 
 type TodoStatus = "pending" | "in_progress" | "completed";
 
@@ -63,6 +65,7 @@ function _TodoWriteView({
   input: ToolCallInput;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const { t } = useI18n();
   const previewValue = useMemo(
     () => JSON.stringify(input.arguments, null, 2) ?? "",
     [input.arguments]
@@ -75,7 +78,7 @@ function _TodoWriteView({
           <span>()</span>
         </span>
         <div className="flex items-center gap-2">
-          <Tooltip content="View arguments">
+          <Tooltip content={t.thread.message.viewArguments}>
             <Button
               className="invisible shrink-0 group-hover/message:visible"
               size="xs"
@@ -89,7 +92,7 @@ function _TodoWriteView({
       </div>
       <PreviewDialog
         open={previewOpen}
-        title="Arguments of todo_write()"
+        title={t.thread.message.argumentsOfTodoWrite}
         type="json"
         value={previewValue}
         onOpenChange={setPreviewOpen}

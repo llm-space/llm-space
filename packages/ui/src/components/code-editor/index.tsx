@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { useI18n } from "../../i18n";
 import { cn } from "../../lib/utils";
 import { Textarea } from "../../ui/textarea";
 import { Tooltip } from "../tooltip";
@@ -119,6 +120,7 @@ const PlainTextCodeEditor = forwardRef<
   },
   ref
 ) {
+  const { t } = useI18n();
   const draftRef = useRef(value);
   const committedRef = useRef(value);
   const focusedRef = useRef(false);
@@ -221,10 +223,10 @@ const PlainTextCodeEditor = forwardRef<
         onPaste={onPaste}
       />
       {onRetry ? (
-        <Tooltip content="Retry CodeMirror editor">
+        <Tooltip content={t.common.codeEditor.retry}>
           <button
             type="button"
-            aria-label="Retry CodeMirror editor"
+            aria-label={t.common.codeEditor.retry}
             className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1 right-1 inline-flex size-6 items-center justify-center rounded transition-colors"
             onClick={onRetry}
           >

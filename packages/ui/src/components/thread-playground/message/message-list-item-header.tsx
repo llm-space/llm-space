@@ -18,6 +18,7 @@ import { useHostServices } from "@llm-space/ui/host";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 
+import { useI18n } from "../../../i18n";
 import { useThreadStoreActions } from "../stores";
 
 import { AddImagesMenu } from "./add-images-menu";
@@ -42,6 +43,7 @@ function _MessageListItemHeader({
   // it — not `readonly` — to strip edit chrome, so desktop's own readonly views
   // (run history, evaluations) keep their controls.
   const { presentational } = useHostServices();
+  const { t, fmt } = useI18n();
   const textContent = useMemo(() => getMessageText(message), [message]);
   const hasTextContent = textContent.trim().length > 0;
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -62,10 +64,12 @@ function _MessageListItemHeader({
   // ready yet, since that can become runnable.
   const showRun =
     message.role === "user" || (message.role === "assistant" && !!message.toolCalls?.length);
-  const runTooltip = runnable ? "Run from this message" : "No runnable content";
+  const runTooltip = runnable
+    ? t.thread.message.runFromThisMessage
+    : t.thread.message.noRunnableContent;
   const runAriaLabel = runnable
-    ? "Run from this message"
-    : "Cannot run from this message";
+    ? t.thread.message.runFromThisMessage
+    : t.thread.message.cannotRunFromThisMessage;
   // A one-line preview shown beside the role tag while collapsed: the text
   // content, or a summary of tool calls when there is no text. Only computed
   // while collapsed — an expanded message re-renders on every streamed token.
@@ -107,10 +111,15 @@ function _MessageListItemHeader({
         className
       )}
     >
-      <Tooltip content="Drag to reorder">
+      <Tooltip content={t.thread.message.dragToReorder}>
         <div
           {...dragHandleProps}
-          aria-label={`${message.role === "user" ? "User" : "Assistant"} message drag handle`}
+          aria-label={fmt(t.thread.message.messageDragHandleAria, {
+            role:
+              message.role === "user"
+                ? t.thread.message.roleUser
+                : t.thread.message.roleAssistant,
+          })}
           className={cn(
             // A small grab affordance near the top edge, centered (out of
             // flow, so nothing else moves). `z-20` keeps it above the
@@ -127,12 +136,14 @@ function _MessageListItemHeader({
       </Tooltip>
       <div className="flex min-w-0 items-center gap-2">
         <div className="shrink-0">
-          <Tooltip content="Toggle role">
+          <Tooltip content={t.thread.message.toggleRole}>
             <Button
               className="px-2"
               variant="outline"
               size="sm"
-              aria-label={`Change message role from ${message.role}`}
+              aria-label={fmt(t.thread.message.changeMessageRoleAria, {
+                role: message.role,
+              })}
               disabled={readonly}
               onClick={handleToggleMessageRole}
             >
@@ -140,12 +151,12 @@ function _MessageListItemHeader({
                 {message.role === "user" ? (
                   <>
                     <UserIcon className="size-3" />
-                    <div>User</div>
+                    <div>{t.thread.message.roleUser}</div>
                   </>
                 ) : (
                   <>
                     <BotIcon className="size-3" />
-                    <div>Assistant</div>
+                    <div>{t.thread.message.roleAssistant}</div>
                   </>
                 )}
               </div>
@@ -180,12 +191,16 @@ function _MessageListItemHeader({
         )}
       >
         <Tooltip
-          content={hasTextContent ? "Preview text content" : "No text content"}
+          content={
+            hasTextContent
+              ? t.thread.message.previewTextContent
+              : t.thread.message.noTextContent
+          }
         >
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Preview text content"
+            aria-label={t.thread.message.previewTextContent}
             disabled={!hasTextContent}
             onClick={handleOpenPreview}
           >
@@ -209,11 +224,11 @@ function _MessageListItemHeader({
           </Tooltip>
         )}
         {!presentational && (
-          <Tooltip content="Remove message">
+          <Tooltip content={t.thread.message.removeMessage}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Remove message"
+              aria-label={t.thread.message.removeMessage}
               disabled={readonly}
               onClick={handleRemove}
             >
@@ -225,7 +240,11 @@ function _MessageListItemHeader({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={collapsed ? "Expand message" : "Collapse message"}
+            aria-label={
+              collapsed
+                ? t.thread.message.expandMessage
+                : t.thread.message.collapseMessage
+            }
             aria-expanded={!collapsed}
             disabled={readonly}
             onClick={handleToggleMessageCollapse}
@@ -241,7 +260,11 @@ function _MessageListItemHeader({
       </div>
       <PreviewDialog
         open={previewOpen}
-        title={`${message.role === "user" ? "User" : "Assistant"} message text`}
+        title={
+          message.role === "user"
+            ? t.thread.message.userMessageText
+            : t.thread.message.assistantMessageText
+        }
         value={textContent}
         onOpenChange={setPreviewOpen}
       />

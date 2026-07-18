@@ -24,10 +24,13 @@ import { useAutoAnimation } from "@llm-space/ui/lib/use-auto-animation";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 
-
+import { useI18n } from "../../../i18n";
 import { useThreadStore } from "../stores";
 
-import { PROMPT_DATE_FORMATS } from "./prompt-variable-options";
+import {
+  PROMPT_DATE_FORMATS,
+  resolveVariableOptionLabel,
+} from "./prompt-variable-options";
 import { PromptVariablesDialog } from "./prompt-variables-dialog";
 import type { PromptVariableSelection } from "./prompt-variables-panel";
 
@@ -57,6 +60,7 @@ export function PromptVariablesListView({
   /** Whether this belongs to the active tab — gates the single-slot command. */
   active?: boolean;
 }) {
+  const { t, fmt } = useI18n();
   const rawVariables = useThreadStore((s) => s.thread.context?.variables);
   const rawVariableVariants = useThreadStore(
     (s) => s.thread.context?.variableVariants
@@ -80,7 +84,7 @@ export function PromptVariablesListView({
           kind: "builtIn" as const,
           name,
           variable,
-          status: _dateFormatLabel(variable.format),
+          status: _dateFormatLabel(t, variable.format),
         };
       }
       return {
@@ -89,18 +93,20 @@ export function PromptVariablesListView({
         variable,
         status:
           variable.skillNames.length === 0
-            ? "All skills"
-            : `${variable.skillNames.length} selected`,
+            ? t.thread.variable.allSkills
+            : fmt(t.thread.variable.countSelected, {
+                count: variable.skillNames.length,
+              }),
       };
     });
     const custom = Object.entries(customValues).map(([name, value]) => ({
       kind: "custom" as const,
       name,
       value,
-      status: value.trim() ? value : "(empty)",
+      status: value.trim() ? value : t.thread.variable.emptyValue,
     }));
     return [...builtIns, ...custom];
-  }, [customValues, variables]);
+  }, [customValues, fmt, t, variables]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [initialSelection, setInitialSelection] =
     useState<PromptVariableSelection | null>(null);
@@ -161,7 +167,7 @@ export function PromptVariablesListView({
             onClick={openManage}
           >
             <PlusIcon className="size-3" />
-            Add
+            {t.thread.variable.add}
           </Button>
         )}
         <PromptVariablesDialog
@@ -189,6 +195,7 @@ function _VariableEntry({
   disabled?: boolean;
   onOpen: (item: VariableListItem) => void;
 }) {
+  const { t, fmt } = useI18n();
   const VariableIcon = _variableIcon(item);
   const token = `{{${item.name}}}`;
   return (
@@ -216,7 +223,9 @@ function _VariableEntry({
               item.warning &&
                 "text-orange-300 group-hover/variable:text-orange-300"
             )}
-            aria-label={`Manage ${item.name} variable`}
+            aria-label={fmt(t.thread.variable.ariaManageVariable, {
+              name: item.name,
+            })}
             disabled={disabled}
             onClick={() => onOpen(item)}
           >
@@ -229,24 +238,23 @@ function _VariableEntry({
         content={
           <div className="max-w-56">
             <div>
-              Copy <span className="font-mono">{token}</span>
+              {t.thread.variable.tooltipCopyHeading}{" "}
+              <span className="font-mono">{token}</span>
             </div>
             <div className="text-muted-foreground pt-1">
-              Paste it into your prompt, messages, or tool results to reference
-              this variable.
+              {t.thread.variable.toastPasteHint}
             </div>
           </div>
         }
       >
         <button
           type="button"
-          aria-label={`Copy ${token}`}
+          aria-label={fmt(t.thread.variable.ariaCopyToken, { token })}
           className="text-muted-foreground hover:text-accent-foreground focus-visible:ring-ring/30 inline-flex h-full items-center rounded-r-md pr-1 pl-1 opacity-0 outline-none group-hover/variable:opacity-100 hover:opacity-100 focus-visible:ring-2"
           onClick={() => {
             void navigator.clipboard.writeText(token);
-            toast.success(`Copied ${token}`, {
-              description:
-                "Paste it into your prompt, messages, or tool results to reference this variable.",
+            toast.success(fmt(t.thread.variable.toastCopiedToken, { token }), {
+              description: t.thread.variable.toastPasteHint,
             });
           }}
         >
@@ -266,8 +274,10 @@ function _variableIcon(item: VariableListItem) {
   return item.variable.type === "currentDate" ? CalendarDaysIcon : SparklesIcon;
 }
 
-function _dateFormatLabel(value: ThreadCurrentDateVariable["format"]): string {
-  return (
-    PROMPT_DATE_FORMATS.find((format) => format.value === value)?.label ?? value
-  );
+function _dateFormatLabel(
+  t: ReturnType<typeof useI18n>["t"],
+  value: ThreadCurrentDateVariable["format"]
+): string {
+  const format = PROMPT_DATE_FORMATS.find((f) => f.value === value);
+  return format ? resolveVariableOptionLabel(t, format) : value;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-
+import { useI18n } from "@llm-space/ui/i18n";
 import { Dialog, DialogContent } from "@llm-space/ui/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@llm-space/ui/ui/tabs";
 import {
@@ -28,19 +28,19 @@ import { SkillsPage } from "./skills-page";
 const PAGES = [
   {
     value: "general",
-    label: "General",
+    labelKey: "general",
     icon: SlidersHorizontal,
     Page: GeneralPage,
   },
-  { value: "account", label: "Account", icon: CircleUser, Page: AccountPage },
-  { value: "models", label: "Models", icon: Boxes, Page: ModelsPage },
-  { value: "mcp", label: "MCP", icon: Cable, Page: McpPage },
-  { value: "network", label: "Network", icon: Network, Page: NetworkPage },
-  { value: "search", label: "Search", icon: Search, Page: SearchPage },
-  { value: "skills", label: "Skills", icon: Sparkles, Page: SkillsPage },
+  { value: "account", labelKey: "account", icon: CircleUser, Page: AccountPage },
+  { value: "models", labelKey: "models", icon: Boxes, Page: ModelsPage },
+  { value: "mcp", labelKey: "mcp", icon: Cable, Page: McpPage },
+  { value: "network", labelKey: "network", icon: Network, Page: NetworkPage },
+  { value: "search", labelKey: "search", icon: Search, Page: SearchPage },
+  { value: "skills", labelKey: "skills", icon: Sparkles, Page: SkillsPage },
   {
     value: "experimental",
-    label: "Experimental",
+    labelKey: "experimental",
     icon: FlaskConical,
     Page: ExperimentalPage,
   },
@@ -57,6 +57,7 @@ export function SettingsDialog({
   tab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -76,13 +77,15 @@ export function SettingsDialog({
         >
           <aside className="bg-muted/30 flex w-50 shrink-0 flex-col gap-2 border-r p-3">
             <header>
-              <div className="text-base font-medium">Settings</div>
+              <div className="text-base font-medium">
+                {t.settings.dialog.title}
+              </div>
             </header>
             <TabsList className="h-fit w-full flex-col gap-0.5 bg-transparent p-0">
-              {PAGES.map(({ value, label, icon: Icon }) => (
+              {PAGES.map(({ value, labelKey, icon: Icon }) => (
                 <TabsTrigger key={value} value={value} className="w-full">
                   <Icon />
-                  {label}
+                  {t.settings.dialog[labelKey]}
                 </TabsTrigger>
               ))}
             </TabsList>

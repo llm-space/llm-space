@@ -30,6 +30,7 @@ import { Button } from "@llm-space/ui/ui/button";
 import { Input } from "@llm-space/ui/ui/input";
 import { Marker, MarkerContent } from "@llm-space/ui/ui/marker";
 
+import { useI18n } from "../../../i18n";
 import { useThreadStoreActions } from "../stores";
 import { usePromptVariableExtensionForContext } from "../variable/use-prompt-variable-extension";
 
@@ -58,6 +59,7 @@ function _ToolCallListItem({
   const { fidelity } = useRenderingFidelity();
   const { presentational } = useHostServices();
   const { updateToolCallOutputText } = useThreadStoreActions();
+  const { t, fmt } = useI18n();
   const { resolveTool, runToolCall } = useToolCallRunner(messageId);
   const variableExtension = usePromptVariableExtensionForContext(
     createToolResultPromptVariablePlaceKey(messageId, toolCall.id),
@@ -99,11 +101,11 @@ function _ToolCallListItem({
         if (canContinue) {
           onContinue();
         } else {
-          toast.error("Add tool responses before continuing");
+          toast.error(t.thread.message.addToolResponsesBeforeContinuing);
         }
       }
     },
-    [canContinue, onContinue]
+    [canContinue, onContinue, t]
   );
   const handleCall = useCallback(async () => {
     if (readonly || !executable) {
@@ -116,28 +118,32 @@ function _ToolCallListItem({
         if (outcome.isFirecrawlLimit) {
           openFirecrawlLimitDialog();
         } else {
-          toast.error(`Failed to call ${toolCall.input.name}()`);
+          toast.error(
+            fmt(t.thread.message.failedToCallTool, {
+              toolName: toolCall.input.name,
+            })
+          );
         }
       }
     } finally {
       setCalling(false);
     }
-  }, [executable, readonly, runToolCall, toolCall]);
+  }, [executable, fmt, readonly, runToolCall, t, toolCall]);
   const handleCopyArguments = useCallback(async () => {
     const text = formatJson(toolCall.input.arguments);
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Arguments copied");
+      toast.success(t.thread.message.argumentsCopied);
     } catch {
-      toast.error("Failed to copy arguments");
+      toast.error(t.thread.message.failedToCopyArguments);
     }
-  }, [toolCall.input.arguments]);
+  }, [t, toolCall.input.arguments]);
   return (
     <div className="bg-foreground/4 flex w-full flex-col gap-2 rounded-md px-3 pt-2 pb-3">
       <div className="relative flex min-w-0 items-start">
         <ToolCallInputView input={toolCall.input} />
         <div className="absolute top-0 right-0 flex items-center">
-          <Tooltip content="Copy arguments">
+          <Tooltip content={t.thread.message.copyArguments}>
             <Button
               className="invisible shrink-0 group-hover/message:visible"
               size="icon"
@@ -148,7 +154,7 @@ function _ToolCallListItem({
             </Button>
           </Tooltip>
           {executable && !presentational ? (
-            <Tooltip content="Call this tool">
+            <Tooltip content={t.thread.message.callThisTool}>
               <Button
                 className="invisible shrink-0 group-hover/message:visible"
                 size="icon"
@@ -171,8 +177,8 @@ function _ToolCallListItem({
         <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
           <Marker role="status" className="gap-1">
             <MarkerContent className="flex items-center text-xs">
-              Response
-              <Tooltip content="Preview response">
+              {t.thread.message.response}
+              <Tooltip content={t.thread.message.previewResponse}>
                 <Button
                   className="invisible shrink-0 group-hover/message:visible"
                   size="xs"
@@ -195,14 +201,18 @@ function _ToolCallListItem({
                 onClick={toggleError}
               >
                 <AlertCircleIcon />
-                {isError ? "Clear error" : "Mark as error"}
+                {isError
+                  ? t.thread.message.clearError
+                  : t.thread.message.markAsError}
               </Button>
             </div>
           )}
         </div>
         <PreviewDialog
           open={previewOpen}
-          title={`Response of ${toolCall.input.name}()`}
+          title={fmt(t.thread.message.responseOfTool, {
+            toolName: toolCall.input.name,
+          })}
           value={outputText}
           onOpenChange={setPreviewOpen}
         />
@@ -257,6 +267,7 @@ function _ToolCallResponseEditor({
     () => parseWebSearchOutput(input, value),
     [input, value]
   );
+  const { t, fmt } = useI18n();
 
   if (webSearchResults) {
     return <WebSearchResultsView results={webSearchResults} />;
@@ -281,7 +292,7 @@ function _ToolCallResponseEditor({
       hideFocusRing
       scrollOnFocus
       plain={plain}
-      placeholder={`Enter the response of ${input.name}()`}
+      placeholder={fmt(t.thread.message.enterResponseOfTool, { name: input.name })}
       readonly={readonly}
       value={value}
       extraExtensions={extraExtensions}
@@ -448,6 +459,7 @@ function AskUserQuestionEditor({
   const [selections, setSelections] = useState<QuestionSelection[]>(() =>
     _initSelections(questions, value)
   );
+  const { t, fmt } = useI18n();
 
   const commit = useCallback(
     (index: number, next: QuestionSelection) => {
@@ -544,7 +556,7 @@ function AskUserQuestionEditor({
                 />
               ))}
               <OptionRow
-                label="Other"
+                label={t.thread.message.other}
                 multiSelect={question.multiSelect}
                 selected={selection.otherEnabled}
                 disabled={readonly}
@@ -553,8 +565,10 @@ function AskUserQuestionEditor({
               {selection.otherEnabled && (
                 <Input
                   className="ml-6 h-8 w-[calc(100%-1.5rem)]"
-                  placeholder="Type your answer…"
-                  aria-label={`Other answer for "${question.question}"`}
+                  placeholder={t.thread.message.typeYourAnswer}
+                  aria-label={fmt(t.thread.message.otherAnswerForQuestionAria, {
+                    question: question.question,
+                  })}
                   disabled={readonly}
                   value={selection.otherText}
                   onChange={(e) => setOtherText(index, e.target.value)}

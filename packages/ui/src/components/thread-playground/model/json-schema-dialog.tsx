@@ -15,6 +15,8 @@ import {
   DialogTitle,
 } from "@llm-space/ui/ui/dialog";
 
+import { useI18n } from "../../../i18n";
+
 /**
  * The JSON Schema seeded into the editor when none is configured yet.
  * `additionalProperties: false` keeps it valid for OpenAI strict mode.
@@ -44,6 +46,7 @@ export function JsonSchemaDialog({
   onSave: (schema: object) => void;
 }) {
   const [text, setText] = useState("");
+  const { t } = useI18n();
   // Reinitialize the editor when the dialog opens (adjust during render, not in
   // an effect, to avoid a stale frame). See ToolEditorDialog for the pattern.
   const [prevOpen, setPrevOpen] = useState(false);
@@ -59,11 +62,15 @@ export function JsonSchemaDialog({
     try {
       parsed = JSON.parse(text);
     } catch {
-      toast.error("Error", { description: "Invalid JSON" });
+      toast.error(t.thread.model.errorToastTitle, {
+        description: t.thread.model.invalidJsonToast,
+      });
       return;
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      toast.error("Error", { description: "Schema must be a JSON object" });
+      toast.error(t.thread.model.errorToastTitle, {
+        description: t.thread.model.schemaMustBeObjectToast,
+      });
       return;
     }
     onSave(parsed);
@@ -78,10 +85,9 @@ export function JsonSchemaDialog({
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Edit response schema</DialogTitle>
+          <DialogTitle>{t.thread.model.editResponseSchemaTitle}</DialogTitle>
           <DialogDescription>
-            The model constrains its response to this JSON Schema. Support and
-            strictness vary by provider.
+            {t.thread.model.editResponseSchemaDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -97,9 +103,9 @@ export function JsonSchemaDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t.thread.model.cancel}
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave}>{t.thread.model.save}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

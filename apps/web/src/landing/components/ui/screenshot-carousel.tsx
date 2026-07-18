@@ -21,6 +21,10 @@ interface ScreenshotCarouselProps {
   height: number;
   /** Advance interval in ms; set 0 to disable autoplay. */
   interval?: number;
+  carouselLabel: string;
+  showSlideLabel: (index: number, title: string) => string;
+  previousLabel: string;
+  nextLabel: string;
   className?: string;
 }
 
@@ -35,6 +39,10 @@ export function ScreenshotCarousel({
   width,
   height,
   interval = 5500,
+  carouselLabel,
+  showSlideLabel,
+  previousLabel,
+  nextLabel,
   className,
 }: ScreenshotCarouselProps) {
   const reduceMotion = useReducedMotion();
@@ -88,7 +96,7 @@ export function ScreenshotCarousel({
       onBlurCapture={() => setPaused(false)}
       role="group"
       aria-roledescription="carousel"
-      aria-label="LLM Space product screenshots"
+      aria-label={carouselLabel}
     >
       {/* Soft brand halo behind the frame */}
       <div className="bg-brand/10 pointer-events-none absolute -inset-x-8 -top-10 bottom-6 rounded-[48px] blur-[120px]" />
@@ -128,11 +136,13 @@ export function ScreenshotCarousel({
           direction="prev"
           onClick={() => scrollTo(active - 1)}
           disabled={count <= 1}
+          label={previousLabel}
         />
         <CarouselArrow
           direction="next"
           onClick={() => scrollTo(active + 1)}
           disabled={count <= 1}
+          label={nextLabel}
         />
       </div>
 
@@ -162,7 +172,7 @@ export function ScreenshotCarousel({
               key={s.src}
               type="button"
               onClick={() => scrollTo(i)}
-              aria-label={`Show slide ${i + 1}: ${s.title}`}
+              aria-label={showSlideLabel(i + 1, s.title)}
               aria-current={i === active}
               className={cn(
                 'h-1.5 cursor-pointer rounded-full transition-all duration-300',
@@ -182,10 +192,12 @@ function CarouselArrow({
   direction,
   onClick,
   disabled,
+  label,
 }: {
   direction: 'prev' | 'next';
   onClick: () => void;
   disabled?: boolean;
+  label: string;
 }) {
   const isPrev = direction === 'prev';
   return (
@@ -193,7 +205,7 @@ function CarouselArrow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={isPrev ? 'Previous screenshot' : 'Next screenshot'}
+      aria-label={label}
       className={cn(
         'absolute top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full sm:flex',
         'border border-white/10 bg-black/50 text-white/80 backdrop-blur-md',

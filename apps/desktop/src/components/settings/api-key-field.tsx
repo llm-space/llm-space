@@ -1,6 +1,7 @@
 "use client";
 
 import { Link } from "@llm-space/ui/components/link";
+import { useI18n } from "@llm-space/ui/i18n";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Input } from "@llm-space/ui/ui/input";
 import { Eye, EyeOff } from "lucide-react";
@@ -29,6 +30,7 @@ export function ApiKeyField({
   description?: ReactNode;
 } & ComponentProps<typeof Input>) {
   const [visible, setVisible] = useState(false);
+  const { t, fmt } = useI18n();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -38,7 +40,7 @@ export function ApiKeyField({
             href={getKeyUrl}
             className="text-primary text-xs underline underline-offset-2 hover:opacity-80"
           >
-            Get API key
+            {t.settings.apiKeyField.getApiKey}
           </Link>
         ) : null}
       </div>
@@ -53,7 +55,10 @@ export function ApiKeyField({
           type="button"
           onClick={() => setVisible((v) => !v)}
           className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 transition-colors"
-          aria-label={visible ? `Hide ${label}` : `Show ${label}`}
+          aria-label={fmt(
+            visible ? t.settings.apiKeyField.hide : t.settings.apiKeyField.show,
+            { label }
+          )}
         >
           {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </button>

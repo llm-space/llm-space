@@ -33,6 +33,18 @@ export type PromptVariableResolver = (
 /** Lists the variables offered by `{{`-triggered autocompletion. */
 export type PromptVariableLister = () => PromptVariableCompletion[];
 
+/**
+ * User-facing strings shown by the imperative CodeMirror tooltip. The React
+ * hook that builds the extension pulls these from the i18n catalog and passes
+ * them in, since this module is pure CodeMirror (no React / hook access).
+ */
+export interface PromptVariableExtensionMessages {
+  viewVariableDetails: string;
+  warningNoValue: string;
+  warningInvalidName: string;
+  warningUnknown: string;
+}
+
 export interface PromptVariableExtensionOptions {
   resolve: PromptVariableResolver;
   listVariables: PromptVariableLister;
@@ -41,6 +53,8 @@ export interface PromptVariableExtensionOptions {
    * tooltip shows a header button (for defined variables only) that calls it.
    */
   onInspect?: (name: string) => void;
+  /** Localized tooltip strings (supplied by the React hook from the i18n catalog). */
+  messages?: PromptVariableExtensionMessages;
 }
 
 // How much of a variable's value preview to show in the dropdown before "…".
@@ -243,6 +257,7 @@ function variableIconDom(): HTMLElement {
 function renderTooltipDom(
   name: string,
   resolution: VariableResolution,
+  messages: PromptVariableExtensionMessages,
   onInspect?: (name: string) => void
 ): HTMLElement {
   const root = document.createElement("div");
@@ -261,8 +276,8 @@ function renderTooltipDom(
     const button = document.createElement("button");
     button.type = "button";
     button.className = "cm-pv-inspect";
-    button.title = "View variable details";
-    button.setAttribute("aria-label", "View variable details");
+    button.title = messages.viewVariableDetails;
+    button.setAttribute("aria-label", messages.viewVariableDetails);
     button.innerHTML =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
     // Keep editor focus/selection so opening the dialog doesn't disturb it.
@@ -288,10 +303,10 @@ function renderTooltipDom(
     body.className = "cm-pv-warning";
     body.textContent =
       resolution.status === "empty"
-        ? "This variable has no value yet."
+        ? messages.warningNoValue
         : resolution.status === "invalid"
-          ? "Invalid variable name."
-          : "Unknown variable — not defined in this thread.";
+          ? messages.warningInvalidName
+          : messages.warningUnknown;
   }
   root.appendChild(body);
   return root;
@@ -299,6 +314,7 @@ function renderTooltipDom(
 
 function createHoverTooltip(
   resolve: PromptVariableResolver,
+  messages: PromptVariableExtensionMessages,
   onInspect?: (name: string) => void
 ): Extension {
   return hoverTooltip(
@@ -320,7 +336,9 @@ function createHoverTooltip(
           pos: from,
           end: to,
           above: true,
-          create: () => ({ dom: renderTooltipDom(name, resolution, onInspect) }),
+          create: () => ({
+            dom: renderTooltipDom(name, resolution, messages, onInspect),
+          }),
         });
         const resolution = resolve(name);
         return resolution instanceof Promise
@@ -385,10 +403,20 @@ export function createPromptVariableExtension({
   resolve,
   listVariables,
   onInspect,
+  messages,
 }: PromptVariableExtensionOptions): Extension[] {
+  // Default to the English literals so the extension remains usable in tests /
+  // non-React callers; the React hook always supplies the localized catalog.
+  const resolvedMessages: PromptVariableExtensionMessages = {
+    viewVariableDetails: messages?.viewVariableDetails ?? "View variable details",
+    warningNoValue: messages?.warningNoValue ?? "This variable has no value yet.",
+    warningInvalidName: messages?.warningInvalidName ?? "Invalid variable name.",
+    warningUnknown:
+      messages?.warningUnknown ?? "Unknown variable — not defined in this thread.",
+  };
   return [
     placeholderHighlighter,
-    createHoverTooltip(resolve, onInspect),
+    createHoverTooltip(resolve, resolvedMessages, onInspect),
     createVariableCompletion(listVariables),
     // Render tooltips (hover + the completion dropdown) under document.body so
     // the editor's own overflow clipping (scroll containers) can't cut them off.

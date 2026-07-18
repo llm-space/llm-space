@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@llm-space/ui/ui/dropdown-menu";
 
+import { useI18n } from "../../../i18n";
 
 import { parseTodoWriteInput, TodoWriteView } from "./todo-write-view";
 
@@ -40,11 +41,19 @@ const FS_TOOLS_WITH_PATH = new Set([
  */
 type LinkKind = "path" | "skill" | "url";
 
+/** Translated labels passed to {@link _reveal} for its toast messages. */
+interface RevealLabels {
+  skillNotFound: string;
+  notFoundValue: string;
+  failedToReveal: string;
+}
+
 /** Reveal a path/skill value in the OS file manager, toasting on a miss/failure. */
 async function _reveal(
   builtinTools: BuiltinToolsHost,
   kind: "path" | "skill",
-  value: string
+  value: string,
+  labels: RevealLabels
 ): Promise<void> {
   try {
     const existed =
@@ -53,11 +62,11 @@ async function _reveal(
         : await builtinTools.revealAbsolutePath(value);
     if (!existed) {
       toast.error(
-        kind === "skill" ? `Skill not found: ${value}` : `Not found: ${value}`
+        kind === "skill" ? labels.skillNotFound : labels.notFoundValue
       );
     }
   } catch {
-    toast.error("Failed to reveal in file manager");
+    toast.error(labels.failedToReveal);
   }
 }
 
@@ -163,6 +172,7 @@ function _ToolCallArgumentRow({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { actions, builtinTools } = useHostServices();
+  const { t, fmt } = useI18n();
   const valueText = formatJson(value);
   const isObject = typeof value === "object" && value !== null;
   // Only object values can expand into their full, pretty-printed form; strings
@@ -172,23 +182,30 @@ function _ToolCallArgumentRow({
       setExpanded((prev) => !prev);
     }
   }, [isObject]);
-  const copyText = useCallback(async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied`);
-    } catch {
-      toast.error(`Failed to copy ${label.toLowerCase()}`);
-    }
-  }, []);
+  const copyText = useCallback(
+    async (text: string, label: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast.success(fmt(t.thread.message.labelCopied, { label }));
+      } catch {
+        toast.error(
+          fmt(t.thread.message.failedToCopyLabel, {
+            label: label.toLowerCase(),
+          })
+        );
+      }
+    },
+    [fmt, t]
+  );
   const copyTextContent = useCallback(() => {
     if (typeof value !== "string") {
       return;
     }
-    void copyText(value, "Text content");
-  }, [copyText, value]);
+    void copyText(value, t.thread.message.textContentLabel);
+  }, [copyText, t, value]);
   const copyValueJson = useCallback(() => {
-    void copyText(formatJson(value), "Value JSON");
-  }, [copyText, value]);
+    void copyText(formatJson(value), t.thread.message.valueJsonLabel);
+  }, [copyText, t, value]);
   const openPreview = useCallback(() => {
     setPreviewOpen(true);
   }, []);
@@ -200,8 +217,12 @@ function _ToolCallArgumentRow({
       actions.openLink(value);
       return;
     }
-    void _reveal(builtinTools, linkKind, value);
-  }, [actions, builtinTools, linkKind, value]);
+    void _reveal(builtinTools, linkKind, value, {
+      skillNotFound: fmt(t.thread.message.skillNotFound, { value }),
+      notFoundValue: fmt(t.thread.message.notFoundValue, { value }),
+      failedToReveal: t.thread.message.failedToRevealInFileManager,
+    });
+  }, [actions, builtinTools, fmt, linkKind, t, value]);
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -216,7 +237,9 @@ function _ToolCallArgumentRow({
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            aria-label={`Open actions for ${argumentKey}`}
+            aria-label={fmt(t.thread.message.openActionsForArgumentAria, {
+              argumentKey,
+            })}
             className={cn(
               "text-muted-foreground absolute top-0.5 left-0 size-5 aria-expanded:visible",
               // Object rows always show their expand/collapse chevron; other
@@ -251,8 +274,8 @@ function _ToolCallArgumentRow({
             <>
               <DropdownMenuItem onSelect={handleActivate}>
                 {linkKind === "url"
-                  ? "Open in Browser"
-                  : "Reveal in File Manager"}
+                  ? t.thread.message.openInBrowser
+                  : t.thread.message.revealInFileManager}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </>
@@ -260,25 +283,25 @@ function _ToolCallArgumentRow({
           {isObject ? (
             <>
               <DropdownMenuItem onSelect={toggleExpanded}>
-                {expanded ? "Collapse" : "Expand"}
+                {expanded ? t.thread.message.collapse : t.thread.message.expand}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </>
           ) : null}
           {typeof value === "string" ? (
             <DropdownMenuItem onSelect={copyTextContent}>
-              Copy Text Content
+              {t.thread.message.copyTextContent}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onSelect={copyValueJson}>
-            Copy Value as JSON
+            {t.thread.message.copyValueAsJson}
           </DropdownMenuItem>
           {typeof value === "string" ? (
             <>
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onSelect={openPreview}>
-                Preview Value...
+                {t.thread.message.previewValue}
               </DropdownMenuItem>
             </>
           ) : null}
@@ -287,7 +310,7 @@ function _ToolCallArgumentRow({
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onSelect={openPreview}>
-                View JSON...
+                {t.thread.message.viewJson}
               </DropdownMenuItem>
             </>
           ) : null}
@@ -301,12 +324,16 @@ function _ToolCallArgumentRow({
         expanded={expanded}
         onToggle={toggleExpanded}
         onActivate={linkKind ? handleActivate : undefined}
-        activateTitle={linkKind === "url" ? "Open in browser" : "Reveal in file manager"}
+        activateTitle={
+          linkKind === "url"
+            ? t.thread.message.openInBrowserTitle
+            : t.thread.message.revealInFileManagerTitle
+        }
       />
       {typeof value === "string" ? (
         <PreviewDialog
           open={previewOpen}
-          title={`View value of "${argumentKey}"`}
+          title={fmt(t.thread.message.viewValueOfArgument, { argumentKey })}
           value={value}
           onOpenChange={setPreviewOpen}
         />
@@ -314,7 +341,7 @@ function _ToolCallArgumentRow({
       {isObject ? (
         <PreviewDialog
           open={previewOpen}
-          title={`View value of "${argumentKey}"`}
+          title={fmt(t.thread.message.viewValueOfArgument, { argumentKey })}
           type="json"
           value={valueText}
           onOpenChange={setPreviewOpen}
@@ -338,6 +365,12 @@ function _PathArrayArgumentRow({
   trailingComma: boolean;
 }) {
   const { builtinTools } = useHostServices();
+  const { t, fmt } = useI18n();
+  const revealLabels = {
+    skillNotFound: t.thread.message.skillNotFound,
+    notFoundValue: t.thread.message.notFoundValue,
+    failedToReveal: t.thread.message.failedToRevealInFileManager,
+  };
   return (
     <div className="w-full min-w-0 py-0.5 pl-1.5">
       <div className="whitespace-pre">
@@ -353,9 +386,15 @@ function _PathArrayArgumentRow({
           <span className="shrink-0">{"    "}</span>
           <button
             type="button"
-            title="Reveal in file manager"
+            title={t.thread.message.revealInFileManagerTitle}
             className="hover:text-primary min-w-0 cursor-pointer truncate underline-offset-2 hover:underline"
-            onClick={() => void _reveal(builtinTools, "path", p)}
+            onClick={() =>
+              void _reveal(builtinTools, "path", p, {
+                skillNotFound: fmt(revealLabels.skillNotFound, { value: p }),
+                notFoundValue: fmt(revealLabels.notFoundValue, { value: p }),
+                failedToReveal: revealLabels.failedToReveal,
+              })
+            }
           >
             {formatJson(p)}
           </button>
@@ -397,6 +436,7 @@ function ArgumentLine({
   onActivate?: () => void;
   activateTitle?: string;
 }) {
+  const { t } = useI18n();
   const line =
     expandable && expanded ? (
       <div
@@ -446,7 +486,13 @@ function ArgumentLine({
     // The click handler lives on `line` itself; the wrapping span here is only
     // the tooltip trigger. Adding another onClick would fire onToggle twice as
     // the event bubbles, cancelling the toggle out.
-    <Tooltip content={`Click to ${expanded ? "collapse" : "expand"}`}>
+    <Tooltip
+      content={
+        expanded
+          ? t.thread.message.clickToCollapse
+          : t.thread.message.clickToExpand
+      }
+    >
       <span>{line}</span>
     </Tooltip>
   );

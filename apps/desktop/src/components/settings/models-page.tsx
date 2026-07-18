@@ -18,6 +18,7 @@ import {
 import { ModelAvatar } from "@llm-space/ui/components/thread-playground/model-avatar";
 import { ProviderAvatar } from "@llm-space/ui/components/thread-playground/provider-avatar";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useI18n } from "@llm-space/ui/i18n";
 import { useAutoAnimation } from "@llm-space/ui/lib/use-auto-animation";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
@@ -91,15 +92,13 @@ import { SettingsPage } from "./settings-page";
  * the `/v1` to be part of the base URL — a `/v1` suffix here would double up
  * into `/v1/v1/...` on every request.
  */
-const ANTHROPIC_BASE_URL_HINT =
-  "The Anthropic SDK adds /v1 to the request path itself, so enter the URL without a /v1 suffix.";
-
 function sortProviders(providers: ModelProviderGroup[]): ModelProviderGroup[] {
   return [...providers].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function ModelsPage() {
   const providers = useModels();
+  const { t } = useI18n();
   const firstProviderId = useMemo(
     () => sortProviders(providers)[0]?.id ?? null,
     [providers]
@@ -121,8 +120,8 @@ export function ModelsPage() {
   return (
     <SettingsPage
       className="flex size-full min-h-0"
-      title="Models"
-      description="LLM Space supports various model providers and their custom models, from OpenAI, Anthropic and Google compatible to Codex."
+      title={t.settings.models.title}
+      description={t.settings.models.description}
     >
       <ProviderList
         providers={providers}
@@ -148,6 +147,7 @@ function ProviderList({
 }) {
   const [query, setQuery] = useState("");
   const [listRef] = useAutoAnimation<HTMLDivElement>();
+  const { t, fmt } = useI18n();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -163,8 +163,8 @@ function ProviderList({
         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2" />
         <Input
           className="h-8 pl-7"
-          aria-label="Search providers"
-          placeholder="Search providers"
+          aria-label={t.settings.models.searchProviders}
+          placeholder={t.settings.models.searchProviders}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -173,12 +173,13 @@ function ProviderList({
       <ScrollArea className="min-h-0 grow">
         {providers.length === 0 ? (
           <div className="text-muted-foreground px-2 py-6 text-center text-xs text-balance">
-            No providers yet. Click the &quot;Add provider&quot; button below to
-            get started.
+            {t.settings.models.noProviders}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-muted-foreground px-2 py-6 text-center text-xs text-balance">
-            No provider matches &quot;{query.trim()}&quot;.
+            {fmt(t.settings.models.noProviderMatches, {
+              query: query.trim(),
+            })}
           </div>
         ) : (
           <div ref={listRef} className="flex flex-col gap-1 pr-2">
@@ -227,6 +228,7 @@ function AddProviderMenu({ onAdd }: { onAdd: (id: string) => void }) {
   const fetchBuiltins = useFetchBuiltinProviders();
   const [open, setOpen] = useState(false);
   const [builtins, setBuiltins] = useState<ModelProviderGroup[] | null>(null);
+  const { t, fmt, plural } = useI18n();
 
   const configuredIds = useMemo(
     () => new Set(configured.map((provider) => provider.id)),
@@ -267,12 +269,18 @@ function AddProviderMenu({ onAdd }: { onAdd: (id: string) => void }) {
         label: (
           <div className="flex flex-col gap-2">
             <div className="text-foreground text-xs font-medium">
-              Discovered
+              {t.settings.models.discovered}
             </div>
             <div className="flex gap-1 pl-1">
-              {discoveredCount}{" "}
-              {discoveredCount === 1 ? "provider" : "providers"} discovered in
-              your environment
+              {plural(
+                discoveredCount,
+                fmt(t.settings.models.providerDiscoveredOne, {
+                  count: discoveredCount,
+                }),
+                fmt(t.settings.models.providerDiscoveredOther, {
+                  count: discoveredCount,
+                })
+              )}
             </div>
           </div>
         ),
@@ -282,39 +290,41 @@ function AddProviderMenu({ onAdd }: { onAdd: (id: string) => void }) {
     if (recommended.length > 0) {
       groups.push({
         id: "recommended",
-        label: "Recommended",
+        label: t.settings.models.recommended,
         items: recommended,
       });
     }
     if (rest.length > 0) {
-      groups.push({ id: "built-in", label: "Built-in", items: rest });
+      groups.push({ id: "built-in", label: t.settings.models.builtIn, items: rest });
     }
     return groups;
-  }, [builtins, configuredIds]);
+  }, [builtins, configuredIds, fmt, plural, t]);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange} modal>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full">
           <Plus />
-          Add provider
+          {t.settings.models.addProvider}
         </Button>
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-72 p-0">
         <Command>
-          <CommandInput placeholder="Search providers..." />
+          <CommandInput placeholder={t.settings.models.searchProvidersEllipsis} />
           <CommandList className="max-h-72">
-            <CommandEmpty>No providers found.</CommandEmpty>
-            <CommandGroup heading="Customized">
+            <CommandEmpty>{t.settings.models.noProvidersFound}</CommandEmpty>
+            <CommandGroup heading={t.settings.models.customized}>
               <CommandItem
-                value="Add custom provider"
+                value={t.settings.models.addCustomProvider}
                 onSelect={() => {
                   setOpen(false);
-                  void addCustomProvider("Custom provider", "").then(onAdd);
+                  void addCustomProvider(t.settings.models.customProvider, "").then(onAdd);
                 }}
               >
-                <ProviderAvatar id="custom-provider" name="Custom provider" />
-                <span className="line-clamp-1 grow">Add custom provider</span>
+                <ProviderAvatar id="custom-provider" name={t.settings.models.customProvider} />
+                <span className="line-clamp-1 grow">
+                  {t.settings.models.addCustomProvider}
+                </span>
               </CommandItem>
             </CommandGroup>
             {groups.map((group) => (
@@ -341,7 +351,9 @@ function AddProviderMenu({ onAdd }: { onAdd: (id: string) => void }) {
                       {provider.websiteURL && (
                         <Link
                           href={provider.websiteURL}
-                          aria-label={`Open ${provider.name} website`}
+                          aria-label={fmt(t.settings.models.openProviderWebsite, {
+                            name: provider.name,
+                          })}
                           className="text-muted-foreground/80 hover:text-foreground shrink-0"
                           onClick={(event) => event.stopPropagation()}
                           onMouseDown={(event) => event.stopPropagation()}
@@ -374,12 +386,15 @@ function ProviderListItem({
   const removeProvider = useRemoveProvider();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { t, fmt } = useI18n();
 
   return (
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Select ${provider.name} provider`}
+      aria-label={fmt(t.settings.models.selectProvider, {
+        name: provider.name,
+      })}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -404,8 +419,12 @@ function ProviderListItem({
           <span
             role="button"
             tabIndex={0}
-            aria-label={`${provider.name} provider actions`}
-            title={`${provider.name} provider actions`}
+            aria-label={fmt(t.settings.models.providerActions, {
+              name: provider.name,
+            })}
+            title={fmt(t.settings.models.providerActions, {
+              name: provider.name,
+            })}
             className={cn(
               "text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-5 shrink-0 items-center justify-center rounded",
               menuOpen
@@ -423,7 +442,7 @@ function ProviderListItem({
             onSelect={() => setConfirmOpen(true)}
           >
             <Trash2 />
-            Remove {provider.name}
+            {fmt(t.settings.models.removeProvider, { name: provider.name })}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -431,9 +450,13 @@ function ProviderListItem({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`Remove ${provider.name}?`}
-        description={`This removes ${provider.name} from your configured providers. You can add it back later.`}
-        confirmLabel="Remove"
+        title={fmt(t.settings.models.removeProviderTitle, {
+          name: provider.name,
+        })}
+        description={fmt(t.settings.models.removeProviderDescription, {
+          name: provider.name,
+        })}
+        confirmLabel={t.common.remove}
         dimBackground={false}
         onConfirm={() => {
           setConfirmOpen(false);
@@ -448,6 +471,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
   const updateProvider = useUpdateProvider();
   const setModelEnabled = useSetModelEnabled();
   const setAllModelsEnabled = useSetAllModelsEnabled();
+  const { t, fmt } = useI18n();
   const [iconDraft, setIconDraft] = useState(provider?.icon ?? "");
   const [baseUrlEnabled, setBaseUrlEnabled] = useState(
     Boolean(provider?.baseUrl)
@@ -519,9 +543,9 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
     }
     void updateProvider(provider.id, { api }).catch((error) => {
       setApiValue(previous);
-      toast.error("Failed to update API type", {
+      toast.error(t.settings.models.failedToUpdateApiType, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     });
   };
@@ -560,7 +584,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
   if (!provider) {
     return (
       <div className="text-muted-foreground flex min-w-0 grow items-center justify-center text-sm">
-        Select or add a provider from the left sidebar
+        {t.settings.models.selectOrAddProvider}
       </div>
     );
   }
@@ -593,10 +617,16 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
         <div className="flex flex-col gap-6 pr-4 pl-6">
           <div className="flex items-center gap-2">
             {isBuiltin && provider.websiteLink ? (
-              <Tooltip content={`Learn more about ${provider.name}`}>
+              <Tooltip
+                content={fmt(t.settings.models.learnMoreProvider, {
+                  name: provider.name,
+                })}
+              >
                 <Link
                   href={provider.websiteLink}
-                  aria-label={`Open ${provider.name} website`}
+                  aria-label={fmt(t.settings.models.openProviderWebsite, {
+                    name: provider.name,
+                  })}
                   className="group/provider-link text-foreground hover:text-foreground flex items-center gap-2"
                 >
                   <h3 className="font-heading text-lg font-medium">
@@ -615,17 +645,21 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
           {!isBuiltin && (
             <>
               <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium">Name</span>
+                <span className="text-sm font-medium">
+                  {t.settings.models.name}
+                </span>
                 <Input
                   defaultValue={provider.name}
-                  placeholder="Custom provider"
-                  aria-label="Custom provider name"
+                  placeholder={t.settings.models.customProvider}
+                  aria-label={t.settings.models.customProviderName}
                   onBlur={handleNameBlur}
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium">API type</span>
+                <span className="text-sm font-medium">
+                  {t.settings.models.apiType}
+                </span>
                 <Select
                   value={apiValue}
                   onValueChange={(value) =>
@@ -634,7 +668,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                 >
                   <SelectTrigger
                     className="w-full"
-                    aria-label={`${provider.name} API type`}
+                    aria-label={fmt(t.settings.models.apiType)}
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -652,7 +686,9 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
 
           {!isBuiltin && (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Icon</span>
+              <span className="text-sm font-medium">
+                {t.settings.models.icon}
+              </span>
               <div className="flex items-center gap-2">
                 <ProviderAvatar
                   id={provider.id}
@@ -661,43 +697,50 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                 />
                 <Input
                   value={iconDraft}
-                  placeholder="Auto (e.g. openai, anthropic, google)"
-                  aria-label={`${provider.name} icon`}
+                  placeholder={t.settings.models.iconPlaceholder}
+                  aria-label={fmt(t.settings.models.providerIconAria, {
+                    name: provider.name,
+                  })}
                   onChange={(e) => setIconDraft(e.target.value)}
                   onBlur={handleIconBlur}
                 />
               </div>
               <div className="text-muted-foreground text-xs">
-                A{" "}
+                {t.settings.models.iconDescriptionPrefix
+                  ? `${t.settings.models.iconDescriptionPrefix} `
+                  : ""}
                 <Link
                   href="https://icons.lobehub.com"
                   className="underline underline-offset-2"
                 >
                   @lobehub/icons
                 </Link>{" "}
-                keyword. Leave blank to auto-resolve from the provider name.
+                {t.settings.models.iconDescription}
               </div>
             </div>
           )}
 
           {provider.id !== "openai-codex" && (
             <ApiKeyField
-              label="API key"
+              label={t.settings.models.apiKey}
               getKeyUrl={provider.websiteLink}
               defaultValue={provider.apiKey ?? ""}
-              placeholder={`Input API Key for ${provider.name}.`}
-              aria-label={`${provider.name} API key`}
+              placeholder={fmt(t.settings.models.apiKeyPlaceholder, {
+                name: provider.name,
+              })}
+              aria-label={fmt(t.settings.models.apiKeyAria, {
+                name: provider.name,
+              })}
               onBlur={handleApiKeyBlur}
               description={
                 <div className="text-muted-foreground pl-5 text-xs">
                   <div className="list-item">
-                    {
-                      'Use "${ENV_NAME}" to reference environment variables. e.g. "$OPENAI_API_KEY"'
-                    }
+                    {t.settings.models.envVarHint}
                   </div>
                   <div className="list-item">
-                    Leave it blank to use the official {provider.name}{" "}
-                    environment variable
+                    {fmt(t.settings.models.officialEnvHint, {
+                      name: provider.name,
+                    })}
                   </div>
                 </div>
               }
@@ -707,12 +750,18 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
           {isBuiltin ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Custom base URL</span>
+                <span className="text-sm font-medium">
+                  {t.settings.models.customBaseUrl}
+                </span>
                 <Switch
                   aria-label={
                     baseUrlEnabled
-                      ? `Disable custom base URL for ${provider.name}`
-                      : `Enable custom base URL for ${provider.name}`
+                      ? fmt(t.settings.models.disableCustomBaseUrl, {
+                          name: provider.name,
+                        })
+                      : fmt(t.settings.models.enableCustomBaseUrl, {
+                          name: provider.name,
+                        })
                   }
                   checked={baseUrlEnabled}
                   onCheckedChange={handleBaseUrlToggle}
@@ -723,29 +772,37 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                   <Input
                     defaultValue={provider.baseUrl ?? ""}
                     placeholder={baseUrlPlaceholder}
-                    aria-label={`${provider.name} custom base URL`}
+                    aria-label={fmt(t.settings.models.customBaseUrlAria, {
+                      name: provider.name,
+                    })}
                     onBlur={handleBaseUrlBlur}
                   />
                   <div className="text-muted-foreground text-xs">
-                    Leave empty to use the default endpoint.
-                    {usesAnthropicApi ? ` ${ANTHROPIC_BASE_URL_HINT}` : null}
+                    {t.settings.models.defaultEndpointHint}
+                    {usesAnthropicApi
+                      ? ` ${t.settings.models.anthropicBaseUrlHint}`
+                      : null}
                   </div>
                 </>
               )}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Base URL</span>
+              <span className="text-sm font-medium">
+                {t.settings.models.baseUrl}
+              </span>
               <Input
                 required
                 defaultValue={provider.baseUrl ?? ""}
                 placeholder={baseUrlPlaceholder}
-                aria-label={`${provider.name} base URL`}
+                aria-label={fmt(t.settings.models.baseUrlAria, {
+                  name: provider.name,
+                })}
                 onBlur={handleBaseUrlBlur}
               />
               {usesAnthropicApi && (
                 <div className="text-muted-foreground text-xs">
-                  {ANTHROPIC_BASE_URL_HINT}
+                  {t.settings.models.anthropicBaseUrlHint}
                 </div>
               )}
             </div>
@@ -755,17 +812,19 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Models</span>
+              <span className="text-sm font-medium">
+                {t.settings.models.models}
+              </span>
               <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
                 {enabledModels === totalModels
                   ? totalModels
                   : `${enabledModels}/${totalModels}`}
               </span>
               <div className="ml-auto flex items-center gap-1">
-                <Tooltip content="Add custom model">
+                <Tooltip content={t.settings.models.addCustomModel}>
                   <button
                     type="button"
-                    aria-label="Add custom model"
+                    aria-label={t.settings.models.addCustomModel}
                     onClick={openCreateModel}
                     className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-6 items-center justify-center rounded transition-colors"
                   >
@@ -776,7 +835,9 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      aria-label={`Model list actions for ${provider.name}`}
+                      aria-label={fmt(t.settings.models.modelListActions, {
+                        name: provider.name,
+                      })}
                       className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-6 items-center justify-center rounded transition-colors"
                     >
                       <MoreHorizontal className="size-4" />
@@ -789,7 +850,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                       }
                     >
                       <Ban />
-                      Disable All
+                      {t.settings.models.disableAll}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() =>
@@ -797,14 +858,14 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
                       }
                     >
                       <CheckCheck />
-                      Enable All
+                      {t.settings.models.enableAll}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {(
                       [
-                        ["enabled", "Show Enabled Only"],
-                        ["disabled", "Show Disabled Only"],
-                        ["all", "Show All"],
+                        ["enabled", t.settings.models.showEnabledOnly],
+                        ["disabled", t.settings.models.showDisabledOnly],
+                        ["all", t.settings.models.showAll],
                       ] as const
                     ).map(([value, label]) => (
                       <DropdownMenuItem
@@ -827,7 +888,7 @@ function ProviderEditor({ provider }: { provider: ModelProviderGroup | null }) {
             <div ref={modelListRef} className="flex flex-col gap-1.5">
               {visibleModels.length === 0 ? (
                 <div className="text-muted-foreground px-1 py-2 text-xs">
-                  No models to show.
+                  {t.settings.models.noModelsToShow}
                 </div>
               ) : (
                 visibleModels.map((model) => (
@@ -874,6 +935,7 @@ function ProviderHeadersEditor({ provider }: { provider: ModelProviderGroup }) {
       value,
     }))
   );
+  const { t, fmt } = useI18n();
 
   const setRow = (index: number, row: { key: string; value: string }) => {
     setRows((prev) => prev.map((r, i) => (i === index ? row : r)));
@@ -906,27 +968,37 @@ function ProviderHeadersEditor({ provider }: { provider: ModelProviderGroup }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium">Custom headers</span>
+      <span className="text-sm font-medium">
+        {t.settings.models.customHeaders}
+      </span>
       {rows.map((row, index) => (
         <div key={index} className="flex items-center gap-2">
           <Input
             value={row.key}
             placeholder="X-Header-Name"
-            aria-label={`${provider.name} header ${index + 1} name`}
+            aria-label={fmt(t.settings.models.headerNameAria, {
+              name: provider.name,
+              index: index + 1,
+            })}
             onChange={(e) => setRow(index, { ...row, key: e.target.value })}
             onBlur={() => persist(rows)}
           />
           <Input
             value={row.value}
-            placeholder="Value"
-            aria-label={`${provider.name} header ${index + 1} value`}
+            placeholder={t.settings.models.headerValuePlaceholder}
+            aria-label={fmt(t.settings.models.headerValueAria, {
+              name: provider.name,
+              index: index + 1,
+            })}
             onChange={(e) => setRow(index, { ...row, value: e.target.value })}
             onBlur={() => persist(rows)}
           />
-          <Tooltip content="Remove header">
+          <Tooltip content={t.settings.models.removeHeader}>
             <button
               type="button"
-              aria-label={`Remove header ${index + 1}`}
+              aria-label={fmt(t.settings.models.removeHeaderAria, {
+                index: index + 1,
+              })}
               onClick={() => removeRow(index)}
               className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded transition-colors"
             >
@@ -942,10 +1014,10 @@ function ProviderHeadersEditor({ provider }: { provider: ModelProviderGroup }) {
         className="self-start"
         onClick={() => setRows((prev) => [...prev, { key: "", value: "" }])}
       >
-        <Plus /> Add header
+        <Plus /> {t.settings.models.addHeader}
       </Button>
       <div className="text-muted-foreground text-xs">
-        Sent with every request to this provider.
+        {t.settings.models.headersDescription}
       </div>
     </div>
   );
@@ -977,18 +1049,19 @@ function ModelListItem({
   const testModelConnection = useTestModelConnection();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [testing, setTesting] = useState(false);
+  const { t, fmt } = useI18n();
 
   const handleTestConnection = async () => {
     setTesting(true);
     try {
       await testModelConnection(providerId, model.id);
-      toast.success("Model connected successfully", {
+      toast.success(t.settings.models.modelConnected, {
         description: model.name,
       });
     } catch (error) {
-      toast.error("Failed to connect to model", {
+      toast.error(t.settings.models.modelConnectFailed, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     } finally {
       setTesting(false);
@@ -1010,10 +1083,12 @@ function ModelListItem({
       </ItemContent>
       <ItemActions>
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-          <Tooltip content="Test connection">
+          <Tooltip content={t.settings.models.testConnection}>
             <button
               type="button"
-              aria-label={`Test connection for ${model.name}`}
+              aria-label={fmt(t.settings.models.testConnectionAria, {
+                name: model.name,
+              })}
               disabled={testing}
               onClick={() => void handleTestConnection()}
               className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-6 items-center justify-center rounded transition-colors"
@@ -1029,7 +1104,9 @@ function ModelListItem({
             <>
               <button
                 type="button"
-                aria-label={`Edit ${model.name}`}
+                aria-label={fmt(t.settings.models.editModelAria, {
+                  name: model.name,
+                })}
                 onClick={onEdit}
                 className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-6 items-center justify-center rounded transition-colors"
               >
@@ -1037,7 +1114,9 @@ function ModelListItem({
               </button>
               <button
                 type="button"
-                aria-label={`Delete ${model.name}`}
+                aria-label={fmt(t.settings.models.deleteModelAria, {
+                  name: model.name,
+                })}
                 onClick={() => setConfirmOpen(true)}
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive inline-flex size-6 items-center justify-center rounded transition-colors"
               >
@@ -1051,7 +1130,9 @@ function ModelListItem({
           checked={enabled}
           onCheckedChange={onToggle}
           aria-label={
-            enabled ? `Disable ${model.name}` : `Enable ${model.name}`
+            enabled
+              ? fmt(t.settings.models.disableModelAria, { name: model.name })
+              : fmt(t.settings.models.enableModelAria, { name: model.name })
           }
         />
       </ItemActions>
@@ -1059,9 +1140,14 @@ function ModelListItem({
         <ConfirmDialog
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
-          title={`Delete ${model.name}?`}
-          description={`This permanently removes the custom model "${model.name}" from ${providerName}.`}
-          confirmLabel="Delete"
+          title={fmt(t.settings.models.deleteModelTitle, {
+            name: model.name,
+          })}
+          description={fmt(t.settings.models.deleteModelDescription, {
+            name: model.name,
+            providerName,
+          })}
+          confirmLabel={t.common.delete}
           dimBackground={false}
           onConfirm={() => {
             setConfirmOpen(false);

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { useI18n } from "../i18n";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -17,7 +18,7 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  cancelLabel = "Cancel",
+  cancelLabel,
   confirmLabel,
   confirmVariant = "destructive",
   onConfirm,
@@ -39,6 +40,7 @@ export function ConfirmDialog({
    */
   dimBackground?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showOverlay={dimBackground}>
@@ -50,7 +52,7 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            {cancelLabel}
+            {cancelLabel ?? t.common.cancel}
           </Button>
           <Button variant={confirmVariant} onClick={onConfirm}>
             {confirmLabel}

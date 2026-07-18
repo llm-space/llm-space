@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@llm-space/ui/i18n";
+import type { Messages } from "@llm-space/ui/i18n";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import {
@@ -20,6 +22,7 @@ import {
 import { type ReactNode } from "react";
 
 import type { UpdateStatus } from "@/shared/updates";
+
 
 type Tone = "primary" | "success" | "danger";
 
@@ -81,7 +84,8 @@ function UpdateDialogBody({
   onRetry: () => void;
   onClose: () => void;
 }) {
-  const view = viewFor(status, { onRestart, onRetry, onClose });
+  const { t, fmt } = useI18n();
+  const view = viewFor(status, { onRestart, onRetry, onClose }, { t, fmt });
   return (
     <div className="flex flex-col items-center px-6 pt-8 pb-6 text-center">
       <IconBadge tone={view.tone} icon={view.icon} spin={view.spin} />
@@ -107,7 +111,8 @@ function viewFor(
     onRestart,
     onRetry,
     onClose,
-  }: { onRestart: () => void; onRetry: () => void; onClose: () => void }
+  }: { onRestart: () => void; onRetry: () => void; onClose: () => void },
+  { t, fmt }: { t: Messages; fmt: (template: string, vars?: Record<string, string | number>) => string }
 ): View {
   switch (status.state) {
     case "checking":
@@ -116,8 +121,8 @@ function viewFor(
         icon: Loader2Icon,
         spin: true,
         progress: true,
-        title: "Checking for updates",
-        description: "Contacting the update server…",
+        title: t.update.dialog.checkingTitle,
+        description: t.update.dialog.checkingDescription,
         actions: null,
       };
     case "downloading":
@@ -126,11 +131,13 @@ function viewFor(
         icon: Loader2Icon,
         spin: true,
         progress: true,
-        title: "Downloading update",
-        description: `Getting version ${status.version} ready to install…`,
+        title: t.update.dialog.downloadingTitle,
+        description: fmt(t.update.dialog.downloadingDescription, {
+          version: status.version,
+        }),
         actions: (
           <Button size="sm" variant="outline" onClick={onClose}>
-            Continue in background
+            {t.update.dialog.continueInBackground}
           </Button>
         ),
       };
@@ -138,11 +145,13 @@ function viewFor(
       return {
         tone: "success",
         icon: CheckIcon,
-        title: "You're all set!",
-        description: `You're already running the latest version — v${status.version}.`,
+        title: t.update.dialog.upToDateTitle,
+        description: fmt(t.update.dialog.upToDateDescription, {
+          version: status.version,
+        }),
         actions: (
           <Button size="sm" onClick={onClose}>
-            Gotcha
+            {t.update.dialog.gotcha}
           </Button>
         ),
       };
@@ -150,15 +159,17 @@ function viewFor(
       return {
         tone: "primary",
         icon: DownloadIcon,
-        title: "Update ready",
-        description: `Version ${status.version} has been downloaded and is ready to install. Restarting takes just a moment.`,
+        title: t.update.dialog.readyTitle,
+        description: fmt(t.update.dialog.readyDescription, {
+          version: status.version,
+        }),
         actions: (
           <>
             <Button size="sm" variant="outline" onClick={onClose}>
-              Later
+              {t.update.dialog.later}
             </Button>
             <Button size="sm" onClick={onRestart}>
-              Restart now
+              {t.update.dialog.restartNow}
             </Button>
           </>
         ),
@@ -167,15 +178,15 @@ function viewFor(
       return {
         tone: "danger",
         icon: TriangleAlertIcon,
-        title: "Update check failed",
+        title: t.update.dialog.errorTitle,
         description: status.message,
         actions: (
           <>
             <Button size="sm" variant="outline" onClick={onClose}>
-              Close
+              {t.common.close}
             </Button>
             <Button size="sm" onClick={onRetry}>
-              Try again
+              {t.common.retry}
             </Button>
           </>
         ),

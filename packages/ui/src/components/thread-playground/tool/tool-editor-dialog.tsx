@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@llm-space/ui/ui/dialog";
 
+import { useI18n } from "../../../i18n";
 import metaToolPrompt from "../examples/meta-tool.md?raw";
 import { DEFAULT_TOOL, TOOL_EXAMPLES } from "../examples/tools";
 import { ExamplesMenu } from "../examples-menu";
@@ -44,6 +45,7 @@ export function ToolEditorDialog({
 }) {
   const { addTool, updateTool } = useThreadStoreActions();
   const threadModel = useThreadStore((s) => s.thread.model);
+  const { t } = useI18n();
   const [text, setText] = useState("");
   const [originalName, setOriginalName] = useState<string | null>(null);
   // Track the last (open, tool) we initialized from so we can reinitialize
@@ -113,14 +115,14 @@ export function ToolEditorDialog({
     try {
       const normalized = normalizeTool(parseJSON(text));
       if (normalized.type !== "function") {
-        toast.error("Error", {
-          description: "MCP tools cannot be edited as function tools",
+        toast.error(t.common.error, {
+          description: t.thread.tool.mcpNotEditableToast,
         });
         return;
       }
       parsed = normalized;
     } catch {
-      toast.error("Error", { description: "Invalid JSON" });
+      toast.error(t.common.error, { description: t.thread.tool.invalidJsonToast });
       return;
     }
 
@@ -142,21 +144,21 @@ export function ToolEditorDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {originalName ? "Edit tool" : "Add function tool"}
+            {originalName
+              ? t.thread.tool.editToolTitle
+              : t.thread.tool.addFunctionToolTitle}
           </DialogTitle>
           <DialogDescription>
-            A function tool consists of a name, description, and parameters.
-            Parameters are defined using JSON Schema. Since the tool is
-            customized, you need to provide a response at runtime.
+            {t.thread.tool.editorDescription}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-sm font-medium">Definition</div>
+            <div className="text-sm font-medium">{t.thread.tool.definition}</div>
             <div className="flex items-center gap-2">
               <GeneratePopoverButton
-                placeholder="Describe what your function does (or paste your function declaration code), and we'll generate a definition."
+                placeholder={t.thread.tool.generatePlaceholder}
                 onGenerate={handleGenerate}
               />
               <ExamplesMenu
@@ -177,9 +179,11 @@ export function ToolEditorDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t.common.cancel}
           </Button>
-          <Button onClick={handleSave}>{tool ? "Save" : "Create"}</Button>
+          <Button onClick={handleSave}>
+            {tool ? t.common.save : t.thread.tool.create}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

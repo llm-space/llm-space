@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@llm-space/ui/lib/utils";
 
-
+import { useI18n } from "../../../i18n";
 import { useModel, useModels } from "../../model-provider";
 
 function formatTokenCount(value: number) {
@@ -37,9 +37,10 @@ function ModelCardField({
 }
 
 function BoolValue({ value }: { value: boolean }) {
+  const { t } = useI18n();
   return (
     <span className={value ? "" : "text-muted-foreground"}>
-      {value ? "Supported" : "Not supported"}
+      {value ? t.thread.model.supported : t.thread.model.notSupported}
     </span>
   );
 }
@@ -52,6 +53,7 @@ export function ModelCard({
   className?: string;
 }) {
   const providers = useModels();
+  const { t } = useI18n();
   const resolvedModel = useModel({
     id: model?.id ?? "",
     provider: model?.provider ?? "",
@@ -66,37 +68,37 @@ export function ModelCard({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <main className="flex flex-col">
-        <ModelCardField label="Model" value={resolvedModel.id} />
-        <ModelCardField label="Provider" value={providerName} />
-        <ModelCardField label="API type" value={resolvedModel?.api} />
+        <ModelCardField label={t.thread.model.modelLabel} value={resolvedModel.id} />
+        <ModelCardField label={t.thread.model.providerLabel} value={providerName} />
+        <ModelCardField label={t.thread.model.apiTypeLabel} value={resolvedModel?.api} />
         <ModelCardField
-          label="Base URL"
+          label={t.thread.model.baseUrlLabel}
           value={
             <span className="text-left break-all">{resolvedModel.baseUrl}</span>
           }
         />
         <ModelCardField
-          label="Context window"
+          label={t.thread.model.contextWindowLabel}
           value={formatTokenCount(resolvedModel.contextWindow)}
         />
         <ModelCardField
-          label="Max tokens"
+          label={t.thread.model.maxTokensLabel}
           value={formatTokenCount(resolvedModel.maxTokens)}
         />
         <ModelCardField
-          label="Reasoning"
+          label={t.thread.model.reasoningLabel}
           value={<BoolValue value={resolvedModel.reasoning} />}
         />
         <ModelCardField
-          label="Image input"
+          label={t.thread.model.imageInputLabel}
           value={<BoolValue value={supportsImageInput} />}
         />
         <ModelCardField
-          label="Input cost"
+          label={t.thread.model.inputCostLabel}
           value={formatCostPerMillion(resolvedModel.cost.input)}
         />
         <ModelCardField
-          label="Output cost"
+          label={t.thread.model.outputCostLabel}
           value={formatCostPerMillion(resolvedModel.cost.output)}
         />
       </main>

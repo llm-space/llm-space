@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import { Separator } from "@llm-space/ui/ui/separator";
 import { Loader2Icon, LogOut } from "lucide-react";
@@ -12,11 +13,12 @@ import { SettingsPage } from "./settings-page";
 
 export function AccountPage() {
   const { state, signIn, signOut } = useGithubAuth();
+  const { t } = useI18n();
 
   return (
     <SettingsPage
-      title="Account"
-      description="Sign in with GitHub to share your threads on the web as gists."
+      title={t.settings.account.title}
+      description={t.settings.account.description}
       className="overflow-y-auto"
     >
       <div className="flex flex-col gap-6 pb-2">
@@ -36,30 +38,32 @@ export function AccountPage() {
             </div>
             <Button variant="outline" onClick={signOut}>
               <LogOut />
-              Sign out
+              {t.settings.account.signOut}
             </Button>
           </div>
         ) : state.status === "signingIn" ? (
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground flex items-center gap-2 text-sm">
               <Loader2Icon className="size-4 animate-spin" />
-              Waiting for GitHub authorization…
+              {t.settings.account.signingIn}
             </span>
             <Button variant="outline" onClick={signOut}>
-              Cancel
+              {t.settings.account.cancel}
             </Button>
           </div>
         ) : (
           <div className="flex items-start justify-between gap-4">
             <span className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Not signed in</span>
+              <span className="text-sm font-medium">
+                {t.settings.account.notSignedIn}
+              </span>
               <span className="text-muted-foreground text-xs">
-                Connect your GitHub account to share threads on the web.
+                {t.settings.account.notSignedInDescription}
               </span>
             </span>
             <Button onClick={signIn}>
               <GitHubIcon />
-              Sign in with GitHub
+              {t.settings.account.signInWithGithub}
             </Button>
           </div>
         )}
@@ -67,11 +71,7 @@ export function AccountPage() {
         <Separator />
 
         <p className="text-muted-foreground text-xs leading-relaxed">
-          Signing in lets you publish a thread as a secret GitHub Gist and share
-          the link. Anyone with the link can view it read-only on the web and
-          import it into LLM Space with one click — no GitHub account needed to
-          view. A secret gist is unlisted, but anyone who has the link can open
-          it, so avoid sharing sensitive threads.
+          {t.settings.account.gistDescription}
         </p>
       </div>
     </SettingsPage>

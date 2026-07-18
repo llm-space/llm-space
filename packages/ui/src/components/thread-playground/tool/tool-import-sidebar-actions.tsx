@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@llm-space/ui/ui/dropdown-menu";
 
+import { useI18n } from "../../../i18n";
+
 
 /**
  * Right-side slot for a tool-import sidebar row: shows the tool count badge at
@@ -27,6 +29,7 @@ function _ToolImportSidebarActions({
   onEnableAll: () => void;
   onDisableAll: () => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   return (
@@ -40,7 +43,7 @@ function _ToolImportSidebarActions({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label="Tool actions"
+            aria-label={t.thread.tool.toolActionsAria}
             className={cn(
               "hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground relative z-10 hidden size-5 shrink-0 items-center justify-center rounded outline-none group-hover/row:flex data-[state=open]:flex",
               open && "text-foreground flex"
@@ -52,10 +55,10 @@ function _ToolImportSidebarActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
           <DropdownMenuItem onSelect={onEnableAll}>
-            Enable all tools
+            {t.thread.tool.enableAllTools}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onDisableAll}>
-            Disable all tools
+            {t.thread.tool.disableAllTools}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@llm-space/ui/i18n";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import {
@@ -36,6 +37,7 @@ export function Welcome({
   onModels,
 }: WelcomeProps) {
   const { executeCommand } = useCommands();
+  const { t } = useI18n();
 
   const handleHeaderDoubleClick = useCallback(() => {
     void electrobun.rpc?.request.toggleMaximized({});
@@ -65,24 +67,23 @@ export function Welcome({
           <EmptyMedia variant="icon">
             <SparklesIcon className="size-8" />
           </EmptyMedia>
-          <EmptyTitle>Welcome to LLM Space 4</EmptyTitle>
+          <EmptyTitle>{t.tabs.welcome.title}</EmptyTitle>
           <EmptyDescription>
-            Start with a ready agent thread, create a blank one, or open an
-            existing file from the left side panel.
+            {t.tabs.welcome.description}
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent className="flex-row justify-center gap-2">
           <Button onClick={onNewStarter}>
             <SparklesIcon />
-            Start from examples
+            {t.tabs.welcome.startFromExamples}
           </Button>
           <Button variant="outline" onClick={onNewFile}>
             <PlusIcon />
-            Blank thread
+            {t.tabs.welcome.blankThread}
           </Button>
           <Button variant="outline" onClick={onModels}>
             <SettingsIcon />
-            Configure models
+            {t.tabs.welcome.configureModels}
           </Button>
         </EmptyContent>
         <Button
@@ -92,7 +93,7 @@ export function Welcome({
           size="sm"
         >
           <a href="#" onClick={handleLearnMore}>
-            Learn more <ArrowUpRightIcon />
+            {t.tabs.welcome.learnMore} <ArrowUpRightIcon />
           </a>
         </Button>
       </Empty>

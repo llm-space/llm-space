@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@llm-space/ui/ui/dropdown-menu";
 
-
+import { useI18n } from "../../../i18n";
 import { useThreadStoreActions } from "../stores/thread-store";
 
 function readImageFile(
@@ -41,6 +41,7 @@ export function AddImagesMenu({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addMessageImageContent } = useThreadStoreActions();
+  const { t } = useI18n();
 
   const addImage = useCallback(
     (mimeType: string, data: string) => {
@@ -94,7 +95,7 @@ export function AddImagesMenu({
         type="file"
         accept="image/*"
         multiple
-        aria-label="Image files"
+        aria-label={t.thread.message.imageFilesAria}
         className="hidden"
         onChange={handleFilesSelected}
       />
@@ -103,21 +104,21 @@ export function AddImagesMenu({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Add image to message"
+            aria-label={t.thread.message.addImageToMessageAria}
             disabled={disabled}
           >
             <ImagePlusIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Add Images</DropdownMenuLabel>
+          <DropdownMenuLabel>{t.thread.message.addImages}</DropdownMenuLabel>
           <DropdownMenuItem onSelect={handleFromFiles}>
             <FileIcon />
-            From Files
+            {t.thread.message.fromFiles}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={handleFromClipboard}>
             <ClipboardPasteIcon />
-            From Clipboard
+            {t.thread.message.fromClipboard}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

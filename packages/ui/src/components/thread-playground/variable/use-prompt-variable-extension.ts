@@ -9,9 +9,13 @@ import { useCallback, useContext, useMemo } from "react";
 
 import { useHostServices } from "@llm-space/ui/host";
 
+import { useI18n } from "../../../i18n";
 import { ThreadStoreContext, type ThreadStore } from "../stores";
 
-import { createPromptVariableExtension } from "./prompt-variable-extension";
+import {
+  createPromptVariableExtension,
+  type PromptVariableExtensionMessages,
+} from "./prompt-variable-extension";
 import { listEnabledPromptVariableSkills } from "./prompt-variable-skills";
 
 // Skills settings are global (not per-thread), so the resolved list is cached
@@ -47,7 +51,8 @@ function getExtensionForStore(
   store: ThreadStore,
   placeKey: string | undefined,
   onInspect: (name: string) => void,
-  loadSkills: () => Promise<SkillInfo[]>
+  loadSkills: () => Promise<SkillInfo[]>,
+  messages: PromptVariableExtensionMessages
 ): Extension[] {
   let byPlace = extensionByStore.get(store);
   if (!byPlace) {
@@ -71,6 +76,7 @@ function getExtensionForStore(
       listVariables: () =>
         listPromptVariableCompletions(store.getState().thread.context),
       onInspect,
+      messages,
     });
     byPlace.set(key, extension);
   }
@@ -102,9 +108,19 @@ export function usePromptVariableExtensionForContext(
   const fallbackStore = useContext(ThreadStoreContext);
   const resolvedStore = store ?? fallbackStore;
   const { skills, actions } = useHostServices();
+  const { t } = useI18n();
   const loadSkills = useCallback(
     () => listEnabledPromptVariableSkills(skills),
     [skills]
+  );
+  const messages: PromptVariableExtensionMessages = useMemo(
+    () => ({
+      viewVariableDetails: t.thread.variable.viewVariableDetails,
+      warningNoValue: t.thread.variable.warningNoValue,
+      warningInvalidName: t.thread.variable.warningInvalidName,
+      warningUnknown: t.thread.variable.warningUnknown,
+    }),
+    [t]
   );
   return useMemo(() => {
     // Readonly snapshot: frozen values from the saved context, and no inspect
@@ -116,6 +132,7 @@ export function usePromptVariableExtensionForContext(
             loadSkillsCached(loadSkills)
           ),
         listVariables: () => listPromptVariableCompletions(context),
+        messages,
       });
     }
     if (!resolvedStore) return EMPTY;
@@ -125,7 +142,8 @@ export function usePromptVariableExtensionForContext(
       resolvedStore,
       placeKey,
       (name) => actions.openVariables(name),
-      loadSkills
+      loadSkills,
+      messages
     );
-  }, [context, placeKey, resolvedStore, actions, loadSkills]);
+  }, [context, placeKey, resolvedStore, actions, loadSkills, messages]);
 }

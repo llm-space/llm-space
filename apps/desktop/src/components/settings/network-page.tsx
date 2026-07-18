@@ -6,6 +6,7 @@ import {
   type NetworkSettings,
   type SystemProxyDetection,
 } from "@llm-space/core";
+import { useI18n } from "@llm-space/ui/i18n";
 import { Input } from "@llm-space/ui/ui/input";
 import { Separator } from "@llm-space/ui/ui/separator";
 import { Switch } from "@llm-space/ui/ui/switch";
@@ -55,6 +56,7 @@ function ProxyField({
   value,
   placeholder,
   disabled,
+  unsupportedMessage,
   onChange,
   onBlur,
 }: {
@@ -62,6 +64,7 @@ function ProxyField({
   value: string;
   placeholder?: string;
   disabled?: boolean;
+  unsupportedMessage: ReactNode;
   onChange: (value: string) => void;
   onBlur: () => void;
 }) {
@@ -80,8 +83,7 @@ function ProxyField({
       />
       {invalid ? (
         <span className="text-destructive text-xs">
-          Only <code>http://</code> and <code>https://</code> proxies are
-          supported.
+          {unsupportedMessage}
         </span>
       ) : null}
     </div>
@@ -104,8 +106,14 @@ function _hostPort(url: string | null): string | null {
 /** The muted "Detected: …" line under the system-proxy toggle. */
 function DetectedProxy({
   detection,
+  socksUnsupported,
+  noSystemProxy,
+  detectedSystemProxy,
 }: {
   detection: SystemProxyDetection | null;
+  socksUnsupported: string;
+  noSystemProxy: string;
+  detectedSystemProxy: (hostPort: string) => string;
 }) {
   if (!detection) {
     return null;
@@ -113,7 +121,7 @@ function DetectedProxy({
   if (detection.socksOnly) {
     return (
       <span className="text-destructive text-xs">
-        A SOCKS proxy is set in System Settings, but SOCKS is not supported.
+        {socksUnsupported}
       </span>
     );
   }
@@ -121,13 +129,13 @@ function DetectedProxy({
   if (!hostPort) {
     return (
       <span className="text-muted-foreground text-xs">
-        No system proxy detected.
+        {noSystemProxy}
       </span>
     );
   }
   return (
     <span className="text-muted-foreground text-xs">
-      Detected: <span className="font-mono">{hostPort}</span> (System Settings)
+      {detectedSystemProxy(hostPort)}
     </span>
   );
 }
@@ -137,6 +145,7 @@ export function NetworkPage() {
     DEFAULT_NETWORK_SETTINGS
   );
   const [detection, setDetection] = useState<SystemProxyDetection | null>(null);
+  const { t, fmt } = useI18n();
 
   useEffect(() => {
     let cancelled = false;
@@ -169,23 +178,23 @@ export function NetworkPage() {
       const saved = await setNetworkSettings(next);
       setSettings(saved);
     } catch (error) {
-      toast.error("Failed to save network settings", {
+      toast.error(t.settings.network.saveFailed, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     }
-  }, []);
+  }, [t]);
 
   return (
     <SettingsPage
-      title="Network"
-      description="Configure proxy settings for model requests and local network calls."
+      title={t.settings.network.title}
+      description={t.settings.network.description}
       className="overflow-y-auto"
     >
       <div className="flex flex-col gap-6 pb-2">
         <ToggleRow
-          title="Enable proxy"
-          hint="Connect through a proxy for model requests and other network calls."
+          title={t.settings.network.enableProxy}
+          hint={t.settings.network.enableProxyHint}
           checked={settings.enabled}
           onCheckedChange={(next) => void persist({ ...settings, enabled: next })}
         />
@@ -196,21 +205,44 @@ export function NetworkPage() {
 
             <div className="flex flex-col gap-2">
               <ToggleRow
-                title="Use system proxy"
+                title={t.settings.network.useSystemProxy}
                 checked={settings.useSystemProxy}
                 onCheckedChange={(next) =>
                   void persist({ ...settings, useSystemProxy: next })
                 }
               />
-              <DetectedProxy detection={detection} />
+              <DetectedProxy
+                detection={detection}
+                socksUnsupported={t.settings.network.socksUnsupported}
+                noSystemProxy={t.settings.network.noSystemProxy}
+                detectedSystemProxy={(hostPort) =>
+                  fmt(t.settings.network.detectedSystemProxy, { hostPort })
+                }
+              />
             </div>
 
             {settings.useSystemProxy ? null : (
               <>
                 <ProxyField
-                  label="HTTP Proxy"
+                  label={t.settings.network.httpProxy}
                   value={settings.httpProxy}
                   placeholder="http://127.0.0.1:7890"
+                  unsupportedMessage={
+                    <>
+                      {t.settings.network.unsupportedProxy.split("http://")[0]}
+                      <code>http://</code>
+                      {
+                        t.settings.network.unsupportedProxy
+                          .split("http://")[1]
+                          ?.split("https://")[0]
+                      }
+                      <code>https://</code>
+                      {
+                        t.settings.network.unsupportedProxy
+                          .split("https://")[1]
+                      }
+                    </>
+                  }
                   onChange={(value) =>
                     setSettings({ ...settings, httpProxy: value })
                   }
@@ -218,9 +250,25 @@ export function NetworkPage() {
                 />
 
                 <ProxyField
-                  label="HTTPS Proxy"
+                  label={t.settings.network.httpsProxy}
                   value={settings.httpsProxy}
                   placeholder="http://127.0.0.1:7890"
+                  unsupportedMessage={
+                    <>
+                      {t.settings.network.unsupportedProxy.split("http://")[0]}
+                      <code>http://</code>
+                      {
+                        t.settings.network.unsupportedProxy
+                          .split("http://")[1]
+                          ?.split("https://")[0]
+                      }
+                      <code>https://</code>
+                      {
+                        t.settings.network.unsupportedProxy
+                          .split("https://")[1]
+                      }
+                    </>
+                  }
                   onChange={(value) =>
                     setSettings({ ...settings, httpsProxy: value })
                   }
@@ -228,18 +276,20 @@ export function NetworkPage() {
                 />
 
                 <div className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">Bypass list</span>
+                  <span className="text-sm font-medium">
+                    {t.settings.network.bypassList}
+                  </span>
                   <Input
                     value={settings.noProxy}
-                    placeholder="localhost, 127.0.0.1, .local"
-                    aria-label="Bypass list"
+                    placeholder={t.settings.network.bypassPlaceholder}
+                    aria-label={t.settings.network.bypassList}
                     onChange={(event) =>
                       setSettings({ ...settings, noProxy: event.target.value })
                     }
                     onBlur={() => void persist(settings)}
                   />
                   <span className="text-muted-foreground text-xs">
-                    Comma-separated hosts that bypass the proxy.
+                    {t.settings.network.bypassHint}
                   </span>
                 </div>
               </>

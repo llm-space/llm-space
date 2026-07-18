@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useHostServices } from "@llm-space/ui/host";
 import { createFrameThrottle } from "@llm-space/ui/lib/frame-throttle";
 
+import { useI18n } from "../../i18n";
 import { useDefaultTextGenerationModel } from "../model-provider";
 
 import { PREVIEW_THROTTLE_MS } from "./streaming-preview";
@@ -70,6 +71,7 @@ export function useStreamText({
   const transportRef = useRef(transport);
 
   const defaultModel = useDefaultTextGenerationModel();
+  const { t } = useI18n();
 
   // Keep the latest inputs/model in refs so `run` has a stable identity but
   // always reads current values.
@@ -81,6 +83,9 @@ export function useStreamText({
     model,
   });
   const defaultModelRef = useRef(defaultModel);
+  // Mirror the message tree into a ref so `run` (stable identity) can read the
+  // current localized error strings without re-creating on language change.
+  const tRef = useRef(t);
   // Sync the latest inputs/model into the refs after commit — they're read only
   // inside `run` (a post-commit callback), so mutating them during render would
   // leak from a render React might replay or discard.
@@ -88,6 +93,7 @@ export function useStreamText({
     argsRef.current = { systemPrompt, messages, userPrompt, reasoning, model };
     defaultModelRef.current = defaultModel;
     transportRef.current = transport;
+    tRef.current = t;
   });
 
   const controllerRef = useRef<AbortController | null>(null);
@@ -103,7 +109,7 @@ export function useStreamText({
     // An explicit `model` overrides the default text-generation model.
     const base = model ?? defaultModelRef.current;
     if (!base) {
-      setError("No model available");
+      setError(tRef.current.thread.errors.noModelAvailable);
       return;
     }
 
@@ -157,7 +163,7 @@ export function useStreamText({
 
     const transport = transportRef.current;
     if (!transport) {
-      setError("Text generation is not available here.");
+      setError(tRef.current.thread.errors.textGenerationNotAvailable);
       setStreaming(false);
       controllerRef.current = null;
       return;

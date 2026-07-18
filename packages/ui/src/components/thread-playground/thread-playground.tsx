@@ -48,6 +48,8 @@ import {
 import { Spinner } from "@llm-space/ui/ui/spinner";
 import { Switch } from "@llm-space/ui/ui/switch";
 
+import { useI18n } from "../../i18n";
+
 import { MessageListView } from "./message/message-list-view";
 import { ThreadPlaygroundSkeleton } from "./misc/skeleton";
 import { TitleEditor, type TitleValidator } from "./misc/title-editor";
@@ -138,6 +140,9 @@ function _ThreadPlayground({
   const defaultModelRef = useRef(defaultModel);
   defaultModelRef.current = defaultModel;
   const { executeTool, skills } = useHostServices();
+  const { t } = useI18n();
+  const storeMessagesRef = useRef(t.thread.store);
+  storeMessagesRef.current = t.thread.store;
   const [store] = useState(() =>
     createThreadStore(initialValue, {
       transport,
@@ -151,6 +156,7 @@ function _ThreadPlayground({
       getReactLoop,
       executeTool: executeTool ?? undefined,
       loadSkills: () => listEnabledPromptVariableSkills(skills),
+      getMessages: () => storeMessagesRef.current,
     })
   );
   useThreadPlaygroundEvents(store, {
@@ -190,6 +196,7 @@ function ThreadPlaygroundContent({
   const hasModel = Boolean(savedModel ?? fallbackModel);
   const undoable = useThreadStore((s) => canUndo(s.changeHistory));
   const redoable = useThreadStore((s) => canRedo(s.changeHistory));
+  const { t } = useI18n();
   const { effectiveAutoRunTools, reactLoop, setAutoRunTools, setReactLoop } =
     useRunMode();
   const { run, abort, undo, redo, syncTitle } = useThreadStoreActions();
@@ -277,34 +284,36 @@ function ThreadPlaygroundContent({
                 readonlyFromProps && "hidden"
               )}
             >
-              <Tooltip content="Undo last edit">
+              <Tooltip content={t.thread.toolbar.undoLastEdit}>
                 <Button
                   variant="ghost"
                   size="icon-lg"
-                  aria-label="Undo last edit"
+                  aria-label={t.thread.toolbar.undoLastEdit}
                   disabled={readonly || !undoable}
                   onClick={undo}
                 >
                   <Undo2Icon className="size-4" />
                 </Button>
               </Tooltip>
-              <Tooltip content="Redo last edit">
+              <Tooltip content={t.thread.toolbar.redoLastEdit}>
                 <Button
                   variant="ghost"
                   size="icon-lg"
-                  aria-label="Redo last edit"
+                  aria-label={t.thread.toolbar.redoLastEdit}
                   disabled={readonly || !redoable}
                   onClick={redo}
                 >
                   <Redo2Icon className="size-4" />
                 </Button>
               </Tooltip>
-              <Tooltip content="View run history">
+              <Tooltip content={t.thread.toolbar.viewRunHistory}>
                 <Button
                   variant="ghost"
                   size="icon-lg"
                   aria-label={
-                    historyOpen ? "Hide run history" : "View run history"
+                    historyOpen
+                      ? t.thread.toolbar.hideRunHistory
+                      : t.thread.toolbar.viewRunHistory
                   }
                   aria-expanded={historyOpen}
                   onClick={toggleHistory}
@@ -312,11 +321,11 @@ function ThreadPlaygroundContent({
                   <HistoryIcon className="size-4" />
                 </Button>
               </Tooltip>
-              <Tooltip content="Share thread">
+              <Tooltip content={t.thread.toolbar.shareThread}>
                 <Button
                   variant="ghost"
                   size="icon-lg"
-                  aria-label="Share thread"
+                  aria-label={t.thread.toolbar.shareThread}
                   onClick={() => actions.shareThread(path)}
                 >
                   <Share2Icon className="size-4" />
@@ -334,8 +343,8 @@ function ThreadPlaygroundContent({
                   content={
                     <div>
                       {status === "running"
-                        ? "Stop running"
-                        : "Run this thread"}
+                        ? t.thread.toolbar.stopRunning
+                        : t.thread.toolbar.runThisThread}
                       <KbdGroup>
                         <Kbd className="text-foreground!">⌘ Enter</Kbd>
                       </KbdGroup>
@@ -346,8 +355,8 @@ function ThreadPlaygroundContent({
                     className="border-r-primary border-none pr-1 pl-4 active:translate-y-0!"
                     aria-label={
                       status === "running"
-                        ? "Stop running thread"
-                        : "Run thread"
+                        ? t.thread.toolbar.stopRunningThreadAria
+                        : t.thread.toolbar.runThreadAria
                     }
                     disabled={
                       readonlyFromProps || (status !== "running" && !hasModel)
@@ -359,14 +368,16 @@ function ThreadPlaygroundContent({
                     ) : (
                       <PlayIcon className="size-3" />
                     )}
-                    {status === "running" ? "Stop" : "Run"}
+                    {status === "running"
+                      ? t.thread.toolbar.stop
+                      : t.thread.toolbar.run}
                   </Button>
                 </Tooltip>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       className="border-none pr-1.5 pl-0.5 active:translate-y-0!"
-                      aria-label="Run settings"
+                      aria-label={t.thread.toolbar.runSettings}
                       disabled={
                         readonlyFromProps || (status !== "running" && !hasModel)
                       }
@@ -375,7 +386,7 @@ function ThreadPlaygroundContent({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-56">
-                    <DropdownMenuLabel>Run settings</DropdownMenuLabel>
+                    <DropdownMenuLabel>{t.thread.toolbar.runSettings}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onSelect={(event) => {
@@ -384,7 +395,7 @@ function ThreadPlaygroundContent({
                       }}
                       className="justify-between gap-6"
                     >
-                      Enable ReAct loop
+                      {t.thread.toolbar.enableReactLoop}
                       <Switch
                         size="sm"
                         checked={reactLoop}
@@ -402,7 +413,7 @@ function ThreadPlaygroundContent({
                       }}
                       className="justify-between gap-6"
                     >
-                      Auto run tools
+                      {t.thread.toolbar.autoRunTools}
                       <Switch
                         size="sm"
                         checked={effectiveAutoRunTools}
@@ -425,7 +436,7 @@ function ThreadPlaygroundContent({
                 <div className="px-3">
                   <div className={"flex w-full border-b py-2"}>
                     <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                      Models
+                      {t.thread.toolbar.models}
                     </div>
                     <div className="flex grow items-center">
                       <ModelConfigEditor readonly={readonly} />
@@ -433,7 +444,7 @@ function ThreadPlaygroundContent({
                   </div>
                   <div className={"flex w-full border-b py-2"}>
                     <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                      Tools
+                      {t.thread.toolbar.tools}
                     </div>
                     <div className="flex max-h-48 grow items-start overflow-y-auto">
                       <ToolListView readonly={readonly} />
@@ -441,7 +452,7 @@ function ThreadPlaygroundContent({
                   </div>
                   <div className={"flex w-full border-b py-2"}>
                     <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                      Variables
+                      {t.thread.toolbar.variables}
                     </div>
                     <div className="flex grow items-center">
                       <PromptVariablesListView

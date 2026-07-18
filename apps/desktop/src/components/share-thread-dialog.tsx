@@ -1,6 +1,7 @@
 "use client";
 
 import { ConfirmDialog } from "@llm-space/ui/components/confirm-dialog";
+import { useI18n } from "@llm-space/ui/i18n";
 import { threadTitleFromPath } from "@llm-space/ui/lib/thread-file";
 import { Button } from "@llm-space/ui/ui/button";
 import {
@@ -58,6 +59,7 @@ export function ShareThreadDialog({
 }) {
   const { state: authState, signIn } = useGithubAuth();
   const { executeCommand } = useCommands();
+  const { t } = useI18n();
 
   const [connector, setConnector] = useState(GIST_CONNECTOR);
   const [title, setTitle] = useState("");
@@ -119,10 +121,16 @@ export function ShareThreadDialog({
       setStatus("success");
     } catch (error) {
       if (cancelledRef.current) return;
-      setErrorMessage(_friendlyError(error));
+      setErrorMessage(
+        _friendlyError(error, {
+          signInRequired: t.share.errorSignInRequired,
+          rateLimit: t.share.errorRateLimit,
+          generic: t.share.errorGeneric,
+        })
+      );
       setStatus("error");
     }
-  }, [path, title, description]);
+  }, [path, title, description, t]);
 
   const handleGenerate = useCallback(() => {
     if (authState.status === "signedIn") {
@@ -182,25 +190,21 @@ export function ShareThreadDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share thread</DialogTitle>
+          <DialogTitle>{t.share.title}</DialogTitle>
           <DialogDescription>
-            Publish this thread to a link anyone can open in their browser.
+            {t.share.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-200/90">
           <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-amber-400" />
-          <p>
-            Anyone with the link can view the full thread — its prompts,
-            messages, and tool calls. It&rsquo;s published as a secret GitHub
-            Gist under your account; delete the gist to revoke access.
-          </p>
+          <p>{t.share.warning}</p>
         </div>
 
         {status === "success" ? (
           <div className="space-y-2">
             <span className="text-muted-foreground text-xs font-medium">
-              Share link
+              {t.share.shareLinkLabel}
             </span>
             <div className="flex items-center gap-2">
               <Input
@@ -220,7 +224,7 @@ export function ShareThreadDialog({
                 ) : (
                   <CopyIcon />
                 )}
-                {copied ? "Copied" : "Copy"}
+                {copied ? t.common.toasts.copied : t.share.copy}
               </Button>
             </div>
             <button
@@ -231,14 +235,14 @@ export function ShareThreadDialog({
               className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
             >
               <ExternalLinkIcon className="size-3.5" />
-              Open in browser
+              {t.share.openInBrowser}
             </button>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
               <span className="text-muted-foreground text-xs font-medium">
-                Share via
+                {t.share.shareVia}
               </span>
               <Select
                 value={connector}
@@ -251,31 +255,33 @@ export function ShareThreadDialog({
                 <SelectContent>
                   <SelectItem value={GIST_CONNECTOR}>
                     <GitHubIcon className="size-3.5" />
-                    GitHub Gist
+                    {t.share.githubGist}
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <span className="text-muted-foreground text-xs font-medium">
-                Title
+                {t.share.titleLabel}
               </span>
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Untitled thread"
+                placeholder={t.share.titlePlaceholder}
                 disabled={busy}
               />
             </div>
             <div className="space-y-1.5">
               <span className="text-muted-foreground text-xs font-medium">
-                Description{" "}
-                <span className="text-muted-foreground/60">(optional)</span>
+                {t.share.descriptionLabel}{" "}
+                <span className="text-muted-foreground/60">
+                  {t.share.descriptionOptional}
+                </span>
               </span>
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="What is this thread about?"
+                placeholder={t.share.descriptionPlaceholder}
                 disabled={busy}
                 rows={2}
               />
@@ -288,21 +294,23 @@ export function ShareThreadDialog({
 
         <DialogFooter>
           {status === "success" ? (
-            <Button onClick={() => handleOpenChange(false)}>Done</Button>
+            <Button onClick={() => handleOpenChange(false)}>
+              {t.common.done}
+            </Button>
           ) : (
             <>
               <Button variant="ghost" onClick={() => handleOpenChange(false)}>
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button onClick={handleGenerate} disabled={busy}>
                 {busy ? <Loader2Icon className="animate-spin" /> : null}
                 {status === "awaitingAuth"
-                  ? "Waiting for GitHub sign-in…"
+                  ? t.share.waitingForSignIn
                   : status === "generating"
-                    ? "Creating link…"
+                    ? t.share.creatingLink
                     : status === "error"
-                      ? "Try again"
-                      : "Generate link"}
+                      ? t.common.retry
+                      : t.share.generateLink}
               </Button>
             </>
           )}
@@ -314,9 +322,9 @@ export function ShareThreadDialog({
         open={confirmSignInOpen}
         onOpenChange={setConfirmSignInOpen}
         dimBackground={false}
-        title="Sign in to GitHub?"
-        description="Sharing publishes this thread as a secret GitHub Gist, so you need to sign in to GitHub first. Continue?"
-        confirmLabel="Sign in and continue"
+        title={t.share.signInTitle}
+        description={t.share.signInDescription}
+        confirmLabel={t.share.signInConfirm}
         confirmVariant="default"
         onConfirm={handleConfirmSignIn}
       />
@@ -325,13 +333,22 @@ export function ShareThreadDialog({
 }
 
 /** Map a share failure to a short, human message for the dialog. */
-function _friendlyError(error: unknown): string {
+function _friendlyError(
+  error: unknown,
+  messages: {
+    signInRequired: string;
+    rateLimit: string;
+    generic: string;
+  }
+): string {
   const message = error instanceof Error ? error.message : "";
   if (/sign-in required/i.test(message)) {
-    return "GitHub sign-in is required to share. Please sign in and try again.";
+    return messages.signInRequired;
   }
   if (/rate limit/i.test(message)) {
-    return "GitHub rate limit reached. Please wait a moment and try again.";
+    return messages.rateLimit;
   }
-  return message || "Couldn't create the share link. Please try again.";
+  // Keep a dynamic error.message as-is; fall back to the generic template only
+  // when there's no underlying message to surface.
+  return message || messages.generic;
 }

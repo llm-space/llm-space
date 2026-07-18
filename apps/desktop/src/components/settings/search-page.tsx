@@ -5,6 +5,7 @@ import {
   type SearchProviderId,
   type SearchSettings,
 } from "@llm-space/core";
+import { useI18n } from "@llm-space/ui/i18n";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ export function SearchPage() {
   const [settings, setSettings] = useState<SearchSettings>(
     DEFAULT_SEARCH_SETTINGS
   );
+  const { t } = useI18n();
 
   useEffect(() => {
     let cancelled = false;
@@ -47,34 +49,36 @@ export function SearchPage() {
       const saved = await setSearchSettings(next);
       setSettings(saved);
     } catch (error) {
-      toast.error("Failed to save search settings", {
+      toast.error(t.settings.search.saveFailed, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     }
-  }, []);
+  }, [t]);
 
   return (
     <SettingsPage
-      title="Search"
+      title={t.settings.search.title}
       description={
         <>
-          Choose the provider for the built-in <code>web_search</code> tool.
-          When Brave Search is selected, <code>web_fetch</code> continues to use
-          Firecrawl for safe page extraction.
+          {t.settings.search.descriptionBefore}
+          <code>web_search</code>
+          {t.settings.search.descriptionAfter}
+          <code>web_fetch</code>
+          {t.settings.search.descriptionTail}
         </>
       }
     >
       <div className="flex flex-col gap-4">
         <div className="flex h-14 items-center justify-between gap-4">
-          <span className="text-sm">Search provider</span>
+          <span className="text-sm">{t.settings.search.provider}</span>
           <Select
             value={settings.provider}
             onValueChange={(value) =>
               void persist({ ...settings, provider: value as SearchProviderId })
             }
           >
-            <SelectTrigger className="w-40" aria-label="Search provider">
+            <SelectTrigger className="w-40" aria-label={t.settings.search.provider}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -88,7 +92,7 @@ export function SearchPage() {
         <Separator />
 
         <ApiKeyField
-          label="Brave Search API key"
+          label={t.settings.search.braveApiKey}
           value={settings.braveApiKey}
           getKeyUrl="https://api-dashboard.search.brave.com/app/keys"
           onChange={(e) =>
@@ -98,7 +102,7 @@ export function SearchPage() {
         />
 
         <ApiKeyField
-          label="Firecrawl API key"
+          label={t.settings.search.firecrawlApiKey}
           value={settings.firecrawlApiKey}
           getKeyUrl="https://www.firecrawl.dev/app/api-keys"
           onChange={(e) =>
@@ -108,7 +112,7 @@ export function SearchPage() {
         />
 
         <ApiKeyField
-          label="Tavily API key"
+          label={t.settings.search.tavilyApiKey}
           value={settings.tavilyApiKey}
           getKeyUrl="https://app.tavily.com/home"
           onChange={(e) =>
@@ -118,9 +122,12 @@ export function SearchPage() {
         />
 
         <p className="text-muted-foreground text-xs">
-          Values starting with <code>$</code> are read from the environment
-          (e.g. <code>$BRAVE_SEARCH_API_KEY</code>,{" "}
-          <code>$FIRECRAWL_API_KEY</code>, <code>$TAVILY_API_KEY</code>).
+          {t.settings.search.envHintBefore}
+          <code>$</code>
+          {t.settings.search.envHintAfter}
+          <code>$BRAVE_SEARCH_API_KEY</code>, <code>$FIRECRAWL_API_KEY</code>,{" "}
+          <code>$TAVILY_API_KEY</code>
+          {t.settings.search.envHintTail}
         </p>
       </div>
     </SettingsPage>

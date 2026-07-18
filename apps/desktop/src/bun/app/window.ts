@@ -9,6 +9,7 @@ import {
 import { BrowserWindow, Updater } from "electrobun/bun";
 
 import type { Command } from "../../shared/commands";
+import type { Lang } from "../../shared/i18n";
 import type { MainWindowRPC } from "../rpc";
 
 import { registerMenuActions } from "./menu";
@@ -37,9 +38,12 @@ async function getMainViewUrl(): Promise<string> {
 export async function createMainWindow({
   rpc,
   executeCommand,
+  initialLang,
 }: {
   rpc: MainWindowRPC;
   executeCommand: (command: Command, window: BrowserWindow) => void;
+  /** The menu's initial language (from `LanguageManager`). */
+  initialLang: Lang;
 }): Promise<BrowserWindow> {
   const url = await getMainViewUrl();
   const windowState = await loadWindowState();
@@ -66,6 +70,6 @@ export async function createMainWindow({
       rpc.send.fullScreenChanged({ fullScreen });
     },
   });
-  registerMenuActions(window, executeCommand);
+  registerMenuActions(window, executeCommand, initialLang);
   return window;
 }

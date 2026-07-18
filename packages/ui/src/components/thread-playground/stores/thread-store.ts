@@ -8,7 +8,6 @@ import {
   Message,
   normalizeThread,
   reduceMessages,
-  RUN_LAST_MESSAGE_ERROR,
   streamThread,
   Tool as ToolSchema,
   uuid,
@@ -65,7 +64,7 @@ import { useShallow } from "zustand/shallow";
 
 import { createFrameThrottle } from "@llm-space/ui/lib/frame-throttle";
 
-
+import { enMessages, type Messages } from "../../../i18n/messages/en";
 import { PREVIEW_THROTTLE_MS } from "../streaming-preview";
 
 import {
@@ -88,6 +87,8 @@ const _noSkills = (): Promise<SkillInfo[]> => Promise.resolve([]);
  * against a model that calls tools without ever settling on an answer.
  */
 const MAX_AUTO_TOOL_TURNS = 50;
+
+type ThreadStoreMessages = Messages["thread"]["store"];
 
 export type ThreadStoreStatus = "idle" | "running";
 export interface ThreadState {
@@ -206,8 +207,10 @@ export function createThreadStore(
      * to none (e.g. a display-only web host).
      */
     loadSkills?: () => Promise<SkillInfo[]>;
+    getMessages?: () => ThreadStoreMessages;
   } = {}
 ): ThreadStore {
+  const getI18n = options.getMessages ?? (() => enMessages.thread.store);
   const normalizedInputThread = ensureThreadVariableState(
     normalizeThread(initialThread)
   );
@@ -300,8 +303,12 @@ export function createThreadStore(
       };
 
       const showDuplicateVariableName = (name: string) => {
-        toast.error("Variable name already exists", {
-          description: `"${name}" is already used by another variable.`,
+        const i18n = getI18n();
+        toast.error(i18n.duplicateVariableTitle, {
+          description: i18n.duplicateVariableDescription.replace(
+            "{name}",
+            name
+          ),
         });
       };
 
@@ -350,10 +357,12 @@ export function createThreadStore(
       /** Validate a tool against the schema, toasting the first errors. */
       const validateTool = (tool: Tool): boolean => {
         if (!toolValidator.Check(tool)) {
+          const i18n = getI18n();
           const errors = [...toolValidator.Errors(tool)];
-          toast.error("Error", {
+          toast.error(i18n.errorTitle, {
             description:
-              errors.map((e) => e.message).join(", ") || "Invalid tool",
+              errors.map((e) => e.message).join(", ") ||
+              i18n.invalidToolDescription,
           });
           return false;
         }
@@ -422,9 +431,9 @@ export function createThreadStore(
               typeof command === "string" &&
               isDangerousBashCommand(command)
             ) {
-              toast.warning("Auto-run paused for a risky command", {
-                description:
-                  "A bash command looked destructive, so it wasn't run automatically. Review it and run it by hand if it's safe.",
+              const i18n = getI18n();
+              toast.warning(i18n.riskyAutoRunTitle, {
+                description: i18n.riskyAutoRunDescription,
               });
               return null;
             }
@@ -440,8 +449,11 @@ export function createThreadStore(
               );
               return { id: toolCall.id, text: contentText, isError };
             } catch (error) {
+              const i18n = getI18n();
               const text =
-                error instanceof Error ? error.message : "Tool call failed";
+                error instanceof Error
+                  ? error.message
+                  : i18n.toolCallFailedFallback;
               return { id: toolCall.id, text, isError: true };
             }
           })
@@ -741,8 +753,12 @@ export function createThreadStore(
         addTool(tool) {
           const { thread } = get();
           if (thread.context?.tools?.some((t) => t.name === tool.name)) {
-            toast.error("Error", {
-              description: `Tool "${tool.name}" already exists`,
+            const i18n = getI18n();
+            toast.error(i18n.errorTitle, {
+              description: i18n.toolAlreadyExistsDescription.replace(
+                "{name}",
+                tool.name
+              ),
             });
             return false;
           }
@@ -762,8 +778,12 @@ export function createThreadStore(
             return false;
           }
           if (tool.name !== name && tools.some((t) => t.name === tool.name)) {
-            toast.error("Error", {
-              description: `Tool "${tool.name}" already exists`,
+            const i18n = getI18n();
+            toast.error(i18n.errorTitle, {
+              description: i18n.toolAlreadyExistsDescription.replace(
+                "{name}",
+                tool.name
+              ),
             });
             return false;
           }
@@ -864,7 +884,8 @@ export function createThreadStore(
           // cannot run.
           const model = options.resolveModel?.(get().thread.model) ?? null;
           if (!model) {
-            toast.error("Select a model to run");
+            const i18n = getI18n();
+            toast.error(i18n.selectModelToRun);
             return;
           }
           // Pre-flight: resolve the message list the run would use (including
@@ -881,7 +902,10 @@ export function createThreadStore(
             }
           }
           if (!isRunnableConversation(messages)) {
-            toast.error("Error", { description: RUN_LAST_MESSAGE_ERROR });
+            const i18n = getI18n();
+            toast.error(i18n.errorTitle, {
+              description: i18n.runLastMessageError,
+            });
             return;
           }
           let promptSnapshot: ThreadContext["snapshot"] =
@@ -895,11 +919,12 @@ export function createThreadStore(
             preparedContext = rendered.context;
             promptSnapshot = rendered.snapshot;
           } catch (error) {
-            toast.error("Unable to render prompt variables", {
+            const i18n = getI18n();
+            toast.error(i18n.renderVariablesFailedTitle, {
               description:
                 error instanceof PromptVariableError || error instanceof Error
                   ? error.message
-                  : "Please check the system prompt variables.",
+                  : i18n.renderVariablesFallback,
             });
             return;
           }
@@ -1122,7 +1147,8 @@ export function createThreadStore(
               failed = true;
               console.error(error);
               if (error instanceof Error) {
-                toast.error("Error", { description: error.message });
+                const i18n = getI18n();
+                toast.error(i18n.errorTitle, { description: error.message });
               }
               return "failed";
             }

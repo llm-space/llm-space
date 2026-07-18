@@ -6,8 +6,7 @@ import { CodeEditor } from "@llm-space/ui/components/code-editor";
 import { useHostServices } from "@llm-space/ui/host";
 import { cn } from "@llm-space/ui/lib/utils";
 
-
-
+import { useI18n } from "../../../i18n";
 import metaPrompt from "../examples/meta-prompt.md?raw";
 import { PROMPT_EXAMPLES, resolveSeed } from "../examples/prompts";
 import { ExamplesMenu } from "../examples-menu";
@@ -35,6 +34,7 @@ function _SystemPromptEditor({
   const seedHost = useHostServices();
   const { presentational } = seedHost;
   const { updateSystemPrompt } = useThreadStoreActions();
+  const { t } = useI18n();
   const variableExtension = usePromptVariableExtension(SYSTEM_PROMPT_PLACE_KEY);
   const handleChange = useCallback(
     (value: string) => {
@@ -115,15 +115,26 @@ function _SystemPromptEditor({
   return (
     <div className={cn("flex size-full flex-col", className)}>
       <div className="flex shrink-0 items-center justify-between py-2">
-        <div className="text-muted-foreground text-sm">System prompt</div>
+        <div className="text-muted-foreground text-sm">{t.thread.prompt.sectionLabel}</div>
         {!presentational && (
           <div className="flex items-center gap-2">
             <GeneratePopoverButton
-              placeholder="Describe the assistant you want (its role, tone, and rules), and we'll generate a system prompt."
+              placeholder={t.thread.prompt.generateSystemHint}
               onGenerate={handleGenerate}
             />
             <ExamplesMenu
               items={PROMPT_EXAMPLES}
+              labelResolver={(example) => {
+                // prompts.ts is a data module (not React), so it carries
+                // hardcoded English labels; resolve the localized label from
+                // the catalog by the example's stable id, falling back to the
+                // example's own label. Mirrors the start-from-example dialog.
+                // `misc` is indexed dynamically (the `exampleLabel_*` keys are
+                // an open set keyed by example id).
+                const misc = t.thread.misc as unknown as Record<string, string>;
+                const key = `exampleLabel_${example.id.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())}`;
+                return misc[key] ?? example.label;
+              }}
               onSelect={(example) =>
                 void resolveSeed(example.content, seedHost).then((content) => {
                   if (content !== undefined) handleExampleSelect(content);
@@ -138,7 +149,7 @@ function _SystemPromptEditor({
         value={systemPrompt ?? ""}
         language="markdown"
         readonly={readonly || streaming}
-        placeholder="Enter system prompt here"
+        placeholder={t.thread.prompt.editorPlaceholder}
         extraExtensions={variableExtension}
         onChange={handleChange}
       />

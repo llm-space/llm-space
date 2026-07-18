@@ -1,16 +1,19 @@
 import { cn } from "@llm-space/ui/lib/utils";
 import { Skeleton } from "@llm-space/ui/ui/skeleton";
 
+import { useI18n } from "../../../i18n";
+
 export function ThreadPlaygroundSkeleton({
   className,
 }: {
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={cn("flex flex-col overflow-hidden", className)}
       aria-busy
-      aria-label="Loading thread playground"
+      aria-label={t.thread.misc.loadingThreadPlaygroundAria}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-12 w-full shrink-0 items-center border-b">
@@ -31,7 +34,7 @@ export function ThreadPlaygroundSkeleton({
           <div className="flex w-1/2 min-w-[300px] flex-col px-3 pb-3">
             <div className="flex w-full border-b py-2">
               <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                Models
+                {t.thread.misc.modelsLabel}
               </div>
               <div className="flex grow items-center">
                 <Skeleton className="h-6 w-44 rounded-md" />
@@ -39,7 +42,7 @@ export function ThreadPlaygroundSkeleton({
             </div>
             <div className="flex w-full border-b py-2">
               <div className="text-muted-foreground w-20 shrink-0 text-sm">
-                Tools
+                {t.thread.misc.toolsLabel}
               </div>
               <div className="flex grow items-center gap-2">
                 <Skeleton className="h-6 w-28 rounded-md" />
@@ -48,7 +51,7 @@ export function ThreadPlaygroundSkeleton({
             </div>
             <div className="flex min-h-0 w-full grow flex-col">
               <div className="text-muted-foreground shrink-0 py-2 text-sm">
-                System prompt
+                {t.thread.misc.systemPromptLabel}
               </div>
               <div className="flex min-h-0 grow flex-col gap-2 rounded-md border bg-(--textarea) px-3 py-3">
                 <Skeleton className="h-3.5 w-full rounded" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { ConfirmDialog } from "@llm-space/ui/components/confirm-dialog";
+import { useI18n } from "@llm-space/ui/i18n";
 import { Switch } from "@llm-space/ui/ui/switch";
 import { useState } from "react";
 
@@ -14,6 +15,7 @@ export function ExperimentalPage() {
     useExperimental();
   const { executeCommand } = useCommands();
   const [reloadPromptOpen, setReloadPromptOpen] = useState(false);
+  const { t, fmt } = useI18n();
 
   const handleReactScanChange = (next: boolean) => {
     setReactScanEnabled(next);
@@ -23,34 +25,32 @@ export function ExperimentalPage() {
   };
 
   return (
-    <SettingsPage title="Experimental">
+    <SettingsPage title={t.settings.experimental.title}>
       <div className="flex h-14 items-center justify-between gap-4">
         <span className="flex flex-col gap-0.5 text-sm">
-          Tracing
+          {t.settings.experimental.tracing}
           <span className="text-muted-foreground text-xs">
-            Enable to connect Langfuse or create a manual project for JSON
-            exports.
+            {t.settings.experimental.tracingHint}
           </span>
         </span>
         <Switch
           checked={tracingEnabled}
           onCheckedChange={setTracingEnabled}
-          aria-label="Tracing"
+          aria-label={t.settings.experimental.tracing}
         />
       </div>
       {import.meta.env.DEV ? (
         <div className="flex h-14 items-center justify-between gap-4">
           <span className="flex flex-col gap-0.5 text-sm">
-            React Scan
+            {t.settings.experimental.reactScan}
             <span className="text-muted-foreground text-xs">
-              Overlay that highlights component re-renders. Takes effect after a
-              reload. Dev builds only.
+              {t.settings.experimental.reactScanHint}
             </span>
           </span>
           <Switch
             checked={reactScanEnabled}
             onCheckedChange={handleReactScanChange}
-            aria-label="React Scan"
+            aria-label={t.settings.experimental.reactScan}
           />
         </div>
       ) : null}
@@ -58,12 +58,14 @@ export function ExperimentalPage() {
         open={reloadPromptOpen}
         onOpenChange={setReloadPromptOpen}
         dimBackground={false}
-        title="Reload to apply?"
-        description={`React Scan will be ${
-          reactScanEnabled ? "enabled" : "disabled"
-        } after the app reloads. Reload now?`}
-        cancelLabel="Later"
-        confirmLabel="Reload"
+        title={t.settings.experimental.reloadTitle}
+        description={fmt(t.settings.experimental.reloadDescription, {
+          state: reactScanEnabled
+            ? t.settings.experimental.enabled
+            : t.settings.experimental.disabled,
+        })}
+        cancelLabel={t.settings.experimental.later}
+        confirmLabel={t.settings.experimental.reload}
         confirmVariant="default"
         onConfirm={() => {
           setReloadPromptOpen(false);

@@ -7,6 +7,7 @@ import type {
 import { readLatestThread } from "@llm-space/core/storage";
 import { ThreadPlayground } from "@llm-space/ui/components/thread-playground";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   ExpandIcon,
@@ -79,6 +80,7 @@ export function ThreadViewer({
   connector: ThreadConnector;
   threadId: string;
 }) {
+  const { t } = useI18n();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [fullscreen, setFullscreen] = useState(false);
   const navigate = useNavigate();
@@ -100,14 +102,16 @@ export function ThreadViewer({
           setState({
             status: "error",
             message:
-              error instanceof Error ? error.message : "Failed to load.",
+              error instanceof Error
+                ? error.message
+                : t.viewer.loading.failedToLoad,
           });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [connector, threadId]);
+  }, [connector, threadId, t.viewer.loading.failedToLoad]);
 
   // Let Escape leave full screen.
   useEffect(() => {
@@ -123,7 +127,7 @@ export function ThreadViewer({
     return (
       <div className="dark flex h-dvh items-center justify-center gap-2 bg-[#08080a] text-sm text-neutral-400">
         <Loader2Icon className="size-4 animate-spin" />
-        Loading shared thread…
+        {t.viewer.loading.loadingSharedThread}
       </div>
     );
   }
@@ -136,15 +140,23 @@ export function ThreadViewer({
     <div className="flex items-center gap-2">
       {fullscreen ? (
         <Button size="sm" onClick={openApp}>
-          Open in LLM Space
+          {t.viewer.actions.openInLlmSpace}
           <ExternalLinkIcon className="size-3.5" />
         </Button>
       ) : null}
-      <Tooltip content={fullscreen ? "Exit full screen" : "Full screen"}>
+      <Tooltip
+        content={
+          fullscreen ? t.viewer.fullscreen.exitFullScreen : t.viewer.fullscreen.enterFullScreen
+        }
+      >
         <Button
           variant="ghost"
           size="icon-lg"
-          aria-label={fullscreen ? "Exit full screen" : "Enter full screen"}
+          aria-label={
+            fullscreen
+              ? t.viewer.fullscreen.exitFullScreenAria
+              : t.viewer.fullscreen.enterFullScreenAria
+          }
           aria-pressed={fullscreen}
           onClick={() => setFullscreen((value) => !value)}
         >
@@ -197,14 +209,15 @@ function SharedThreadMetaBlock({
   meta: SharedThreadMeta;
   onOpenApp: () => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <section className="flex shrink-0 flex-col gap-6 py-5 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-2">
         <div className="text-xs font-medium tracking-widest text-neutral-500 uppercase">
-          Shared thread
+          {t.viewer.meta.sharedThread}
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-white">
-          {meta.title ?? "Untitled thread"}
+          {meta.title ?? t.viewer.meta.untitledThread}
         </h1>
         {meta.description ? (
           <p className="max-w-2xl text-sm text-neutral-400">
@@ -236,12 +249,14 @@ function SharedThreadMetaBlock({
           <Tooltip
             content={
               meta.createdAt
-                ? `Created ${formatDateTime(meta.createdAt)}`
+                ? fmt(t.viewer.meta.created, {
+                    date: formatDateTime(meta.createdAt),
+                  })
                 : undefined
             }
           >
             <span className="text-xs text-neutral-500">
-              Last updated {formatDate(meta.updatedAt)}
+              {fmt(t.viewer.meta.lastUpdated, { date: formatDate(meta.updatedAt) })}
             </span>
           </Tooltip>
         ) : null}
@@ -260,13 +275,14 @@ function SharedThreadMetaBlock({
               />
             ) : null}
             <span>
-              Shared by{" "}
-              <span className="font-medium text-white">{meta.author.name}</span>
+              {fmt(t.viewer.meta.sharedBy, {
+                author: meta.author.name,
+              })}
             </span>
           </a>
         ) : null}
         <Button size="lg" onClick={onOpenApp}>
-          Open in LLM Space
+          {t.viewer.actions.openInLlmSpace}
           <ExternalLinkIcon className="size-4" />
         </Button>
       </div>

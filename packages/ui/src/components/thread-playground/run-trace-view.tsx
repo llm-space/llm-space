@@ -10,6 +10,7 @@ import { format } from "timeago.js";
 
 import { cn } from "@llm-space/ui/lib/utils";
 
+import { useI18n } from "../../i18n";
 
 import { MessageListView } from "./message/message-list-view";
 import { TokenUsageSummary } from "./message/token-usage-summary";
@@ -21,10 +22,11 @@ function _RunTraceView({
   className?: string;
   run: RunSnapshot | null;
 }) {
+  const { t } = useI18n();
   if (!run) {
     return (
       <div className="text-muted-foreground px-4 py-8 text-center text-xs">
-        Select a saved run to inspect.
+        {t.thread.runHistory.selectRunToInspect}
       </div>
     );
   }
@@ -32,7 +34,8 @@ function _RunTraceView({
   const messages = run.thread.context?.messages ?? [];
   const usage = usageForRun(run);
   const systemPrompt =
-    run.thread.context?.systemPrompt?.trim() || "No system prompt";
+    run.thread.context?.systemPrompt?.trim() ||
+    t.thread.runHistory.noSystemPrompt;
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
@@ -54,7 +57,7 @@ function _RunTraceView({
       </div>
       <details className="group shrink-0 border-b px-3 py-2">
         <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-[0.625rem] font-medium">
-          System Prompt
+          {t.thread.runHistory.systemPrompt}
         </summary>
         <pre
           className={cn(

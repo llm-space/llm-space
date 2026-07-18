@@ -7,6 +7,7 @@ import {
   isPromptExample,
   type PromptExample,
 } from "@llm-space/ui/components/thread-playground/examples/prompts";
+import { useI18n } from "@llm-space/ui/i18n";
 import {
   Dialog,
   DialogContent,
@@ -37,9 +38,27 @@ export function StartFromExampleDialog({
   onOpenChange: (open: boolean) => void;
   onSelectExample: (example: PromptExample) => void;
 }) {
+  const { t } = useI18n();
   const selectExample = (example: PromptExample) => {
     onOpenChange(false);
     onSelectExample(example);
+  };
+
+  // Resolve a prompt example's localized label/description from the i18n catalog
+  // by its stable `id` (kebab-case → camelCase suffix). `prompts.ts` is a data
+  // module (not React), so it can't call useI18n — the catalog holds the
+  // translations keyed by id. Falls back to the example's own English fields.
+  // The `misc` subtree is indexed dynamically (the `exampleLabel_*` /
+  // `exampleDescription_*` keys are an open set keyed by example id), so a
+  // `Record<string, string>` view is the correct access shape here.
+  const misc = t.thread.misc as unknown as Record<string, string>;
+  const labelFor = (example: PromptExample): string => {
+    const key = `exampleLabel_${_kebabToCamel(example.id)}`;
+    return misc[key] ?? example.label;
+  };
+  const descriptionFor = (example: PromptExample): string => {
+    const key = `exampleDescription_${_kebabToCamel(example.id)}`;
+    return misc[key] ?? example.description;
   };
 
   return (
@@ -51,10 +70,10 @@ export function StartFromExampleDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <SparklesIcon className="size-3.5" /> Start from examples
+            <SparklesIcon className="size-3.5" /> {t.tabs.startExample.title}
           </DialogTitle>
           <DialogDescription className="pl-5.5">
-            Choose a prompt example to create a new thread.
+            {t.tabs.startExample.description}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[80vh]">
@@ -76,9 +95,9 @@ export function StartFromExampleDialog({
                       <Icon />
                     </ItemMedia>
                     <ItemContent>
-                      <ItemTitle>{item.label}</ItemTitle>
+                      <ItemTitle>{labelFor(item)}</ItemTitle>
                       <ItemDescription>
-                        <Markdown>{item.description}</Markdown>
+                        <Markdown>{descriptionFor(item)}</Markdown>
                       </ItemDescription>
                     </ItemContent>
                   </button>
@@ -90,4 +109,9 @@ export function StartFromExampleDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** `general-agent` → `generalAgent`. Empty/dynamic ids fall through unchanged. */
+function _kebabToCamel(id: string): string {
+  return id.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }

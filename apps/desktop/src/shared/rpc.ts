@@ -23,6 +23,7 @@ import type { RPCSchema } from "electrobun";
 import type { AnalyticsEvent, AnalyticsStatus } from "./analytics";
 import type { GithubAuthState } from "./auth";
 import type { Command } from "./commands";
+import type { Lang } from "./i18n";
 import type { SharedImportStatusPayload } from "./shared-import";
 import type {
   TraceConnectedProjectInput,
@@ -388,6 +389,17 @@ export interface DesktopRPCType {
         params: Record<string, never>;
         response: GithubAuthState;
       };
+      // The user's UI language (`en` | `zh`). `null` means "follow the OS".
+      // `setLanguage` persists to `settings/language.json` and rebuilds the
+      // native menu; the resolved language is echoed back.
+      getLanguage: {
+        params: Record<string, never>;
+        response: { language: Lang };
+      };
+      setLanguage: {
+        params: { language: Lang | null };
+        response: { language: Lang };
+      };
     };
     // Messages the webview SENDS and the bun side handles.
     messages: {
@@ -416,6 +428,10 @@ export interface DesktopRPCType {
       // GitHub sign-in state changed (signed in/out, or a Device Flow started /
       // failed). Drives the sidebar account widget and the Account settings page.
       githubAuthChanged: GithubAuthState;
+      // The UI language changed (user picked one in Settings). Lets the
+      // renderer resync its `I18nProvider` even when the change originated
+      // elsewhere (e.g. a future CLI flag).
+      languageChanged: { language: Lang };
       // A unified command dispatched from the bun process (native menu / global
       // shortcuts) to run in the webview. See `shared/commands.ts`.
       executeCommand: Command;

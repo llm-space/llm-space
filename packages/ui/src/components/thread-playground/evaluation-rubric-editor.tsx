@@ -25,6 +25,8 @@ import { Button } from "@llm-space/ui/ui/button";
 import { Input } from "@llm-space/ui/ui/input";
 import { Textarea } from "@llm-space/ui/ui/textarea";
 
+import { useI18n } from "../../i18n";
+
 function _emptyCriterion(): EvaluationCriterion {
   return { id: uuid(), name: "" };
 }
@@ -50,6 +52,7 @@ export function EvaluationRubricEditor({
   onRemove: (id: string) => boolean;
   onSaved: (rubric: EvaluationRubricRecord) => void;
 }) {
+  const { t, fmt } = useI18n();
   const [name, setName] = useState(rubric?.name ?? "");
   const [criteria, setCriteria] = useState(() => _initialCriteria(rubric));
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -120,8 +123,8 @@ export function EvaluationRubricEditor({
       })),
     });
     if (!saved) {
-      toast.error("Unable to save rubric", {
-        description: "Check the rubric fields or the thread rubric limit.",
+      toast.error(t.thread.evaluation.saveRubricErrorToast, {
+        description: t.thread.evaluation.saveRubricErrorToastDescription,
       });
       return;
     }
@@ -133,21 +136,25 @@ export function EvaluationRubricEditor({
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <label className="flex flex-col gap-2">
-            <span className="text-xs font-medium">Rubric name</span>
+            <span className="text-xs font-medium">
+              {t.thread.evaluation.rubricNameLabel}
+            </span>
             <Input
               value={name}
               maxLength={MAX_RUBRIC_NAME_LENGTH}
               autoFocus
-              placeholder="Answer quality"
+              placeholder={t.thread.evaluation.rubricNamePlaceholder}
               onChange={(event) => setName(event.currentTarget.value)}
             />
           </label>
 
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-medium">Criteria</div>
+              <div className="text-xs font-medium">
+                {t.thread.evaluation.criteriaLabel}
+              </div>
               <div className="text-muted-foreground text-[0.625rem]">
-                Use 2–6 dimensions. Every score uses 1 = poor and 5 = excellent.
+                {t.thread.evaluation.criteriaHint}
               </div>
             </div>
             <Button
@@ -159,7 +166,7 @@ export function EvaluationRubricEditor({
               }
             >
               <PlusIcon className="size-3" />
-              Add criterion
+              {t.thread.evaluation.addCriterionButton}
             </Button>
           </div>
 
@@ -176,13 +183,15 @@ export function EvaluationRubricEditor({
                     <div className="min-w-0 flex-1 space-y-2">
                       <label className="flex flex-col gap-1">
                         <span className="text-muted-foreground text-[0.625rem]">
-                          Criterion {index + 1}
+                          {fmt(t.thread.evaluation.criterionIndex, {
+                            index: index + 1,
+                          })}
                         </span>
                         <Input
                           value={criterion.name}
                           maxLength={MAX_CRITERION_NAME_LENGTH}
                           aria-invalid={duplicate || !criterion.name.trim()}
-                          placeholder="Correctness"
+                          placeholder={t.thread.evaluation.criterionNamePlaceholder}
                           onChange={(event) =>
                             updateCriterion(criterion.id, {
                               name: event.currentTarget.value,
@@ -191,19 +200,21 @@ export function EvaluationRubricEditor({
                         />
                         {duplicate && (
                           <span className="text-destructive text-[0.625rem]">
-                            Criterion names must be unique.
+                            {t.thread.evaluation.criterionNameDuplicate}
                           </span>
                         )}
                       </label>
                       <label className="flex flex-col gap-1">
                         <span className="text-muted-foreground text-[0.625rem]">
-                          Description (optional)
+                          {t.thread.evaluation.criterionDescriptionLabel}
                         </span>
                         <Textarea
                           className="min-h-16 resize-y text-xs"
                           value={criterion.description ?? ""}
                           maxLength={MAX_CRITERION_DESCRIPTION_LENGTH}
-                          placeholder="What should a reviewer look for?"
+                          placeholder={
+                            t.thread.evaluation.criterionDescriptionPlaceholder
+                          }
                           onChange={(event) =>
                             updateCriterion(criterion.id, {
                               description: event.currentTarget.value,
@@ -213,34 +224,65 @@ export function EvaluationRubricEditor({
                       </label>
                     </div>
                     <div className="flex shrink-0 flex-col gap-1">
-                      <Tooltip content="Move criterion up">
+                      <Tooltip content={t.thread.evaluation.moveCriterionUpTooltip}>
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          aria-label={`Move ${criterion.name || `criterion ${index + 1}`} up`}
+                          aria-label={fmt(
+                            t.thread.evaluation.moveCriterionUpAria,
+                            {
+                              name:
+                                criterion.name ||
+                                fmt(t.thread.evaluation.criterionIndex, {
+                                  index: index + 1,
+                                }),
+                            }
+                          )}
                           disabled={index === 0}
                           onClick={() => moveCriterion(index, -1)}
                         >
                           <ArrowUpIcon className="size-3" />
                         </Button>
                       </Tooltip>
-                      <Tooltip content="Move criterion down">
+                      <Tooltip
+                        content={t.thread.evaluation.moveCriterionDownTooltip}
+                      >
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          aria-label={`Move ${criterion.name || `criterion ${index + 1}`} down`}
+                          aria-label={fmt(
+                            t.thread.evaluation.moveCriterionDownAria,
+                            {
+                              name:
+                                criterion.name ||
+                                fmt(t.thread.evaluation.criterionIndex, {
+                                  index: index + 1,
+                                }),
+                            }
+                          )}
                           disabled={index === criteria.length - 1}
                           onClick={() => moveCriterion(index, 1)}
                         >
                           <ArrowDownIcon className="size-3" />
                         </Button>
                       </Tooltip>
-                      <Tooltip content="Remove criterion">
+                      <Tooltip
+                        content={t.thread.evaluation.removeCriterionTooltip}
+                      >
                         <Button
                           size="icon-sm"
                           variant="ghost"
                           className="hover:text-destructive"
-                          aria-label={`Remove ${criterion.name || `criterion ${index + 1}`}`}
+                          aria-label={fmt(
+                            t.thread.evaluation.removeCriterionAria,
+                            {
+                              name:
+                                criterion.name ||
+                                fmt(t.thread.evaluation.criterionIndex, {
+                                  index: index + 1,
+                                }),
+                            }
+                          )}
                           disabled={criteria.length <= MIN_RUBRIC_CRITERIA}
                           onClick={() =>
                             setCriteria((current) =>
@@ -271,17 +313,19 @@ export function EvaluationRubricEditor({
               onClick={() => setRemoveOpen(true)}
             >
               <Trash2Icon className="size-3" />
-              Delete rubric
+              {t.thread.evaluation.deleteRubricButton}
             </Button>
           )}
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeftIcon className="size-3" />
-            Back
+            {t.thread.evaluation.backButton}
           </Button>
           <Button disabled={!valid} onClick={handleSave}>
-            {rubric ? "Save rubric" : "Create rubric"}
+            {rubric
+              ? t.thread.evaluation.saveRubricButton
+              : t.thread.evaluation.createRubricButton}
           </Button>
         </div>
       </div>
@@ -289,9 +333,9 @@ export function EvaluationRubricEditor({
       <ConfirmDialog
         open={removeOpen}
         onOpenChange={setRemoveOpen}
-        title="Delete rubric?"
-        description="The reusable definition will be removed. Saved evaluations keep their immutable rubric snapshots and scores."
-        confirmLabel="Delete"
+        title={t.thread.evaluation.confirmDeleteRubricTitle}
+        description={t.thread.evaluation.confirmDeleteRubricDescription}
+        confirmLabel={t.thread.evaluation.confirmDeleteRubricAction}
         dimBackground={false}
         onConfirm={() => {
           setRemoveOpen(false);

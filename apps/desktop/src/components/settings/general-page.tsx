@@ -15,6 +15,7 @@ import {
   type Theme,
 } from "@llm-space/ui/components/theme-provider";
 import { ModelAvatar } from "@llm-space/ui/components/thread-playground/model-avatar";
+import { LANGUAGES, useI18n, type Lang } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   Select,
@@ -110,6 +111,7 @@ function DefaultModelSelect() {
   const providers = useModels();
   const defaultModel = useDefaultModel();
   const setDefaultModel = useSetDefaultModel();
+  const { t } = useI18n();
 
   const groups = useMemo(
     () =>
@@ -148,11 +150,16 @@ function DefaultModelSelect() {
 
   return (
     <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger className="w-64" aria-label="Default model">
+      <SelectTrigger
+        className="w-64"
+        aria-label={t.settings.general.defaultModelAria}
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={AUTO_DEFAULT_MODEL}>Automatic</SelectItem>
+        <SelectItem value={AUTO_DEFAULT_MODEL}>
+          {t.settings.general.automatic}
+        </SelectItem>
         {groups.length > 0 ? <SelectSeparator /> : null}
         {groups.map((group) => (
           <SelectGroup key={group.id}>
@@ -189,6 +196,7 @@ function DefaultModelSelect() {
 function AnalyticsRow() {
   const [enabled, setEnabled] = useState(DEFAULT_ANALYTICS_SETTINGS.enabled);
   const [available, setAvailable] = useState(true);
+  const { t } = useI18n();
 
   useEffect(() => {
     let cancelled = false;
@@ -206,28 +214,31 @@ function AnalyticsRow() {
     };
   }, []);
 
-  const handleChange = useCallback(async (next: boolean) => {
-    setEnabled(next); // Optimistic; the RPC echoes the input, so no reconcile.
-    try {
-      await setAnalyticsSettings(next);
-    } catch (error) {
-      setEnabled(!next);
-      toast.error("Failed to update analytics setting", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    }
-  }, []);
+  const handleChange = useCallback(
+    async (next: boolean) => {
+      setEnabled(next); // Optimistic; the RPC echoes the input, so no reconcile.
+      try {
+        await setAnalyticsSettings(next);
+      } catch (error) {
+        setEnabled(!next);
+        toast.error(t.settings.general.analyticsUpdateFailed, {
+          description:
+            error instanceof Error ? error.message : t.common.toasts.tryAgain,
+        });
+      }
+    },
+    [t.common.toasts.tryAgain, t.settings.general.analyticsUpdateFailed]
+  );
 
   return (
     <SettingsRow
       label={
         <span className="flex flex-col gap-0.5">
-          Share anonymous usage analytics
+          {t.settings.general.analytics}
           <span className="text-muted-foreground text-xs">
             {available
-              ? "Helps improve the app. Only anonymous actions are sent - never your prompts, messages, or API keys."
-              : "Telemetry is turned off in this build or environment. Nothing is sent."}
+              ? t.settings.general.analyticsHint
+              : t.settings.general.analyticsUnavailableHint}
           </span>
         </span>
       }
@@ -236,7 +247,7 @@ function AnalyticsRow() {
         checked={available && enabled}
         disabled={!available}
         onCheckedChange={(next) => void handleChange(next)}
-        aria-label="Share anonymous usage analytics"
+        aria-label={t.settings.general.analyticsAria}
       />
     </SettingsRow>
   );
@@ -295,6 +306,7 @@ export function GeneralPage() {
   const { theme, setTheme } = useTheme();
   const { executeCommand } = useCommands();
   const { fidelity, setFidelity } = useRenderingFidelity();
+  const { lang, setLang, t } = useI18n();
   const [updateMode, setUpdateMode] = useUpdateMode();
   const {
     primaryColor,
@@ -304,23 +316,27 @@ export function GeneralPage() {
   } = usePrimaryColor();
   const showResetPrimaryColor = primaryColor !== DEFAULT_PRIMARY;
   return (
-    <SettingsPage title="General" className="overflow-y-auto">
+    <SettingsPage title={t.settings.general.title} className="overflow-y-auto">
       <div className="flex flex-col gap-7 pb-2">
-        <SettingsSection title="Appearance">
+        <SettingsSection title={t.settings.general.appearance}>
           <SettingsRow
             label={
               <RowLabel
-                title="Language"
-                hint="English only for now — more languages are coming."
+                title={t.settings.general.language}
+                hint={t.settings.general.languageHint}
               />
             }
           >
-            <Select defaultValue="en-US" disabled>
-              <SelectTrigger className="w-32" aria-label="Language">
+            <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+              <SelectTrigger className="w-32" aria-label={t.settings.general.language}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="en-US">English (US)</SelectItem>
+                {LANGUAGES.map((language) => (
+                  <SelectItem key={language.code} value={language.code}>
+                    {language.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </SettingsRow>
@@ -328,19 +344,28 @@ export function GeneralPage() {
           <SettingsRow
             label={
               <RowLabel
-                title="Theme"
-                hint="Match your system setting, or force light or dark."
+                title={t.settings.general.theme}
+                hint={t.settings.general.themeHint}
               />
             }
           >
             <Select value={theme} onValueChange={(v) => setTheme(v as Theme)}>
-              <SelectTrigger className="w-32" aria-label="Theme">
+              <SelectTrigger
+                className="w-32"
+                aria-label={t.settings.general.theme}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="light">
+                  {t.settings.general.themeLight}
+                </SelectItem>
+                <SelectItem value="dark">
+                  {t.settings.general.themeDark}
+                </SelectItem>
+                <SelectItem value="system">
+                  {t.settings.general.themeSystem}
+                </SelectItem>
               </SelectContent>
             </Select>
           </SettingsRow>
@@ -348,8 +373,8 @@ export function GeneralPage() {
           <SettingsRow
             label={
               <RowLabel
-                title="Primary color"
-                hint="The accent color for buttons, links, and highlights."
+                title={t.settings.general.primaryColor}
+                hint={t.settings.general.primaryColorHint}
               />
             }
           >
@@ -360,7 +385,7 @@ export function GeneralPage() {
                   variant="secondary"
                   onClick={resetPrimaryColor}
                 >
-                  Reset
+                  {t.settings.general.reset}
                 </Button>
               ) : null}
               <PrimaryColorPicker
@@ -374,8 +399,8 @@ export function GeneralPage() {
           <SettingsRow
             label={
               <RowLabel
-                title="Rendering"
-                hint="Full renders messages with full editors. Fast shows them as plain text for smoother scrolling on large threads."
+                title={t.settings.general.rendering}
+                hint={t.settings.general.renderingHint}
               />
             }
           >
@@ -383,23 +408,30 @@ export function GeneralPage() {
               value={fidelity}
               onValueChange={(v) => setFidelity(v as RenderingFidelity)}
             >
-              <SelectTrigger className="w-32" aria-label="Rendering fidelity">
+              <SelectTrigger
+                className="w-32"
+                aria-label={t.settings.general.renderingFidelityAria}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="rich">Full</SelectItem>
-                <SelectItem value="lite">Fast</SelectItem>
+                <SelectItem value="rich">
+                  {t.settings.general.renderingFull}
+                </SelectItem>
+                <SelectItem value="lite">
+                  {t.settings.general.renderingFast}
+                </SelectItem>
               </SelectContent>
             </Select>
           </SettingsRow>
         </SettingsSection>
 
-        <SettingsSection title="Defaults">
+        <SettingsSection title={t.settings.general.defaults}>
           <SettingsRow
             label={
               <RowLabel
-                title="Default model"
-                hint="Used for new threads, and when a thread's model is no longer available."
+                title={t.settings.general.defaultModel}
+                hint={t.settings.general.defaultModelHint}
               />
             }
           >
@@ -407,12 +439,12 @@ export function GeneralPage() {
           </SettingsRow>
         </SettingsSection>
 
-        <SettingsSection title="Data & privacy">
+        <SettingsSection title={t.settings.general.dataPrivacy}>
           <SettingsRow
             label={
               <RowLabel
-                title="Workspace folder"
-                hint="Where your threads are stored on disk."
+                title={t.settings.general.workspaceFolder}
+                hint={t.settings.general.workspaceFolderHint}
               />
             }
           >
@@ -422,12 +454,12 @@ export function GeneralPage() {
           <AnalyticsRow />
         </SettingsSection>
 
-        <SettingsSection title="Updates">
+        <SettingsSection title={t.settings.general.updates}>
           <SettingsRow
             label={
               <RowLabel
-                title="Software updates"
-                hint="Automatic downloads updates in the background and prompts you to restart."
+                title={t.settings.general.softwareUpdates}
+                hint={t.settings.general.softwareUpdatesHint}
               />
             }
           >
@@ -436,13 +468,22 @@ export function GeneralPage() {
                 value={updateMode}
                 onValueChange={(v) => setUpdateMode(v as UpdateMode)}
               >
-                <SelectTrigger className="w-40" aria-label="Software updates">
+                <SelectTrigger
+                  className="w-40"
+                  aria-label={t.settings.general.softwareUpdates}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="automatic">Automatic</SelectItem>
-                  <SelectItem value="manual">Check manually</SelectItem>
-                  <SelectItem value="off">Off</SelectItem>
+                  <SelectItem value="automatic">
+                    {t.settings.general.updateModeAutomatic}
+                  </SelectItem>
+                  <SelectItem value="manual">
+                    {t.settings.general.updateModeManual}
+                  </SelectItem>
+                  <SelectItem value="off">
+                    {t.settings.general.updateModeOff}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -451,7 +492,7 @@ export function GeneralPage() {
                   executeCommand({ type: "checkForUpdates", args: {} })
                 }
               >
-                Check now
+                {t.settings.general.checkNow}
               </Button>
             </div>
           </SettingsRow>

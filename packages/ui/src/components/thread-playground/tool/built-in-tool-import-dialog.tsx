@@ -24,6 +24,8 @@ import { Input } from "@llm-space/ui/ui/input";
 import { Switch } from "@llm-space/ui/ui/switch";
 
 
+import { useI18n } from "../../../i18n";
+
 import { getBuiltInToolIcon } from "./built-in-tool-icon";
 import { ToolImportSidebarActions } from "./tool-import-sidebar-actions";
 
@@ -31,14 +33,13 @@ type BuiltInToolCategoryId = "fileSystem" | "web" | "misc";
 
 interface BuiltInToolCategory {
   id: BuiltInToolCategoryId;
-  label: string;
   icon: LucideIcon;
 }
 
 const BUILT_IN_TOOL_CATEGORIES: BuiltInToolCategory[] = [
-  { id: "fileSystem", label: "File system", icon: FilesIcon },
-  { id: "web", label: "Web", icon: GlobeIcon },
-  { id: "misc", label: "Misc", icon: CloudSunIcon },
+  { id: "fileSystem", icon: FilesIcon },
+  { id: "web", icon: GlobeIcon },
+  { id: "misc", icon: CloudSunIcon },
 ];
 
 const FILE_SYSTEM_TOOL_NAMES = new Set([
@@ -84,17 +85,29 @@ function _BuiltInToolImportDialog({
   );
   const toolRowRefs = useRef(new Map<string, HTMLDivElement>());
   const { builtinTools } = useHostServices();
+  const { t, fmt } = useI18n();
+
+  const categoryLabel = useCallback((id: BuiltInToolCategoryId): string => {
+    switch (id) {
+      case "fileSystem":
+        return t.thread.tool.categoryFileSystem;
+      case "web":
+        return t.thread.tool.categoryWeb;
+      case "misc":
+        return t.thread.tool.categoryMisc;
+    }
+  }, [t]);
 
   const loadTools = useCallback(async () => {
     try {
       setTools(await builtinTools.list());
     } catch (error) {
-      toast.error("Failed to load built-in tools", {
+      toast.error(t.thread.tool.failedToLoadBuiltInTools, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     }
-  }, [builtinTools]);
+  }, [builtinTools, t]);
 
   useEffect(() => {
     if (!open) {
@@ -172,9 +185,9 @@ function _BuiltInToolImportDialog({
         }}
       >
         <DialogHeader className="border-b px-4 py-3">
-          <DialogTitle>Add built-in tools</DialogTitle>
+          <DialogTitle>{t.thread.tool.addBuiltInToolsTitle}</DialogTitle>
           <DialogDescription>
-            Choose built-in tools to make available in this thread.
+            {t.thread.tool.addBuiltInToolsDescription}
           </DialogDescription>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -184,8 +197,8 @@ function _BuiltInToolImportDialog({
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search tools"
-                aria-label="Search tools"
+                placeholder={t.thread.tool.searchTools}
+                aria-label={t.thread.tool.searchTools}
                 className="h-8 pl-7 text-xs"
               />
             </div>
@@ -206,13 +219,13 @@ function _BuiltInToolImportDialog({
                 >
                   <button
                     type="button"
-                    aria-label={category.label}
+                    aria-label={categoryLabel(category.id)}
                     className="focus-visible:ring-ring/30 absolute inset-0 rounded-md outline-none focus-visible:ring-2"
                     onClick={() => setSelectedCategoryId(category.id)}
                   />
                   <CategoryIcon className="size-3.5 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">
-                    {category.label}
+                    {categoryLabel(category.id)}
                   </span>
                   <ToolImportSidebarActions
                     count={categoryTools.length}
@@ -241,8 +254,8 @@ function _BuiltInToolImportDialog({
               {selectedTools.length === 0 ? (
                 <div className="text-muted-foreground px-3 py-6 text-center text-sm">
                   {query.trim()
-                    ? "No tools match your search."
-                    : "No built-in tools in this category."}
+                    ? t.thread.tool.noToolsMatchSearch
+                    : t.thread.tool.noBuiltInToolsInCategory}
                 </div>
               ) : (
                 selectedTools.map((tool) => {
@@ -289,7 +302,15 @@ function _BuiltInToolImportDialog({
                       </div>
                       <Switch
                         checked={exists}
-                        aria-label={`${exists ? "Remove" : "Add"} ${tool.name}`}
+                        aria-label={
+                          exists
+                            ? fmt(t.thread.tool.removeToolAriaBuiltIn, {
+                                name: tool.name,
+                              })
+                            : fmt(t.thread.tool.addToolAria, {
+                                name: tool.name,
+                              })
+                        }
                         onCheckedChange={(checked) =>
                           handleToggleTool(tool, checked)
                         }

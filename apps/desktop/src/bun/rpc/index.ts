@@ -14,8 +14,10 @@ import type { Command } from "../../shared/commands";
 import type { DesktopRPCType } from "../../shared/rpc";
 import { buildWebShareUrl } from "../../shared/share";
 import type { Analytics } from "../analytics";
+import { setMenuLanguage } from "../app/menu";
 import type { GitHubAuthManager } from "../auth";
 import { moveToTrash, revealInFileManager } from "../fs";
+import type { LanguageManager } from "../i18n/language-manager";
 import type { McpManager } from "../mcp";
 import type { ModelManager } from "../models";
 import type { NetworkSettingsManager } from "../network";
@@ -70,6 +72,7 @@ export interface MainWindowRPCDependencies {
   gistWriter: GistThreadWriter;
   homePath: string;
   localFs: LocalFileSystem;
+  languageManager: LanguageManager;
   mcpManager: McpManager;
   modelManager: ModelManager;
   networkSettings: NetworkSettingsManager;
@@ -92,6 +95,7 @@ export function createMainWindowRPC({
   gistWriter,
   homePath,
   localFs,
+  languageManager,
   mcpManager,
   modelManager,
   networkSettings,
@@ -351,6 +355,13 @@ export function createMainWindowRPC({
           return null;
         },
         githubAuthStatus: () => Promise.resolve(githubAuth.getState()),
+        getLanguage: () => Promise.resolve({ language: languageManager.get() }),
+        setLanguage: ({ language }) => {
+          const resolved = languageManager.set(language);
+          setMenuLanguage(resolved);
+          rpc.send.languageChanged({ language: resolved });
+          return Promise.resolve({ language: resolved });
+        },
       },
       messages: {
         sendStreamThreadRequest: (payload) => {

@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@llm-space/ui/ui/dropdown-menu";
 
+import { useI18n } from "../../i18n";
+
 /** An entry that renders as a plain divider in the menu. */
 interface SeparatorItem { type: "separator" }
 
@@ -21,21 +23,28 @@ interface ExampleItem { type: string; label: string; icon: LucideIcon }
  * Given a catalog of items (each either a `{ type: "separator" }` divider or an
  * object carrying a `label`/`icon`), it renders the trigger and menu and calls
  * `onSelect` with the picked (non-separator) item.
+ *
+ * `labelResolver` (optional) overrides each item's display label — e.g. to
+ * localize a hardcoded English `label` from a non-React data module via the
+ * i18n catalog. When omitted, the item's own `label` is shown verbatim.
  */
 export function ExamplesMenu<T extends ExampleItem>({
   items,
   onSelect,
   align = "end",
+  labelResolver,
 }: {
   items: readonly (T | SeparatorItem)[];
   onSelect: (item: T) => void;
   align?: "start" | "end";
+  labelResolver?: (item: T) => string;
 }) {
+  const { t } = useI18n();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm">
-          Examples
+          {t.thread.toolbar.examples}
           <ChevronDown data-icon="inline-end" />
         </Button>
       </DropdownMenuTrigger>
@@ -46,13 +55,11 @@ export function ExamplesMenu<T extends ExampleItem>({
           }
           const example = item as T;
           const Icon = example.icon;
+          const label = labelResolver ? labelResolver(example) : example.label;
           return (
-            <DropdownMenuItem
-              key={example.label}
-              onSelect={() => onSelect(example)}
-            >
+            <DropdownMenuItem key={label} onSelect={() => onSelect(example)}>
               <Icon />
-              {example.label}
+              {label}
             </DropdownMenuItem>
           );
         })}

@@ -484,6 +484,14 @@ function ShowcaseSection() {
           slides={slides}
           width={SHOWCASE_IMAGE_WIDTH}
           height={SHOWCASE_IMAGE_HEIGHT}
+          carouselLabel={t.showcase.carouselLabel}
+          showSlideLabel={(index, title) =>
+            t.showcase.showSlideAria
+              .replace('{index}', String(index))
+              .replace('{title}', title)
+          }
+          previousLabel={t.showcase.previousScreenshot}
+          nextLabel={t.showcase.nextScreenshot}
         />
       </motion.div>
     </section>

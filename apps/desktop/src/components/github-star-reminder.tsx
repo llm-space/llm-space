@@ -1,3 +1,4 @@
+import { useI18n } from "@llm-space/ui/i18n";
 import { cn } from "@llm-space/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -22,6 +23,7 @@ const SHOW_DELAY_MS = 5000;
  */
 export function GithubStarReminder() {
   const { executeCommand } = useCommands();
+  const { t } = useI18n();
   // `open` keeps the card mounted; `leaving` plays the fade-out before unmount.
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -70,19 +72,19 @@ export function GithubStarReminder() {
       <button
         type="button"
         onClick={handleStar}
-        aria-label="Star LLM Space on GitHub"
+        aria-label={t.github.starReminder.starOnGithub}
         className="block w-full"
       >
         <img
           src="/images/star-on-github.png"
-          alt="Star LLM Space on GitHub"
+          alt={t.github.starReminder.starOnGithub}
           className="block aspect-[3/2] w-full object-cover"
         />
       </button>
       <button
         type="button"
         onClick={close}
-        aria-label="Dismiss"
+        aria-label={t.github.starReminder.dismiss}
         className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-black/50 text-white/80 transition-colors hover:bg-black/70 hover:text-white"
       >
         <XIcon className="size-3.5" />

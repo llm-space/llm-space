@@ -37,20 +37,37 @@ import { Textarea } from "@llm-space/ui/ui/textarea";
 
 
 
+import { useI18n } from "../../i18n";
+
 import { EvaluationRubricEditor } from "./evaluation-rubric-editor";
 import { RunEvaluationScorecard } from "./run-evaluation-scorecard";
 import { RunTraceView } from "./run-trace-view";
 
-const VERDICT_OPTIONS: {
-  value: EvaluationRecord["verdict"];
-  label: string;
-}[] = [
-  { value: "leftBetter", label: "Run A Better" },
-  { value: "rightBetter", label: "Run B Better" },
-  { value: "tie", label: "Tie" },
-  { value: "pass", label: "Pass" },
-  { value: "fail", label: "Fail" },
+const VERDICT_VALUES: EvaluationRecord["verdict"][] = [
+  "leftBetter",
+  "rightBetter",
+  "tie",
+  "pass",
+  "fail",
 ];
+
+function _verdictLabel(
+  verdict: EvaluationRecord["verdict"],
+  t: ReturnType<typeof useI18n>["t"]
+): string {
+  switch (verdict) {
+    case "leftBetter":
+      return t.thread.runHistory.verdictRunABetter;
+    case "rightBetter":
+      return t.thread.runHistory.verdictRunBBetter;
+    case "tie":
+      return t.thread.runHistory.verdictTie;
+    case "pass":
+      return t.thread.runHistory.verdictPass;
+    case "fail":
+      return t.thread.runHistory.verdictFail;
+  }
+}
 
 export function RunEvaluationDialog({
   open,
@@ -95,6 +112,8 @@ export function RunEvaluationDialog({
   const [scoreDraft, setScoreDraft] = useState<EvaluationScoreDraft>({});
   const [removeScoresOpen, setRemoveScoresOpen] = useState(false);
 
+  const { t, fmt } = useI18n();
+
   const [prevOpen, setPrevOpen] = useState(false);
   const identity = `${leftRun?.id ?? ""}:${rightRun?.id ?? ""}:${evaluation?.id ?? ""}`;
   const [prevIdentity, setPrevIdentity] = useState(identity);
@@ -127,10 +146,19 @@ export function RunEvaluationDialog({
 
   const title = useMemo(() => {
     if (!leftRun || !rightRun) {
-      return "Compare Runs";
+      return t.thread.evaluation.compareRunsTitle;
     }
-    return `${format(leftRun.timestamp)} vs ${format(rightRun.timestamp)}`;
-  }, [leftRun, rightRun]);
+    return fmt(t.thread.evaluation.compareTimestampsTitle, {
+      left: format(leftRun.timestamp),
+      right: format(rightRun.timestamp),
+    });
+  }, [
+    leftRun,
+    rightRun,
+    t.thread.evaluation.compareRunsTitle,
+    t.thread.evaluation.compareTimestampsTitle,
+    fmt,
+  ]);
 
   const runScores = useMemo(() => {
     if (!selectedRubric || !leftRun || !rightRun) {
@@ -175,12 +203,12 @@ export function RunEvaluationDialog({
         : {}),
     });
     if (!saved) {
-      toast.error("Unable to save evaluation", {
-        description: "Check the selected runs and rubric scores.",
+      toast.error(t.thread.evaluation.saveEvaluationErrorToast, {
+        description: t.thread.evaluation.saveEvaluationErrorToastDescription,
       });
       return;
     }
-    toast.success("Evaluation saved");
+    toast.success(t.thread.evaluation.saveEvaluationSuccessToast);
     onOpenChange(false);
   };
 
@@ -193,17 +221,17 @@ export function RunEvaluationDialog({
   };
 
   const dialogTitle = inspectingRun
-    ? "Inspect Run"
+    ? t.thread.evaluation.inspectRunTitle
     : rubricEditorOpen
       ? editingRubric
-        ? "Edit rubric"
-        : "Create rubric"
-      : "Evaluate Runs";
+        ? t.thread.evaluation.editRubricTitle
+        : t.thread.evaluation.createRubricTitle
+      : t.thread.evaluation.evaluateRunsTitle;
   const dialogDescription = inspectingRun
-    ? "Saved run evidence from this comparison."
+    ? t.thread.evaluation.inspectRunDescription
     : rubricEditorOpen
-      ? "Create reusable criteria for manual run comparison in this thread."
-      : "Compare two durable runs and save a structured evaluation with this thread.";
+      ? t.thread.evaluation.editRubricDescription
+      : t.thread.evaluation.compareRunsDescription;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,7 +246,7 @@ export function RunEvaluationDialog({
             <div className="flex justify-end border-t px-4 py-3">
               <Button variant="ghost" onClick={() => setInspectingRun(null)}>
                 <ArrowLeftIcon className="size-3" />
-                Back to Evaluation
+                {t.thread.evaluation.backToEvaluation}
               </Button>
             </div>
           </>
@@ -254,17 +282,21 @@ export function RunEvaluationDialog({
               <div className="text-muted-foreground mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span>{title}</span>
                 {evaluation && (
-                  <span>Last saved {format(evaluation.updatedAt)}</span>
+                  <span>
+                    {fmt(t.thread.evaluation.lastSaved, {
+                      time: format(evaluation.updatedAt),
+                    })}
+                  </span>
                 )}
               </div>
               <div className="flex flex-col gap-3 lg:flex-row">
                 <_RunComparisonPanel
-                  label="Run A"
+                  label={t.thread.evaluation.runLabelA}
                   run={leftRun}
                   onInspectRun={setInspectingRun}
                 />
                 <_RunComparisonPanel
-                  label="Run B"
+                  label={t.thread.evaluation.runLabelB}
                   run={rightRun}
                   onInspectRun={setInspectingRun}
                 />
@@ -297,31 +329,35 @@ export function RunEvaluationDialog({
                   }}
                 />
                 <div>
-                  <div className="text-xs font-medium">Verdict</div>
+                  <div className="text-xs font-medium">
+                    {t.thread.evaluation.verdictLabel}
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {VERDICT_OPTIONS.map((option) => {
-                      const selected = verdict === option.value;
+                    {VERDICT_VALUES.map((value) => {
+                      const selected = verdict === value;
                       return (
                         <Button
-                          key={option.value}
+                          key={value}
                           type="button"
                           variant={selected ? "default" : "outline"}
                           aria-pressed={selected}
-                          onClick={() => setVerdict(option.value)}
+                          onClick={() => setVerdict(value)}
                         >
                           {selected && <CheckIcon className="size-3" />}
-                          {option.label}
+                          {_verdictLabel(value, t)}
                         </Button>
                       );
                     })}
                   </div>
                 </div>
                 <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium">Evaluation Note</span>
+                  <span className="text-xs font-medium">
+                    {t.thread.evaluation.evaluationNoteLabel}
+                  </span>
                   <Textarea
                     className="min-h-24"
                     value={note}
-                    placeholder="Why did this run pass, fail, or beat the other one?"
+                    placeholder={t.thread.evaluation.evaluationNotePlaceholder}
                     onChange={(event) => setNote(event.target.value)}
                   />
                 </label>
@@ -329,26 +365,26 @@ export function RunEvaluationDialog({
             </div>
             <div className="flex justify-end gap-2 border-t px-4 py-3">
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Close
+                {t.thread.evaluation.close}
               </Button>
               <Button disabled={!canSave} onClick={handleSave}>
                 <SaveIcon className="size-3" />
-                Save Evaluation
+                {t.thread.evaluation.saveEvaluation}
               </Button>
             </div>
           </>
         ) : (
           <div className="text-muted-foreground px-4 py-8 text-center text-xs">
-            Select two runs to compare.
+            {t.thread.evaluation.selectTwoRuns}
           </div>
         )}
       </DialogContent>
       <ConfirmDialog
         open={removeScoresOpen}
         onOpenChange={setRemoveScoresOpen}
-        title="Remove rubric scores?"
-        description="Saving without a rubric permanently removes the saved rubric snapshot and all criterion scores from this evaluation. This cannot be undone."
-        confirmLabel="Remove scores and save"
+        title={t.thread.evaluation.confirmRemoveScoresTitle}
+        description={t.thread.evaluation.confirmRemoveScoresDescription}
+        confirmLabel={t.thread.evaluation.confirmRemoveScoresAction}
         dimBackground={false}
         onConfirm={() => {
           setRemoveScoresOpen(false);
@@ -368,6 +404,7 @@ function _RunComparisonPanel({
   run: RunSnapshot;
   onInspectRun: (run: RunSnapshot) => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <section className="bg-muted/30 flex min-w-0 flex-1 flex-col rounded-lg border">
       <div className="border-b px-3 py-2">
@@ -378,11 +415,14 @@ function _RunComparisonPanel({
               type="button"
               variant="ghost"
               size="sm"
-              aria-label={`Inspect ${label}: ${summarizeRun(run.thread)}`}
+              aria-label={fmt(t.thread.evaluation.inspectAria, {
+                label,
+                summary: summarizeRun(run.thread),
+              })}
               onClick={() => onInspectRun(run)}
             >
               <EyeIcon className="size-3" />
-              Inspect
+              {t.thread.evaluation.inspectButton}
             </Button>
             <div className="text-muted-foreground text-[0.625rem]">
               {format(run.timestamp)}
@@ -394,23 +434,35 @@ function _RunComparisonPanel({
         </div>
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 border-b px-3 py-2 text-[0.625rem]">
-        <_MetaValue label="Model" value={runModelLabel(run.thread)} />
-        <_MetaValue label="Messages" value={runMessageCountLabel(run.thread)} />
         <_MetaValue
-          label="Captured"
+          label={t.thread.evaluation.metaModel}
+          value={runModelLabel(run.thread)}
+        />
+        <_MetaValue
+          label={t.thread.evaluation.metaMessages}
+          value={runMessageCountLabel(run.thread)}
+        />
+        <_MetaValue
+          label={t.thread.evaluation.metaCaptured}
           value={new Date(run.timestamp).toLocaleString()}
         />
       </div>
       <div className="flex min-h-0 flex-col gap-3 p-3">
         <_TextExcerpt
-          label="System Prompt"
-          value={run.thread.context?.systemPrompt?.trim() || "No system prompt"}
+          label={t.thread.evaluation.systemPromptLabel}
+          value={
+            run.thread.context?.systemPrompt?.trim() ||
+            t.thread.runHistory.noSystemPrompt
+          }
         />
         <_TextExcerpt
-          label="Last User Message"
+          label={t.thread.evaluation.lastUserMessageLabel}
           value={runLastUserText(run.thread)}
         />
-        <_TextExcerpt label="Result" value={runResultText(run.thread)} />
+        <_TextExcerpt
+          label={t.thread.evaluation.resultLabel}
+          value={runResultText(run.thread)}
+        />
       </div>
     </section>
   );

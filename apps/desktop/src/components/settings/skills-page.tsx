@@ -3,6 +3,7 @@
 import type { SkillInfo, SkillsSettings } from "@llm-space/core";
 import { ConfirmDialog } from "@llm-space/ui/components/confirm-dialog";
 import { SkillListItem } from "@llm-space/ui/components/skill-list-item";
+import { useI18n } from "@llm-space/ui/i18n";
 import { useAutoAnimation } from "@llm-space/ui/lib/use-auto-animation";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
@@ -46,6 +47,7 @@ export function SkillsPage() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   // Bumped after a bulk enable/disable so the skills pane refetches.
   const [reloadToken, setReloadToken] = useState(0);
+  const { t } = useI18n();
 
   useEffect(() => {
     let cancelled = false;
@@ -83,23 +85,23 @@ export function SkillsPage() {
       setSettings(next);
       setSelectedPath(path);
     } catch (error) {
-      toast.error("Failed to add folder", {
+      toast.error(t.settings.skills.failedToAddFolder, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     }
-  }, []);
+  }, [t]);
 
   const handleRemove = useCallback(async (path: string) => {
     try {
       setSettings(await removeSkillsPath(path));
     } catch (error) {
-      toast.error("Failed to remove folder", {
+      toast.error(t.settings.skills.failedToRemoveFolder, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     }
-  }, []);
+  }, [t]);
 
   const handleSetAll = useCallback(async (path: string, hidden: boolean) => {
     try {
@@ -108,22 +110,26 @@ export function SkillsPage() {
       setReloadToken((token) => token + 1);
     } catch (error) {
       toast.error(
-        hidden ? "Failed to disable skills" : "Failed to enable skills",
+        hidden
+          ? t.settings.skills.failedToDisableSkills
+          : t.settings.skills.failedToEnableSkills,
         {
           description:
-            error instanceof Error ? error.message : "Please try again.",
+            error instanceof Error ? error.message : t.common.toasts.tryAgain,
         }
       );
     }
-  }, []);
+  }, [t]);
 
   return (
     <SettingsPage
       className="flex size-full min-h-0"
-      title="Skills"
+      title={t.settings.skills.title}
       description={
         <>
-          These settings only apply to the built-in <code>skill()</code> tool.
+          {t.settings.skills.descriptionBefore}
+          <code>skill()</code>
+          {t.settings.skills.descriptionAfter}
         </>
       }
     >
@@ -159,14 +165,14 @@ function PathList({
   onDisableAll: (path: string) => void;
 }) {
   const [listRef] = useAutoAnimation<HTMLDivElement>();
+  const { t } = useI18n();
 
   return (
     <div className="flex w-64 shrink-0 flex-col gap-3 border-r pr-4">
       <ScrollArea className="min-h-0 grow">
         {paths.length === 0 ? (
           <div className="text-muted-foreground px-2 py-6 text-center text-xs text-balance">
-            No folders yet. Click the &quot;Add folder&quot; button below to get
-            started.
+            {t.settings.skills.noFolders}
           </div>
         ) : (
           <div ref={listRef} className="flex flex-col gap-1 pr-2">
@@ -187,7 +193,7 @@ function PathList({
 
       <Button variant="outline" className="w-full" onClick={onAdd}>
         <Plus />
-        Add folder
+        {t.settings.skills.addFolder}
       </Button>
     </div>
   );
@@ -210,12 +216,13 @@ function PathListItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { t, fmt } = useI18n();
 
   return (
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Select ${path}`}
+      aria-label={fmt(t.settings.skills.selectFolderAria, { path })}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -238,8 +245,8 @@ function PathListItem({
           <span
             role="button"
             tabIndex={0}
-            aria-label={`${path} folder actions`}
-            title={`${path} folder actions`}
+            aria-label={fmt(t.settings.skills.folderActions, { path })}
+            title={fmt(t.settings.skills.folderActions, { path })}
             className={cn(
               "text-muted-foreground hover:bg-accent hover:text-foreground inline-flex size-5 shrink-0 items-center justify-center rounded",
               menuOpen
@@ -254,11 +261,11 @@ function PathListItem({
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onSelect={() => onEnableAll()}>
             <CheckCheck />
-            Enable all skills
+            {t.settings.skills.enableAll}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => onDisableAll()}>
             <Ban />
-            Disable all skills
+            {t.settings.skills.disableAll}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -266,7 +273,7 @@ function PathListItem({
             onSelect={() => setConfirmOpen(true)}
           >
             <Trash2 />
-            Remove {path}
+            {fmt(t.settings.skills.removePath, { path })}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -274,9 +281,9 @@ function PathListItem({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Remove folder?"
-        description={`This removes "${path}" from your skill discovery folders. You can add it back later.`}
-        confirmLabel="Remove"
+        title={t.settings.skills.removeFolderTitle}
+        description={fmt(t.settings.skills.removeFolderDescription, { path })}
+        confirmLabel={t.common.remove}
         dimBackground={false}
         onConfirm={() => {
           setConfirmOpen(false);
@@ -290,6 +297,7 @@ function PathListItem({
 function PathSkills({ path }: { path: string | null }) {
   const [skills, setSkills] = useState<SkillInfo[] | null>(null);
   const [listRef] = useAutoAnimation<HTMLDivElement>();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!path) {
@@ -334,20 +342,20 @@ function PathSkills({ path }: { path: string | null }) {
               )
             : prev
         );
-        toast.error("Failed to update skill", {
+        toast.error(t.settings.skills.failedToUpdateSkill, {
           description:
-            error instanceof Error ? error.message : "Please try again.",
+            error instanceof Error ? error.message : t.common.toasts.tryAgain,
         });
       }
     },
-    [path]
+    [path, t.common.toasts.tryAgain, t.settings.skills.failedToUpdateSkill]
   );
 
   const content = useMemo(() => {
     if (!path) {
       return (
         <div className="text-muted-foreground flex size-full items-center justify-center text-sm">
-          Select or add a folder from the left sidebar
+          {t.settings.skills.selectOrAddFolder}
         </div>
       );
     }
@@ -355,14 +363,14 @@ function PathSkills({ path }: { path: string | null }) {
       return (
         <div className="text-muted-foreground flex items-center gap-2 px-1 py-6 text-sm">
           <Loader2 className="size-4 animate-spin" />
-          Loading skills…
+          {t.settings.skills.loading}
         </div>
       );
     }
     if (skills.length === 0) {
       return (
         <div className="text-muted-foreground px-1 py-6 text-sm">
-          No skills found in this folder.
+          {t.settings.skills.noSkillsFound}
         </div>
       );
     }
@@ -379,7 +387,15 @@ function PathSkills({ path }: { path: string | null }) {
         ))}
       </div>
     );
-  }, [handleToggle, listRef, path, skills]);
+  }, [
+    handleToggle,
+    listRef,
+    path,
+    skills,
+    t.settings.skills.loading,
+    t.settings.skills.noSkillsFound,
+    t.settings.skills.selectOrAddFolder,
+  ]);
 
   return (
     <div className="flex min-w-0 grow flex-col">

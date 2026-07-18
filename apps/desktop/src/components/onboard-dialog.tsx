@@ -7,6 +7,7 @@ import {
   useModels,
 } from "@llm-space/ui/components/model-provider";
 import { ProviderAvatar } from "@llm-space/ui/components/thread-playground/provider-avatar";
+import { useI18n } from "@llm-space/ui/i18n";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@llm-space/ui/ui/dialog";
@@ -41,6 +42,7 @@ export function OnboardDialog({
   const { executeCommand } = useCommands();
   const fetchBuiltinProviders = useFetchBuiltinProviders();
   const addProvider = useAddProvider();
+  const { t, fmt } = useI18n();
   const [builtinProviders, setBuiltinProviders] = useState<
     ModelProviderGroup[] | null
   >(null);
@@ -67,14 +69,14 @@ export function OnboardDialog({
         if (cancelled) {
           return;
         }
-        setLoadError(PROVIDER_DISCOVERY_ERROR_MESSAGE);
+        setLoadError(t.onboard.errors.discoveryMessage);
         setBuiltinProviders([]);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [fetchBuiltinProviders, models.length, open]);
+  }, [fetchBuiltinProviders, models.length, open, t.onboard.errors.discoveryMessage]);
 
   const detectedProviders = useMemo(() => {
     return (builtinProviders ?? [])
@@ -118,16 +120,18 @@ export function OnboardDialog({
       try {
         await addProvider(provider.id);
         setAddedProviderName(provider.name);
-        toast.success(`${provider.name} is ready`);
+        toast.success(fmt(t.onboard.toasts.providerReady, {
+          providerName: provider.name,
+        }));
       } catch {
-        toast.error("Could not add provider", {
-          description: ADD_PROVIDER_ERROR_MESSAGE,
+        toast.error(t.onboard.toasts.couldNotAddProvider, {
+          description: t.onboard.errors.addProviderMessage,
         });
       } finally {
         setAddingProviderId(null);
       }
     },
-    [addProvider]
+    [addProvider, fmt, t.onboard.toasts.providerReady, t.onboard.toasts.couldNotAddProvider, t.onboard.errors.addProviderMessage]
   );
 
   const handleReady = useCallback(() => {
@@ -152,7 +156,7 @@ export function OnboardDialog({
         <div className="relative">
           <img
             src="/images/onboard.png"
-            alt="Onboard"
+            alt={t.onboard.aria.heroImageAlt}
             className="w-full rounded-lg"
           />
           <DialogClose asChild>
@@ -160,7 +164,7 @@ export function OnboardDialog({
               className="bg-muted/75 hover:bg-muted/85! text-foreground/80 absolute top-2 right-2 rounded-full"
               variant="ghost"
               size="icon-sm"
-              aria-label="Close onboarding"
+              aria-label={t.onboard.actions.closeOnboarding}
             >
               <XIcon className="size-3" />
             </Button>
@@ -176,7 +180,7 @@ export function OnboardDialog({
                     onClick={handleConfigureModels}
                   >
                     <SettingsIcon className="size-3" />
-                    Configure models
+                    {t.onboard.actions.configureModels}
                   </Button>
                 ) : (
                   <DialogClose asChild>
@@ -185,7 +189,7 @@ export function OnboardDialog({
                       className="dark:bg-[red]!"
                       size="lg"
                     >
-                      Get started
+                      {t.onboard.actions.getStarted}
                       <ArrowRightIcon className="size-3.5" />
                     </RainbowButton>
                   </DialogClose>
@@ -196,17 +200,17 @@ export function OnboardDialog({
                   size="lg"
                   onClick={handleLearnMore}
                 >
-                  Learn more
+                  {t.onboard.actions.learnMore}
                 </Button>
               </div>
               <div className="text-xs text-white/65">
-                We collect anonymous usage data to improve the app.{" "}
+                {t.onboard.analytics.notice}{" "}
                 <button
                   type="button"
                   className="underline underline-offset-2 transition-colors hover:text-white/90"
                   onClick={handleOpenAnalyticsSettings}
                 >
-                  Manage in settings
+                  {t.onboard.actions.manageInSettings}
                 </button>
               </div>
             </div>
@@ -245,11 +249,6 @@ const ONBOARDING_RECOMMENDED_PROVIDER_IDS = new Set([
   "google",
 ]);
 
-const PROVIDER_DISCOVERY_ERROR_MESSAGE =
-  "Provider check did not finish. Open model settings to continue.";
-
-const ADD_PROVIDER_ERROR_MESSAGE = "Open model settings and try again.";
-
 /** Sort discovered providers so the lowest-friction local options appear first. */
 function _sortProviderForOnboarding(
   a: ModelProviderGroup,
@@ -287,6 +286,7 @@ function _OnboardSetupPanel({
   onConfigureModels: () => void;
   onReady: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={cn(
@@ -300,7 +300,7 @@ function _OnboardSetupPanel({
         <_LoadingSetupState />
       ) : loadError ? (
         <_ManualSetupState
-          title="Provider check failed"
+          title={t.onboard.manual.checkFailedTitle}
           description={loadError}
           recommendedProviders={[]}
           onConfigureModels={onConfigureModels}
@@ -313,8 +313,8 @@ function _OnboardSetupPanel({
         />
       ) : (
         <_ManualSetupState
-          title="No local provider found"
-          description="Add a provider in settings to choose a model."
+          title={t.onboard.manual.noProviderTitle}
+          description={t.onboard.manual.noProviderDescription}
           recommendedProviders={recommendedProviders}
           onConfigureModels={onConfigureModels}
         />
@@ -324,13 +324,14 @@ function _OnboardSetupPanel({
 }
 
 function _LoadingSetupState() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-3">
       <Spinner className="size-4 text-white/80" />
       <div className="min-w-0">
-        <div className="text-sm font-medium">Checking local providers</div>
+        <div className="text-sm font-medium">{t.onboard.loading.title}</div>
         <div className="text-xs text-white/65">
-          Looking for credentials already available on this computer.
+          {t.onboard.loading.hint}
         </div>
       </div>
     </div>
@@ -344,17 +345,20 @@ function _ReadySetupState({
   providerName: string | null;
   onReady?: () => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="flex cursor-pointer items-start gap-3" onClick={onReady}>
       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-400/18 text-emerald-200">
         <CheckIcon className="size-4" />
       </div>
       <div className="min-w-0 grow">
-        <div className="text-sm font-medium">Ready to run</div>
+        <div className="text-sm font-medium">{t.onboard.ready.title}</div>
         <div className="text-xs text-white/65">
           {providerName
-            ? `${providerName} is configured for this workspace.`
-            : "A provider is configured for this workspace."}
+            ? fmt(t.onboard.ready.providerConfigured, {
+                providerName,
+              })
+            : t.onboard.ready.providerConfiguredFallback}
         </div>
       </div>
     </div>
@@ -370,16 +374,23 @@ function _DetectedSetupState({
   addingProviderId: string | null;
   onAddProvider: (provider: ModelProviderGroup) => void;
 }) {
+  const { t, fmt, plural } = useI18n();
   return (
     <div className="flex flex-col gap-3">
       <div>
         <div className="text-sm font-medium">
-          {providers.length === 1 ? "Provider detected" : "Providers detected"}
+          {plural(
+            providers.length,
+            t.onboard.detected.titleOne,
+            t.onboard.detected.titleOther
+          )}
         </div>
         <div className="text-xs text-white/65">
-          {providers.length === 1
-            ? "Add a detected provider from the list to get started."
-            : "Add detected providers from the list to get started."}
+          {plural(
+            providers.length,
+            t.onboard.detected.hintOne,
+            t.onboard.detected.hintOther
+          )}
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -391,7 +402,9 @@ function _DetectedSetupState({
               type="button"
               className="flex w-full items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-2.5 text-left transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70"
               disabled={Boolean(addingProviderId)}
-              aria-label={`Add detected provider ${provider.name}`}
+              aria-label={fmt(t.onboard.aria.addDetectedProvider, {
+                providerName: provider.name,
+              })}
               onClick={() => onAddProvider(provider)}
             >
               <ProviderAvatar
@@ -405,7 +418,7 @@ function _DetectedSetupState({
                   {provider.name}
                 </span>
                 <span className="block text-xs text-white/60">
-                  Detected locally
+                  {t.onboard.detected.detectedLocally}
                 </span>
               </span>
               {adding ? (
@@ -432,6 +445,7 @@ function _ManualSetupState({
   recommendedProviders: ModelProviderGroup[];
   onConfigureModels: () => void;
 }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
@@ -446,14 +460,16 @@ function _ManualSetupState({
       {recommendedProviders.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="text-xs font-medium text-white/80">
-            Recommended setup
+            {t.onboard.manual.recommendedSetup}
           </div>
           {recommendedProviders.map((provider) => (
             <button
               key={provider.id}
               type="button"
               className="flex w-full items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-2.5 text-left transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
-              aria-label={`Open model settings to configure ${provider.name}`}
+              aria-label={fmt(t.onboard.aria.openModelSettingsToConfigure, {
+                providerName: provider.name,
+              })}
               onClick={onConfigureModels}
             >
               <ProviderAvatar
@@ -467,7 +483,7 @@ function _ManualSetupState({
                   {provider.name}
                 </span>
                 <span className="block text-xs text-white/60">
-                  Set up in model settings
+                  {t.onboard.manual.setUpInModelSettings}
                 </span>
               </span>
               <ArrowRightIcon className="size-3.5 shrink-0 text-white/70" />
@@ -481,7 +497,7 @@ function _ManualSetupState({
         onClick={onConfigureModels}
       >
         <SettingsIcon className="size-3.5" />
-        Open model settings
+        {t.onboard.actions.openModelSettings}
       </Button>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import type { Thread } from "@llm-space/core";
 import { ThreadPlayground } from "@llm-space/ui/components/thread-playground";
+import { useI18n } from "@llm-space/ui/i18n";
 import { parentOf, threadPathForTitle } from "@llm-space/ui/lib/thread-file";
 import { cn } from "@llm-space/ui/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ export function ThreadTabPane({
   consumeDiscardedPane,
 }: ThreadTabPaneProps) {
   const qc = useQueryClient();
+  const { t, fmt } = useI18n();
   const {
     data: thread,
     isLoading,
@@ -66,12 +68,14 @@ export function ThreadTabPane({
   // file surfaces here instead: report it and close the tab it was given.
   useEffect(() => {
     if (!isError) return;
-    toast.error("Error", {
+    toast.error(t.common.error, {
       description:
-        error instanceof Error ? error.message : `File not found: ${path}`,
+        error instanceof Error
+          ? error.message
+          : fmt(t.tabs.pane.fileNotFound, { path }),
     });
     onClose?.(path);
-  }, [isError, error, path, onClose]);
+  }, [isError, error, path, onClose, t, fmt]);
 
   // Persist edits back to the same path, debounced so we don't write per keystroke.
   // `pending` holds the latest unsaved thread so we can flush it on unmount.
@@ -142,13 +146,15 @@ export function ThreadTabPane({
         });
         setReloadKey((key) => key + 1);
       } catch (error) {
-        toast.error("Error", {
+        toast.error(t.common.error, {
           description:
-            error instanceof Error ? error.message : "Failed to refresh",
+            error instanceof Error
+              ? error.message
+              : t.tabs.pane.failedToRefresh,
         });
       }
     })();
-  }, [refreshNonce, qc]);
+  }, [refreshNonce, qc, t]);
 
   const handleRenameTitle = useCallback(
     async (title: string): Promise<boolean> => {

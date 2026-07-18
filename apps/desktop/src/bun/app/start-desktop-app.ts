@@ -15,6 +15,7 @@ import { executeCommandInBun } from "../commands";
 import { createDeepLinkHandler, type DeepLinkHandler } from "../deep-link";
 import { setDeepLinkHandler } from "../deep-link/launch";
 import { DesktopHost } from "../host/desktop-host";
+import { LanguageManager } from "../i18n/language-manager";
 import { McpManager } from "../mcp";
 import { ModelManager } from "../models";
 import { NetworkSettingsManager } from "../network";
@@ -46,6 +47,7 @@ export async function startDesktopApp(): Promise<DesktopAppRuntime> {
   const modelManager = new ModelManager();
   const searchSettings = new SearchSettingsManager();
   const skillsManager = new SkillsManager();
+  const languageManager = new LanguageManager();
   const githubAuth = new GitHubAuthManager({
     onChange: (state) => getRpc().send.githubAuthChanged(state),
   });
@@ -121,6 +123,7 @@ export async function startDesktopApp(): Promise<DesktopAppRuntime> {
       gistWriter,
       homePath,
       localFs,
+      languageManager,
       mcpManager,
       modelManager,
       networkSettings,
@@ -131,7 +134,11 @@ export async function startDesktopApp(): Promise<DesktopAppRuntime> {
       traceManager,
       updater,
     });
-    mainWindow = await createMainWindow({ rpc, executeCommand });
+    mainWindow = await createMainWindow({
+      rpc,
+      executeCommand,
+      initialLang: languageManager.get(),
+    });
 
     // The window + rpc are ready — wire the importer and flush any deep links
     // buffered at process entry during a cold-start launch (see deep-link/launch).

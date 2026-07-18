@@ -17,7 +17,7 @@ import {
 import { Input } from "@llm-space/ui/ui/input";
 import { ScrollArea } from "@llm-space/ui/ui/scroll-area";
 
-
+import { useI18n } from "../../../i18n";
 
 interface SkillSelectionDialogProps {
   open: boolean;
@@ -40,6 +40,7 @@ function _SkillSelectionDialog({
   onOpenChange,
   onApply,
 }: SkillSelectionDialogProps) {
+  const { t, fmt } = useI18n();
   const [query, setQuery] = useState("");
   const [draftSkillNames, setDraftSkillNames] = useState(selectedSkillNames);
 
@@ -103,10 +104,9 @@ function _SkillSelectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[560px] max-h-[calc(100vh-4rem)] w-[min(720px,calc(100vw-2rem))] max-w-none! flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b px-4 py-3">
-          <DialogTitle>Select skills</DialogTitle>
+          <DialogTitle>{t.thread.variable.selectSkillsTitle}</DialogTitle>
           <DialogDescription>
-            All enabled skills are included by default. Pick specific skills to
-            narrow it to only those.
+            {t.thread.variable.selectSkillsDescription}
           </DialogDescription>
         </DialogHeader>
         <div className="flex min-h-0 grow flex-col gap-3 p-4">
@@ -116,15 +116,17 @@ function _SkillSelectionDialog({
               className="h-8 pl-7"
               value={query}
               disabled={disabled}
-              placeholder="Search skills"
+              placeholder={t.thread.variable.searchSkills}
               onChange={(event) => setQuery(event.currentTarget.value)}
             />
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs">
               {draftSkillNames.length === 0
-                ? "All skills (default)"
-                : `Selected ${draftSkillNames.length}`}
+                ? t.thread.variable.allSkillsDefault
+                : fmt(t.thread.variable.selectedCount, {
+                    count: draftSkillNames.length,
+                  })}
             </span>
             <Button
               size="xs"
@@ -132,14 +134,14 @@ function _SkillSelectionDialog({
               disabled={disabled || draftSkillNames.length === 0}
               onClick={() => setDraftSkillNames([])}
             >
-              Clear
+              {t.thread.variable.clear}
             </Button>
           </div>
           <ScrollArea className="border-border/60 min-h-0 grow rounded-md border">
             <div className="flex flex-col gap-1.5 p-2">
               {loading ? (
                 <div className="text-muted-foreground px-2 py-3 text-xs">
-                  Loading skills...
+                  {t.thread.variable.loadingSkills}
                 </div>
               ) : error ? (
                 <div className="text-destructive px-2 py-3 text-xs">
@@ -147,7 +149,7 @@ function _SkillSelectionDialog({
                 </div>
               ) : filteredSkills.length === 0 ? (
                 <div className="text-muted-foreground px-2 py-3 text-xs">
-                  No matching skills.
+                  {t.thread.variable.noMatchingSkills}
                 </div>
               ) : (
                 filteredSkills.map((skill) => (
@@ -170,10 +172,10 @@ function _SkillSelectionDialog({
             disabled={disabled}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t.common.cancel}
           </Button>
           <Button disabled={disabled} onClick={apply}>
-            Done
+            {t.common.done}
           </Button>
         </DialogFooter>
       </DialogContent>

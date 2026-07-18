@@ -48,13 +48,14 @@ import {
 } from "@llm-space/ui/ui/select";
 import { Textarea } from "@llm-space/ui/ui/textarea";
 
-
+import { useI18n } from "../../../i18n";
 import { useThreadStore, useThreadStoreActions } from "../stores";
 
 import {
   PROMPT_DATE_FORMATS,
   PROMPT_SKILLS_FORMATS,
   PROMPT_SKILLS_INDENTS,
+  resolveVariableOptionLabel,
 } from "./prompt-variable-options";
 import { listEnabledPromptVariableSkills } from "./prompt-variable-skills";
 import { SkillSelectionDialog } from "./skill-selection-dialog";
@@ -89,6 +90,7 @@ function _PromptVariablesPanel({
   disabled,
   initialSelection,
 }: PromptVariablesPanelProps) {
+  const { t, fmt } = useI18n();
   const { skills: skillsHost } = useHostServices();
   const rawVariables = useThreadStore((s) => s.thread.context?.variables);
   const rawVariableVariants = useThreadStore(
@@ -160,7 +162,7 @@ function _PromptVariablesPanel({
           kind: "builtIn" as const,
           name,
           variable,
-          status: _dateFormatLabel(variable.format),
+          status: _dateFormatLabel(t, variable.format),
         };
       }
       const selectedCount = variable.skillNames.length;
@@ -173,10 +175,10 @@ function _PromptVariablesPanel({
         variable,
         status:
           selectedCount === 0
-            ? "All skills"
+            ? t.thread.variable.allSkills
             : missingCount > 0
-              ? `${missingCount} missing`
-              : `${selectedCount} selected`,
+              ? fmt(t.thread.variable.missingCount, { count: missingCount })
+              : fmt(t.thread.variable.countSelected, { count: selectedCount }),
         warning: missingCount > 0 || Boolean(skillsError),
       };
     });
@@ -184,10 +186,10 @@ function _PromptVariablesPanel({
       kind: "custom" as const,
       name,
       value,
-      status: value.trim() ? value : "(empty)",
+      status: value.trim() ? value : t.thread.variable.emptyValue,
     }));
     return { builtInItems, customItems: custom };
-  }, [customValues, skillsByName, skillsError, variables]);
+  }, [customValues, fmt, skillsByName, skillsError, t, variables]);
 
   // Apply a chip-open target once, then let in-dialog selection stay user-owned
   // across variable edits.
@@ -237,7 +239,9 @@ function _PromptVariablesPanel({
         if (!cancelled) {
           setSkills([]);
           setSkillsError(
-            error instanceof Error ? error.message : "Failed to load skills."
+            error instanceof Error
+              ? error.message
+              : t.thread.variable.failedToLoadSkills
           );
         }
       })
@@ -249,7 +253,7 @@ function _PromptVariablesPanel({
     return () => {
       cancelled = true;
     };
-  }, [skillsHost]);
+  }, [skillsHost, t]);
 
   const addCustom = useCallback(() => {
     const used = new Set([...Object.keys(variables), ...customNames]);
@@ -286,7 +290,7 @@ function _PromptVariablesPanel({
       <div className="grid min-h-0 grow grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
         <ScrollArea className="border-border/60 min-h-0 border-r">
           <div className="grid gap-3 p-2">
-            <VariableListGroup title="Built-in">
+            <VariableListGroup title={t.thread.variable.builtIn}>
               {builtInItems.map((item) => (
                 <VariableListRow
                   key={`${item.kind}:${item.name}`}
@@ -303,7 +307,7 @@ function _PromptVariablesPanel({
               ))}
             </VariableListGroup>
             <VariableListGroup
-              title="Custom"
+              title={t.thread.variable.custom}
               action={
                 <Button
                   className="h-6 px-1.5 text-[0.6875rem]"
@@ -313,7 +317,7 @@ function _PromptVariablesPanel({
                   onClick={addCustom}
                 >
                   <PlusIcon className="size-3" />
-                  Add variable
+                  {t.thread.variable.addVariable}
                 </Button>
               }
             >
@@ -334,7 +338,7 @@ function _PromptVariablesPanel({
                 ))
               ) : (
                 <div className="text-muted-foreground px-2 py-1 text-[0.6875rem]">
-                  No custom variables.
+                  {t.thread.variable.noCustomVariables}
                 </div>
               )}
             </VariableListGroup>
@@ -384,15 +388,15 @@ function _PromptVariablesPanel({
             setPendingRemoveCustom(null);
           }
         }}
-        title="Delete custom variable?"
+        title={t.thread.variable.deleteCustomTitle}
         description={
           pendingRemoveCustom
             ? pendingRemoveCustom.hasReferences
-              ? `This thread references "{{${pendingRemoveCustom.name}}}". Deleting this variable will leave unresolved placeholders.`
-              : `This removes "{{${pendingRemoveCustom.name}}}" and its value from this thread.`
+              ? t.thread.variable.deleteReferencedDesc
+              : t.thread.variable.deleteRemoveDesc
             : undefined
         }
-        confirmLabel="Delete variable"
+        confirmLabel={t.thread.variable.deleteVariable}
         onConfirm={() => {
           if (pendingRemoveCustom) {
             removeCustomVariable(pendingRemoveCustom.name);
@@ -500,10 +504,11 @@ function VariableDetail({
   onUpdateCustom: (name: string, value: string) => void;
   onRemoveCustom: (name: string) => void;
 }) {
+  const { t } = useI18n();
   if (!selection) {
     return (
       <div className="text-muted-foreground p-3 text-xs">
-        Add a custom variable to provide a reusable value.
+        {t.thread.variable.addCustomHint}
       </div>
     );
   }
@@ -513,7 +518,7 @@ function VariableDetail({
     if (value === undefined) {
       return (
         <div className="text-muted-foreground p-3 text-xs">
-          Select a variable to edit.
+          {t.thread.variable.selectVariableToEdit}
         </div>
       );
     }
@@ -535,7 +540,7 @@ function VariableDetail({
   if (!variable) {
     return (
       <div className="text-muted-foreground p-3 text-xs">
-        Select a variable to edit.
+        {t.thread.variable.selectVariableToEdit}
       </div>
     );
   }
@@ -588,14 +593,15 @@ function CurrentDateVariableDetail({
   onRename: (oldName: string, newName: string) => boolean;
   onUpdate: (name: string, variable: ThreadCurrentDateVariable) => void;
 }) {
+  const { t } = useI18n();
   return (
     <DetailShell
       icon={<CalendarDaysIcon className="text-muted-foreground size-4" />}
-      title="Current date"
+      title={t.thread.variable.currentDate}
       disabled={disabled}
     >
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
-        <Field label="Name">
+        <Field label={t.thread.variable.name}>
           <VariableNameInput
             name={name}
             disabled={disabled}
@@ -605,7 +611,7 @@ function CurrentDateVariableDetail({
             onCommit={(next) => onRename(name, next)}
           />
         </Field>
-        <Field label="Format">
+        <Field label={t.thread.variable.format}>
           <Select
             value={variable.format}
             disabled={disabled}
@@ -613,20 +619,23 @@ function CurrentDateVariableDetail({
               onUpdate(name, { ...variable, format })
             }
           >
-            <SelectTrigger className="w-full" aria-label="Current date format">
+            <SelectTrigger
+              className="w-full"
+              aria-label={t.thread.variable.ariaCurrentDateFormat}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PROMPT_DATE_FORMATS.map((format) => (
                 <SelectItem key={format.value} value={format.value}>
-                  {format.label}
+                  {resolveVariableOptionLabel(t, format)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
       </div>
-      <Field label="Value">
+      <Field label={t.thread.variable.value}>
         <PreviewBlock value={formatCurrentDateVariable(variable.format)} />
       </Field>
     </DetailShell>
@@ -658,6 +667,7 @@ function SkillsVariableDetail({
   onRename: (oldName: string, newName: string) => boolean;
   onUpdate: (name: string, variable: ThreadSkillsVariable) => void;
 }) {
+  const { t, fmt } = useI18n();
   const [skillsDialogOpen, setSkillsDialogOpen] = useState(false);
   const selectedSkills = variable.skillNames.flatMap((skillName) => {
     const skill = skillsByName.get(skillName);
@@ -670,7 +680,7 @@ function SkillsVariableDetail({
   const preview =
     skillsError ??
     (someMissing
-      ? "Some selected skills are no longer enabled."
+      ? t.thread.variable.someSkillsNoLongerEnabled
       : formatSkillsVariable(
           usingAllSkills ? skills : selectedSkills,
           variable
@@ -683,14 +693,14 @@ function SkillsVariableDetail({
   return (
     <DetailShell
       icon={<SparklesIcon className="text-muted-foreground size-4" />}
-      title="Available skills"
+      title={t.thread.variable.availableSkills}
       disabled={disabled}
       action={
-        <Tooltip content="Select skills">
+        <Tooltip content={t.thread.variable.selectSkills}>
           <Button
             size="icon-sm"
             variant="outline"
-            aria-label="Select skills"
+            aria-label={t.thread.variable.selectSkills}
             disabled={disabled}
             onClick={() => setSkillsDialogOpen(true)}
           >
@@ -702,7 +712,7 @@ function SkillsVariableDetail({
       contentClassName="flex min-h-0 grow flex-col"
     >
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem_9rem]">
-        <Field label="Name">
+        <Field label={t.thread.variable.name}>
           <VariableNameInput
             name={name}
             disabled={disabled}
@@ -712,7 +722,7 @@ function SkillsVariableDetail({
             onCommit={(next) => onRename(name, next)}
           />
         </Field>
-        <Field label="Format">
+        <Field label={t.thread.variable.format}>
           <Select
             value={variable.format}
             disabled={disabled}
@@ -720,42 +730,52 @@ function SkillsVariableDetail({
               update({ format })
             }
           >
-            <SelectTrigger className="w-full" aria-label="Skills format">
+            <SelectTrigger
+              className="w-full"
+              aria-label={t.thread.variable.ariaSkillsFormat}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PROMPT_SKILLS_FORMATS.map((format) => (
                 <SelectItem key={format.value} value={format.value}>
-                  {format.label}
+                  {resolveVariableOptionLabel(t, format)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Indent">
+        <Field label={t.thread.variable.indent}>
           <Select
             value={String(variable.indent)}
             disabled={disabled}
             onValueChange={(indent) => update({ indent: Number(indent) })}
           >
-            <SelectTrigger className="w-full" aria-label="Skills indentation">
+            <SelectTrigger
+              className="w-full"
+              aria-label={t.thread.variable.ariaSkillsIndentation}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PROMPT_SKILLS_INDENTS.map((indent) => (
                 <SelectItem key={indent} value={String(indent)}>
-                  {indent === 0 ? "Default" : `${indent} spaces`}
+                  {indent === 0
+                    ? t.thread.variable.indentDefault
+                    : fmt(t.thread.variable.indentSpaces, { count: indent })}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
       </div>
-      <Field label="Value" className="flex min-h-0 grow flex-col">
+      <Field label={t.thread.variable.value} className="flex min-h-0 grow flex-col">
         <PreviewBlock
           className="max-h-none min-h-32 grow"
           muted={skillsLoading || Boolean(skillsError) || someMissing}
-          value={skillsLoading ? "Loading skills..." : preview}
+          value={
+            skillsLoading ? t.thread.variable.loadingSkills : preview
+          }
         />
       </Field>
       <SkillSelectionDialog
@@ -791,16 +811,17 @@ function CustomVariableDetail({
   onUpdate: (name: string, value: string) => void;
   onRemove: (name: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <DetailShell
       icon={<BracesIcon className="text-muted-foreground size-4" />}
-      title="User defined variable"
+      title={t.thread.variable.userDefinedVariable}
       disabled={disabled}
       action={
         <Button
           size="icon-sm"
           variant="ghost"
-          aria-label="Delete custom variable"
+          aria-label={t.thread.variable.ariaDeleteCustomVariable}
           disabled={disabled}
           onClick={() => onRemove(name)}
         >
@@ -810,7 +831,7 @@ function CustomVariableDetail({
       className="flex h-full flex-col"
       contentClassName="flex min-h-0 grow flex-col"
     >
-      <Field label="Name">
+      <Field label={t.thread.variable.name}>
         <VariableNameInput
           name={name}
           disabled={disabled}
@@ -820,12 +841,12 @@ function CustomVariableDetail({
           onCommit={(next) => onRename(name, next)}
         />
       </Field>
-      <Field label="Value" className="flex min-h-0 grow flex-col">
+      <Field label={t.thread.variable.value} className="flex min-h-0 grow flex-col">
         <Textarea
           className="min-h-32 grow resize-none font-mono text-xs"
           value={value}
           disabled={disabled}
-          placeholder="Variable value"
+          placeholder={t.thread.variable.variableValuePlaceholder}
           onChange={(event) => onUpdate(name, event.currentTarget.value)}
         />
       </Field>
@@ -919,6 +940,7 @@ function VariableNameInput({
   isAvailable: (name: string) => boolean;
   onCommit: (name: string) => boolean;
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState(name);
   useEffect(() => {
     setDraft(name);
@@ -966,11 +988,12 @@ function VariableNameInput({
       />
       {showFeedback && !valid ? (
         <div className="text-destructive text-xs">
-          Use letters, numbers, and underscores; start with a letter or
-          underscore.
+          {t.thread.variable.nameInvalid}
         </div>
       ) : showFeedback && !available ? (
-        <div className="text-destructive text-xs">Name already exists.</div>
+        <div className="text-destructive text-xs">
+          {t.thread.variable.nameExists}
+        </div>
       ) : null}
     </div>
   );
@@ -988,10 +1011,12 @@ function _variableIcon(item: VariableListItem): ReactNode {
   return <SparklesIcon className="text-muted-foreground size-4 shrink-0" />;
 }
 
-function _dateFormatLabel(value: ThreadCurrentDateVariable["format"]): string {
-  return (
-    PROMPT_DATE_FORMATS.find((format) => format.value === value)?.label ?? value
-  );
+function _dateFormatLabel(
+  t: ReturnType<typeof useI18n>["t"],
+  value: ThreadCurrentDateVariable["format"]
+): string {
+  const format = PROMPT_DATE_FORMATS.find((f) => f.value === value);
+  return format ? resolveVariableOptionLabel(t, format) : value;
 }
 
 function _selectionExists(

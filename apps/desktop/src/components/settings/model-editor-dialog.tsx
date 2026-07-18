@@ -7,6 +7,7 @@ import {
   useUpsertCustomModel,
 } from "@llm-space/ui/components/model-provider";
 import { ModelAvatar } from "@llm-space/ui/components/thread-playground/model-avatar";
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   Dialog,
@@ -110,6 +111,7 @@ export function ModelEditorDialog({
     initialState(model, providerApi)
   );
   const [testing, setTesting] = useState(false);
+  const { t } = useI18n();
 
   // Reset the form whenever the dialog opens (for a fresh create or a different
   // model to edit).
@@ -176,13 +178,13 @@ export function ModelEditorDialog({
     setTesting(true);
     try {
       await testModelConnection(providerId, trimmedId, buildModel());
-      toast.success("Model connected successfully", {
+      toast.success(t.settings.modelEditor.modelConnected, {
         description: form.name.trim() || trimmedId,
       });
     } catch (error) {
-      toast.error("Failed to connect to model", {
+      toast.error(t.settings.modelEditor.modelConnectFailed, {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : t.common.toasts.tryAgain,
       });
     } finally {
       setTesting(false);
@@ -198,17 +200,19 @@ export function ModelEditorDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Edit model" : "Add custom model"}
+            {isEdit
+              ? t.settings.modelEditor.editTitle
+              : t.settings.modelEditor.addTitle}
           </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update this custom model's configuration."
-              : "Define a custom model for this provider."}
+              ? t.settings.modelEditor.editDescription
+              : t.settings.modelEditor.addDescription}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <Field label="Model ID">
+          <Field label={t.settings.modelEditor.modelId}>
             <Input
               value={form.id}
               placeholder="deepseek-v4-pro"
@@ -216,7 +220,7 @@ export function ModelEditorDialog({
             />
           </Field>
 
-          <Field label="Model name">
+          <Field label={t.settings.modelEditor.modelName}>
             <Input
               value={form.name}
               placeholder="DeepSeek V4 Pro"
@@ -226,16 +230,20 @@ export function ModelEditorDialog({
             />
           </Field>
 
-          <Field label="Icon">
+          <Field label={t.settings.modelEditor.icon}>
             <div className="flex items-center gap-2">
               <ModelAvatar
                 id={form.id.trim() || "model"}
-                name={form.name.trim() || form.id.trim() || "Model"}
+                name={
+                  form.name.trim() ||
+                  form.id.trim() ||
+                  t.settings.modelEditor.modelFallbackName
+                }
                 icon={form.icon.trim() || undefined}
               />
               <Input
                 value={form.icon}
-                placeholder="Auto (e.g. openai, claude, deepseek)"
+                placeholder={t.settings.modelEditor.iconPlaceholder}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, icon: e.target.value }))
                 }
@@ -251,11 +259,11 @@ export function ModelEditorDialog({
               >
                 @lobehub/icons
               </a>{" "}
-              keyword. Leave blank to auto-resolve from the model ID.
+              {t.settings.modelEditor.iconDescription}
             </p>
           </Field>
 
-          <Field label="API type">
+          <Field label={t.settings.modelEditor.apiType}>
             <Select
               value={form.api}
               onValueChange={(value) =>
@@ -279,7 +287,7 @@ export function ModelEditorDialog({
           </Field>
 
           <ToggleField
-            label="Reasoning supported"
+            label={t.settings.modelEditor.reasoningSupported}
             checked={form.reasoning}
             onCheckedChange={(checked) =>
               setForm((prev) => ({ ...prev, reasoning: checked }))
@@ -288,7 +296,7 @@ export function ModelEditorDialog({
 
           {form.reasoning && (
             <ToggleField
-              label="Use DeepSeek thinking format"
+              label={t.settings.modelEditor.useDeepSeekThinking}
               checked={form.deepseekThinking}
               onCheckedChange={(checked) =>
                 setForm((prev) => ({ ...prev, deepseekThinking: checked }))
@@ -297,7 +305,7 @@ export function ModelEditorDialog({
           )}
 
           <ToggleField
-            label="Image supported"
+            label={t.settings.modelEditor.imageSupported}
             checked={form.image}
             onCheckedChange={(checked) =>
               setForm((prev) => ({ ...prev, image: checked }))
@@ -305,7 +313,10 @@ export function ModelEditorDialog({
           />
 
           <div className="flex gap-4">
-            <Field label="Context window" className="flex-1">
+            <Field
+              label={t.settings.modelEditor.contextWindow}
+              className="flex-1"
+            >
               <Input
                 type="number"
                 min={1}
@@ -319,7 +330,7 @@ export function ModelEditorDialog({
                 }
               />
             </Field>
-            <Field label="Max tokens" className="flex-1">
+            <Field label={t.settings.modelEditor.maxTokens} className="flex-1">
               <Input
                 type="number"
                 min={1}
@@ -346,14 +357,16 @@ export function ModelEditorDialog({
             ) : (
               <CableIcon className="size-4" />
             )}
-            Test
+            {t.settings.modelEditor.test}
           </Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t.settings.modelEditor.cancel}
             </Button>
             <Button onClick={handleSave} disabled={!canSave}>
-              {isEdit ? "Save" : "Add"}
+              {isEdit
+                ? t.settings.modelEditor.save
+                : t.settings.modelEditor.add}
             </Button>
           </div>
         </DialogFooter>

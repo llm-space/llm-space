@@ -11,6 +11,8 @@ import { memo, useMemo } from "react";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
 import { cn } from "@llm-space/ui/lib/utils";
 
+import { useI18n } from "../../../i18n";
+
 
 
 
@@ -27,6 +29,7 @@ function _TokenUsageSummary({
     () => (hasModelUsage(usage) ? usageBreakdownRows(usage) : []),
     [usage]
   );
+  const { t, fmt } = useI18n();
   const label = useMemo(
     () =>
       hasModelUsage(usage)
@@ -44,7 +47,9 @@ function _TokenUsageSummary({
     <Tooltip
       content={
         <div className="min-w-44 text-xs">
-          <div className="text-foreground mb-1 font-medium">Token Usage</div>
+          <div className="text-foreground mb-1 font-medium">
+            {t.thread.message.tokenUsage}
+          </div>
           <div className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1">
             {rows.map((row) => (
               <div key={row.label} className="contents">
@@ -59,7 +64,7 @@ function _TokenUsageSummary({
       }
     >
       <div
-        aria-label={`Token usage: ${label}`}
+        aria-label={fmt(t.thread.message.tokenUsageAria, { label })}
         className={cn(
           "text-muted-foreground bg-foreground/4 flex w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-[0.625rem]",
           variant === "header" &&

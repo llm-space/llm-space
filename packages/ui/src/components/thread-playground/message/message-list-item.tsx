@@ -27,7 +27,7 @@ import { Marker, MarkerContent } from "@llm-space/ui/ui/marker";
 import { ShineBorder } from "@llm-space/ui/ui/shine-border";
 import { Skeleton } from "@llm-space/ui/ui/skeleton";
 
-
+import { useI18n } from "../../../i18n";
 import { useThreadStore, useThreadStoreActions } from "../stores";
 import { usePromptVariableExtensionForContext } from "../variable/use-prompt-variable-extension";
 
@@ -60,6 +60,7 @@ function _MessageListItem({
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
 }) {
   const { fidelity } = useRenderingFidelity();
+  const { t } = useI18n();
   const variableExtension = usePromptVariableExtensionForContext(
     createMessagePromptVariablePlaceKey(message.id),
     context
@@ -173,12 +174,12 @@ function _MessageListItem({
         )}
       >
         <div className="insert-line absolute top-1.5 right-2 left-0 border-b border-dashed opacity-0 transition-[opacity,border-color,border-style] group-hover:opacity-100"></div>
-        <Tooltip content="Insert Message Here">
+        <Tooltip content={t.thread.message.insertMessageHere}>
           <Button
             className="text-muted-foreground hover:border-primary hover:bg-primary! hover:text-primary-foreground absolute -top-0.5 -right-3 z-10 size-4 rounded-full opacity-0 transition-[opacity,background-color,color,border-color] group-hover:opacity-100"
             variant="outline"
             size="icon-xs"
-            aria-label="Insert message before this message"
+            aria-label={t.thread.message.insertMessageBeforeAria}
             onClick={() => insertMessageBefore(message.id)}
           >
             <PlusIcon className="size-3" />
@@ -226,7 +227,9 @@ function _MessageListItem({
               plain={fidelity === "lite"}
               placeholder={
                 placeholder ??
-                `Enter ${message.role === "user" ? "user" : "assistant"} message here`
+                (message.role === "user"
+                  ? t.thread.message.enterUserMessageHere
+                  : t.thread.message.enterAssistantMessageHere)
               }
               streaming={streaming}
               readonly={readonly}
@@ -277,6 +280,7 @@ function _ToolStepContinuation({
   const status = useThreadStore((state) => state.status);
   const { run } = useThreadStoreActions();
   const { presentational } = useHostServices();
+  const { t, fmt, plural } = useI18n();
   const { resolveTool, runToolCall } = useToolCallRunner(messageId);
   const callableToolCalls = useMemo(
     () =>
@@ -331,15 +335,21 @@ function _ToolStepContinuation({
       // Suppress the generic toast when the only failures are the Firecrawl
       // limit, since the dialog already explains them.
       if (errorCount > firecrawlLimitCount) {
-        toast.error("Some tool calls failed", {
-          description: `${errorCount}/${outcomes.length} tool call${
-            outcomes.length === 1 ? "" : "s"
-          } failed.`,
+        toast.error(t.thread.message.someToolCallsFailed, {
+          description: fmt(
+            plural(
+              errorCount,
+              t.thread.message.toolCallFailedCount,
+              t.thread.message.toolCallsFailedCount
+            ),
+            { errorCount, total: outcomes.length }
+          ),
         });
       }
     } finally {
       setCallingTools(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t/fmt/plural + the marker labels are stable per language; omitting them keeps the callback identity stable across re-renders
   }, [callableToolCalls, canCallTools, runToolCall]);
 
   // The web shared viewer hides the whole run-continuation block.
@@ -351,7 +361,14 @@ function _ToolStepContinuation({
     <div className="bg-foreground/4 flex min-w-0 items-center justify-between gap-3 rounded-md px-3 py-1">
       <Marker role="status" className="min-w-0">
         <MarkerContent className="truncate text-xs">
-          {toolCalls.length} tool call{toolCalls.length === 1 ? "" : "s"}
+          {fmt(
+            plural(
+              toolCalls.length,
+              t.thread.message.toolCallMarkerOne,
+              t.thread.message.toolCallMarkerOther
+            ),
+            { count: toolCalls.length }
+          )}
         </MarkerContent>
       </Marker>
       <div className="flex shrink-0 items-center gap-2">
@@ -361,22 +378,22 @@ function _ToolStepContinuation({
             size="sm"
             variant="outline"
             disabled={!canCallTools}
-            aria-label="Call available MCP and built-in tools"
+            aria-label={t.thread.message.callToolsAria}
             onClick={() => void handleCallTools()}
           >
-            Call tools
+            {t.thread.message.callTools}
           </Button>
         ) : null}
-        <Tooltip content="Run from this message">
+        <Tooltip content={t.thread.message.runFromThisMessage}>
           <Button
             className="invisible shrink-0 group-hover/message:visible"
             size="sm"
             variant="default"
             disabled={!canContinue}
-            aria-label="Run from this message"
+            aria-label={t.thread.message.runFromThisMessage}
             onClick={() => void handleContinue()}
           >
-            Continue
+            {t.thread.message.continue}
           </Button>
         </Tooltip>
       </div>

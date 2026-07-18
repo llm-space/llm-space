@@ -4,10 +4,25 @@ const THREAD_FILE_EXTENSION = ".json";
 const INVALID_FILE_STEM_CHARS = /[<>:"/\\|?*]/;
 const RESERVED_WINDOWS_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
+/**
+ * A stable identifier for each validation failure, so consumers can resolve a
+ * localized message from the i18n catalog (`t.thread.errors.*`) instead of
+ * showing the English {@link FileStemValidationResult.error} fallback.
+ */
+export type FileStemErrorCode =
+  | "required"
+  | "dotOrDotDot"
+  | "reservedChar"
+  | "reservedByWindows"
+  | "trailingPeriodOrSpace";
+
 export interface FileStemValidationResult {
   valid: boolean;
   value: string;
+  /** English fallback message (non-React consumers). Prefer {@link errorCode} + i18n in React. */
   error?: string;
+  /** Stable failure id — resolve via `t.thread.errors[errorCode]` in React UI. */
+  errorCode?: FileStemErrorCode;
 }
 
 export function basename(path: string): string {
@@ -87,13 +102,19 @@ export function validateThreadFileStem(
 ): FileStemValidationResult {
   const trimmed = value.trim();
   if (!trimmed) {
-    return { valid: false, value: trimmed, error: "File name is required." };
+    return {
+      valid: false,
+      value: trimmed,
+      error: "File name is required.",
+      errorCode: "required",
+    };
   }
   if (trimmed === "." || trimmed === "..") {
     return {
       valid: false,
       value: trimmed,
       error: "File name cannot be . or ..",
+      errorCode: "dotOrDotDot",
     };
   }
   if (
@@ -104,6 +125,7 @@ export function validateThreadFileStem(
       valid: false,
       value: trimmed,
       error: "File name contains a reserved character.",
+      errorCode: "reservedChar",
     };
   }
   if (RESERVED_WINDOWS_NAMES.test(trimmed)) {
@@ -111,6 +133,7 @@ export function validateThreadFileStem(
       valid: false,
       value: trimmed,
       error: "File name is reserved by Windows.",
+      errorCode: "reservedByWindows",
     };
   }
   if (trimmed.endsWith(".") || trimmed.endsWith(" ")) {
@@ -118,6 +141,7 @@ export function validateThreadFileStem(
       valid: false,
       value: trimmed,
       error: "File name cannot end with a period or space.",
+      errorCode: "trailingPeriodOrSpace",
     };
   }
   return { valid: true, value: trimmed };

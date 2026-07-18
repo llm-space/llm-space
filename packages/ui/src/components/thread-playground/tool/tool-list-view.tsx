@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@llm-space/ui/ui/dropdown-menu";
 
+import { useI18n } from "../../../i18n";
 import {
   useThreadStore,
   useThreadStoreActions,
@@ -41,6 +42,7 @@ export function ToolListView({
   const tools = useThreadStore((s) => s.thread.context?.tools);
   const { addTool, removeTool } = useThreadStoreActions();
   const { presentational } = useHostServices();
+  const { t } = useI18n();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [builtInOpen, setBuiltInOpen] = useState(false);
@@ -117,7 +119,7 @@ export function ToolListView({
                 disabled={readonly}
               >
                 <PlusIcon className="size-3" />
-                Add
+                {t.thread.tool.add}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -128,7 +130,7 @@ export function ToolListView({
                 }}
               >
                 <PackageCheckIcon />
-                Add Built-in Tools
+                {t.thread.tool.addBuiltInTools}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
@@ -138,12 +140,12 @@ export function ToolListView({
                 }}
               >
                 <CableIcon />
-                Add MCP Tools
+                {t.thread.tool.addMcpTools}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={openAddDialog}>
                 <FunctionSquareIcon />
-                Add Custom Function Tool
+                {t.thread.tool.addCustomFunctionTool}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

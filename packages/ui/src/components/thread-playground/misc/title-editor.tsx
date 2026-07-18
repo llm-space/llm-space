@@ -5,13 +5,39 @@ import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
 import {
   validateThreadFileStem,
+  type FileStemErrorCode,
   type FileStemValidationResult,
 } from "@llm-space/ui/lib/thread-file";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import { Input } from "@llm-space/ui/ui/input";
 
+import { useI18n, type Messages } from "../../../i18n";
+
 export type TitleValidator = (value: string) => FileStemValidationResult;
+
+/**
+ * Maps a {@link FileStemErrorCode} to its `t.thread.errors.*` key, so the
+ * title editor can show a localized validation message instead of the
+ * validator's English fallback (`FileStemValidationResult.error`).
+ */
+/**
+ * Maps a {@link FileStemErrorCode} to its `t.thread.errors.*` key, so the
+ * title editor can show a localized validation message instead of the
+ * validator's English fallback (`FileStemValidationResult.error`).
+ *
+ * A parallel mapping lives in the desktop file-tree rename input
+ * (`apps/desktop/src/components/file-system-tree-view/file-system-tree-view.tsx`)
+ * because the file-tree can't import this private symbol through the package's
+ * exports map — keep the two in sync when a new error code is added.
+ */
+const FILE_STEM_ERROR_KEY: Record<FileStemErrorCode, keyof Messages["thread"]["errors"]> = {
+  required: "fileNameRequired",
+  dotOrDotDot: "fileNameCannotBeDotOrDotDot",
+  reservedChar: "fileNameContainsReservedChar",
+  reservedByWindows: "fileNameReservedByWindows",
+  trailingPeriodOrSpace: "fileNameCannotEndWithPeriodOrSpace",
+};
 
 function _TitleEditor({
   className,
@@ -26,6 +52,7 @@ function _TitleEditor({
   onRename?: (title: string) => Promise<boolean>;
   validateTitle?: TitleValidator;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +77,11 @@ function _TitleEditor({
   const commitEditing = useCallback(async () => {
     const result = validateTitle(draftTitle);
     if (!result.valid) {
-      setError(result.error ?? "Invalid file name.");
+      setError(
+        result.errorCode
+          ? t.thread.errors[FILE_STEM_ERROR_KEY[result.errorCode]]
+          : (result.error ?? t.thread.errors.invalidFileName)
+      );
       focusInput();
       return;
     }
@@ -72,7 +103,7 @@ function _TitleEditor({
     } finally {
       setCommitting(false);
     }
-  }, [draftTitle, focusInput, onRename, title, validateTitle]);
+  }, [draftTitle, focusInput, onRename, t, title, validateTitle]);
 
   const cancelEditing = useCallback(() => {
     cancelledRef.current = true;
@@ -101,13 +132,13 @@ function _TitleEditor({
         <Input
           ref={inputRef}
           autoFocus
-          aria-label="Thread title"
+          aria-label={t.thread.misc.threadTitleAria}
           aria-invalid={!validation.valid || !!error}
           aria-describedby="thread-title-error"
           className="h-8 border-transparent bg-transparent! text-sm font-medium shadow-none focus-visible:ring-0"
           readOnly={committing}
           value={draftTitle}
-          placeholder="untitled"
+          placeholder={t.thread.misc.untitledPlaceholder}
           onBlur={handleBlur}
           onChange={(event) => {
             setDraftTitle(event.target.value);
@@ -132,7 +163,10 @@ function _TitleEditor({
             id="thread-title-error"
             className="text-destructive absolute top-full left-2 z-10 mt-1 text-xs"
           >
-            {error ?? validation.error}
+            {error ??
+              (validation.errorCode
+                ? t.thread.errors[FILE_STEM_ERROR_KEY[validation.errorCode]]
+                : validation.error)}
           </div>
         )}
       </div>
@@ -145,7 +179,7 @@ function _TitleEditor({
         className="min-w-0 truncate text-sm font-medium"
         role="button"
         tabIndex={0}
-        aria-label="Edit thread title"
+        aria-label={t.thread.misc.editThreadTitleAria}
         onClick={startEditing}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -154,20 +188,22 @@ function _TitleEditor({
           }
         }}
       >
-        <Tooltip content="Click to edit title">
+        <Tooltip content={t.thread.misc.clickToEditTitle}>
           {title ? (
             <span>{title}</span>
           ) : (
-            <span className="text-muted-foreground">untitled</span>
+            <span className="text-muted-foreground">
+              {t.thread.misc.untitledPlaceholder}
+            </span>
           )}
         </Tooltip>
       </div>
       <div className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
-        <Tooltip content="Edit title">
+        <Tooltip content={t.thread.misc.editTitle}>
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Edit thread title"
+            aria-label={t.thread.misc.editThreadTitleAria}
             onClick={startEditing}
           >
             <PencilIcon className="size-3" />

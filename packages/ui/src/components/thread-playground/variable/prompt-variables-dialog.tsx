@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@llm-space/ui/ui/dialog";
 
+import { useI18n } from "../../../i18n";
 
 import {
   PromptVariablesPanel,
@@ -29,6 +30,7 @@ function _PromptVariablesDialog({
   initialSelection,
   onOpenChange,
 }: PromptVariablesDialogProps) {
+  const { t } = useI18n();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -37,12 +39,8 @@ function _PromptVariablesDialog({
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="border-border/70 shrink-0 border-b px-4 py-3 pr-10">
-          <DialogTitle>Variables</DialogTitle>
-          <DialogDescription>
-            Use `{"{{variable_name}}"}` as placeholder in your prompt, messages
-            and tool results to reference the variable. e.g. `
-            {"{{current_date}}"}` will be replaced with the current date.
-          </DialogDescription>
+          <DialogTitle>{t.thread.variable.dialogTitle}</DialogTitle>
+          <DialogDescription>{t.thread.variable.dialogDescription}</DialogDescription>
         </DialogHeader>
         <PromptVariablesPanel
           className="min-h-0 grow"

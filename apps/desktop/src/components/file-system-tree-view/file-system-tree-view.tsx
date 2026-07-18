@@ -7,11 +7,13 @@ import {
   resolveSeed,
 } from "@llm-space/ui/components/thread-playground/examples/prompts";
 import { useHostServices } from "@llm-space/ui/host";
+import { useI18n, type Messages } from "@llm-space/ui/i18n";
 import {
   basename,
   parentOf,
   threadFileNameFromTitle,
   validateThreadFileStem,
+  type FileStemErrorCode,
 } from "@llm-space/ui/lib/thread-file";
 import { cn } from "@llm-space/ui/lib/utils";
 import {
@@ -43,11 +45,9 @@ import { useFullScreen } from "@/lib/use-full-screen";
 import { NodeActions, RootActions } from "./node-actions";
 import { useFileSystemTree, type MoveConflict } from "./use-file-system-tree";
 
-/** What the OS calls its trash, for the delete-confirmation copy. */
-const TRASH_NAME =
-  typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent)
-    ? "Recycle Bin"
-    : "Trash";
+/** Whether the host is Windows — picks the OS-trash / file-manager label. */
+const _isWindows =
+  typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent);
 
 /** The special workspace folder that deep-link shared-thread imports land in. */
 const SHARED_DIR = "shared";
@@ -86,6 +86,12 @@ function _FileSystemTreeView({
 }) {
   const fullScreen = useFullScreen();
   const seedHost = useHostServices();
+  const { t, fmt } = useI18n();
+  // OS-trash name (Trash/Recycle Bin) reused from t.common.os so all surfaces
+  // share one translated label.
+  const trashName = _isWindows
+    ? t.common.os.recycleBinName
+    : t.common.os.trashName;
   const {
     nodesByPath,
     loadingByPath,
@@ -450,7 +456,7 @@ function _FileSystemTreeView({
       <header className="text-muted-foreground electrobun-webkit-app-region-drag flex h-11.5 items-center justify-between px-3 text-xs font-medium">
         {headerStart ?? (
           <span className={cn(fullScreen ? "opacity-100" : "opacity-0")}>
-            LLM Space 4
+            {t.fileTree.tree.brand}
           </span>
         )}
         <span>
@@ -466,9 +472,9 @@ function _FileSystemTreeView({
         ) : data.length === 0 ? (
           <Empty className="h-full">
             <EmptyHeader>
-              <EmptyTitle>No Threads Yet</EmptyTitle>
+              <EmptyTitle>{t.fileTree.tree.emptyTitle}</EmptyTitle>
               <EmptyDescription>
-                Create a thread to get started.
+                {t.fileTree.tree.emptyDescription}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -493,13 +499,18 @@ function _FileSystemTreeView({
         }}
         title={
           <>
-            Move &ldquo;
-            {deleting ? basename(deleting).replace(/\.json$/, "") : ""}
-            &rdquo; to the {TRASH_NAME}?
+            {fmt(t.fileTree.confirmDelete.title, {
+              name: deleting ? basename(deleting).replace(/\.json$/, "") : "",
+              trash: trashName,
+            })}
           </>
         }
-        description={`You can restore it from the ${TRASH_NAME} later.`}
-        confirmLabel={`Move to ${TRASH_NAME}`}
+        description={fmt(t.fileTree.confirmDelete.description, {
+          trash: trashName,
+        })}
+        confirmLabel={fmt(t.fileTree.confirmDelete.confirmLabel, {
+          trash: trashName,
+        })}
         onConfirm={() => {
           const path = deleting;
           setDeleting(null);
@@ -522,23 +533,26 @@ function _FileSystemTreeView({
         }}
         title={
           <>
-            Replace &ldquo;
-            {overwriteConflict
-              ? overwriteConflict.isDir
-                ? overwriteConflict.name
-                : overwriteConflict.name.replace(/\.json$/, "")
-              : ""}
-            &rdquo;?
+            {fmt(t.fileTree.confirmReplace.title, {
+              name: overwriteConflict
+                ? overwriteConflict.isDir
+                  ? overwriteConflict.name
+                  : overwriteConflict.name.replace(/\.json$/, "")
+                : "",
+            })}
           </>
         }
         description={
           overwriteConflict
-            ? `${overwriteConflict.isDir ? "A folder" : "A thread"} with this name already exists here. Replacing it moves the existing ${
-                overwriteConflict.isDir ? "folder" : "thread"
-              } to the ${TRASH_NAME}.`
+            ? fmt(
+                overwriteConflict.isDir
+                  ? t.fileTree.confirmReplace.folderDescription
+                  : t.fileTree.confirmReplace.threadDescription,
+                { trash: trashName }
+              )
             : undefined
         }
-        confirmLabel="Replace"
+        confirmLabel={t.fileTree.confirmReplace.confirmLabel}
         onConfirm={() => {
           overwriteConflict?.resolve(true);
           setOverwriteConflict(null);
@@ -553,6 +567,25 @@ function _FileSystemTreeView({
 // mode-derived className) are stable across tab changes.
 export const FileSystemTreeView = memo(_FileSystemTreeView);
 
+/**
+ * Maps a {@link FileStemErrorCode} to its `t.thread.errors.*` key so the rename
+ * input shows a localized message instead of the validator's English fallback.
+ * Mirrors `FILE_STEM_ERROR_KEY` in
+ * `packages/ui/src/components/thread-playground/misc/title-editor.tsx` (kept
+ * private here because the file-tree can't reach that symbol through the ui
+ * package's exports map) — keep the two in sync when a new error code is added.
+ */
+const FILE_STEM_ERROR_KEY: Record<
+  FileStemErrorCode,
+  keyof Messages["thread"]["errors"]
+> = {
+  required: "fileNameRequired",
+  dotOrDotDot: "fileNameCannotBeDotOrDotDot",
+  reservedChar: "fileNameContainsReservedChar",
+  reservedByWindows: "fileNameReservedByWindows",
+  trailingPeriodOrSpace: "fileNameCannotEndWithPeriodOrSpace",
+};
+
 /** In-place rename input: Enter confirms, Esc / blur cancels. */
 function RenameInput({
   initial,
@@ -563,6 +596,7 @@ function RenameInput({
   onConfirm: (value: string) => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [value, setValue] = useState(initial);
   const validation = validateThreadFileStem(value);
   return (
@@ -597,12 +631,12 @@ function RenameInput({
           }
         }}
       />
-      {!validation.valid && (
+      {!validation.valid && validation.errorCode && (
         <span
           id="tree-rename-error"
           className="text-destructive bg-background absolute top-full left-1 z-10 mt-1 text-xs whitespace-nowrap"
         >
-          {validation.error}
+          {t.thread.errors[FILE_STEM_ERROR_KEY[validation.errorCode]]}
         </span>
       )}
     </span>

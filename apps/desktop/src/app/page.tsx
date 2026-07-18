@@ -1,5 +1,6 @@
 import { FirecrawlLimitDialog } from "@llm-space/ui/components/firecrawl-limit-dialog";
 import { useModels } from "@llm-space/ui/components/model-provider";
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   ResizableHandle,
@@ -102,6 +103,7 @@ function _SidebarModeSwitch({
   mode: "files" | "traces";
   onModeChange: (mode: "files" | "traces") => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="bg-muted/60 grid w-full grid-cols-2 rounded-md p-0.5">
       <Button
@@ -112,7 +114,7 @@ function _SidebarModeSwitch({
         onClick={() => onModeChange("files")}
       >
         <FileTextIcon className="size-3" />
-        Files
+        {t.tabs.page.sidebarFiles}
       </Button>
       <Button
         className="relative h-6 justify-center px-2"
@@ -122,9 +124,9 @@ function _SidebarModeSwitch({
         onClick={() => onModeChange("traces")}
       >
         <GitBranchIcon className="size-3" />
-        Traces
+        {t.tabs.page.sidebarTraces}
         <span className="border-primary/30 bg-primary/10 text-primary absolute top-1 right-2 rounded px-1 py-px text-[0.5rem] leading-none font-semibold tracking-wide uppercase">
-          Beta
+          {t.tabs.page.tracesBetaBadge}
         </span>
       </Button>
     </div>
@@ -204,6 +206,7 @@ function PageInner() {
   const { executeCommand } = useCommands();
   const models = useModels();
   const { tracingEnabled } = useExperimental();
+  const { t, fmt, plural } = useI18n();
 
   // The active tab is read through a ref so command handlers never go stale.
   // The ref is read only inside post-commit command handlers, so the sync
@@ -271,18 +274,36 @@ function PageInner() {
               models
             );
       if (created.length === 0) {
-        toast.error("No threads could be imported from the selected files.");
+        toast.error(t.tabs.page.importNone);
         return;
       }
       executeCommand({ type: "refreshTree", args: {} });
       for (const path of created) openTab(path);
       const skipped = total - created.length;
       toast.success(
-        `Imported ${created.length} thread${created.length === 1 ? "" : "s"}`,
-        skipped > 0 ? { description: `${skipped} file(s) skipped` } : undefined
+        fmt(
+          plural(
+            created.length,
+            t.tabs.page.importSuccessOne,
+            t.tabs.page.importSuccessOther
+          ),
+          { count: created.length }
+        ),
+        skipped > 0
+          ? {
+              description: fmt(
+                plural(
+                  skipped,
+                  t.tabs.page.filesSkippedOne,
+                  t.tabs.page.filesSkippedOther
+                ),
+                { count: skipped }
+              ),
+            }
+          : undefined
       );
     },
-    [models, executeCommand, openTab]
+    [models, executeCommand, openTab, t, fmt, plural]
   );
 
   // Register the command handlers backed by page-level state (tabs, sidebar,
@@ -439,7 +460,7 @@ function PageInner() {
         type="file"
         multiple
         accept=".json,application/json"
-        aria-label="Import thread files"
+        aria-label={t.tabs.page.importThreadFilesAria}
         className="hidden"
         onChange={(e) => {
           const files = e.target.files;
@@ -582,7 +603,7 @@ function PageInner() {
       </LazyOverlay>
       {isDraggingFiles && (
         <div className="border-primary bg-primary/10 text-primary pointer-events-none absolute inset-3 z-50 flex items-center justify-center rounded-lg border-2 border-dashed text-sm font-medium backdrop-blur-sm">
-          Drop files to import as threads
+          {t.tabs.page.dropFilesHint}
         </div>
       )}
     </div>

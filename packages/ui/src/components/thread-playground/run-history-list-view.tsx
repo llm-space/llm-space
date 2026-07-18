@@ -38,20 +38,34 @@ import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
 import { Item, ItemContent, ItemDescription, ItemGroup } from "@llm-space/ui/ui/item";
 
+import { useI18n } from "../../i18n";
+import type { Messages } from "../../i18n";
+
 import { RunEvaluationDialog } from "./run-evaluation-dialog";
 import { RunTraceView } from "./run-trace-view";
 import { useThreadStore, useThreadStoreActions } from "./stores";
 
-const VERDICT_LABELS: Record<EvaluationRecord["verdict"], string> = {
-  leftBetter: "Run A Better",
-  rightBetter: "Run B Better",
-  tie: "Tie",
-  pass: "Pass",
-  fail: "Fail",
-};
+/**
+ * Resolve verdict display labels from the i18n tree. The verdict keys
+ * (`leftBetter` / `rightBetter` / `tie` / `pass` / `fail`) are stable across
+ * locales; the localized strings live in `t.thread.runHistory.verdict*`.
+ */
+function VERDICT_LABELS_BY_KEY(
+  t: Messages
+): Record<EvaluationRecord["verdict"], string> {
+  const g = t.thread.runHistory;
+  return {
+    leftBetter: g.verdictRunABetter,
+    rightBetter: g.verdictRunBBetter,
+    tie: g.verdictTie,
+    pass: g.verdictPass,
+    fail: g.verdictFail,
+  };
+}
 
 function _RunHistoryListView({ onClose }: { onClose: () => void }) {
   const [containerRef] = useAutoAnimation();
+  const { t, fmt } = useI18n();
   const runHistory = useThreadStore((s) => s.runHistory);
   const evaluations = useThreadStore((s) => s.evaluations);
   const evaluationRubrics = useThreadStore((s) => s.evaluationRubrics);
@@ -174,34 +188,39 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
           <Button
             variant="ghost"
             size="sm"
-            aria-label="Back to run history"
+            aria-label={t.thread.runHistory.ariaBackToRunHistory}
             onClick={handleBackToHistory}
           >
             <ArrowLeftIcon className="size-3" />
-            Back
+            {t.thread.runHistory.back}
           </Button>
           <div className="min-w-0 flex-1 px-1">
-            <div className="text-foreground truncate text-sm">Inspect Run</div>
+            <div className="text-foreground truncate text-sm">
+              {t.thread.runHistory.inspectRunTitle}
+            </div>
             <div className="text-muted-foreground text-[0.625rem]">
-              {inspectingRunIndex + 1} of {runs.length}
+              {fmt(t.thread.runHistory.positionOfTotal, {
+                index: inspectingRunIndex + 1,
+                total: runs.length,
+              })}
             </div>
           </div>
-          <Tooltip content="Previous run">
+          <Tooltip content={t.thread.runHistory.previousRun}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Inspect previous run"
+              aria-label={t.thread.runHistory.ariaInspectPreviousRun}
               disabled={!canInspectPrevious}
               onClick={inspectPreviousRun}
             >
               <ChevronLeftIcon className="size-3" />
             </Button>
           </Tooltip>
-          <Tooltip content="Next run">
+          <Tooltip content={t.thread.runHistory.nextRun}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Inspect next run"
+              aria-label={t.thread.runHistory.ariaInspectNextRun}
               disabled={!canInspectNext}
               onClick={inspectNextRun}
             >
@@ -211,7 +230,7 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Close run history"
+            aria-label={t.thread.runHistory.ariaCloseRunHistory}
             onClick={onClose}
           >
             <XIcon className="size-3" />
@@ -225,12 +244,12 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex size-full flex-col">
       <div className="text-muted-foreground flex h-12 shrink-0 items-center justify-between border-b pl-3 text-sm">
-        <div>Run history</div>
+        <div>{t.thread.runHistory.title}</div>
         <div className="pr-2">
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Close run history"
+            aria-label={t.thread.runHistory.ariaCloseRunHistory}
             onClick={onClose}
           >
             <XIcon className="size-3" />
@@ -240,9 +259,13 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
       <div className="border-b px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-xs font-medium">Compare Runs</div>
+            <div className="text-xs font-medium">
+              {t.thread.runHistory.compareRuns}
+            </div>
             <div className="text-muted-foreground text-[0.625rem]">
-              {selectedRuns.length}/2 selected
+              {fmt(t.thread.runHistory.selectedCount, {
+                count: selectedRuns.length,
+              })}
             </div>
           </div>
           <Button
@@ -251,7 +274,7 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
             onClick={handleCompareSelected}
           >
             <GitCompareArrowsIcon className="size-3" />
-            Compare
+            {t.thread.runHistory.compare}
           </Button>
         </div>
       </div>
@@ -262,7 +285,7 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
         <ItemGroup className="gap-3.5!">
           {runs.length === 0 ? (
             <div className="text-muted-foreground m-auto text-xs">
-              No runs yet
+              {t.thread.runHistory.noRunsYet}
             </div>
           ) : (
             runs.map((run, index) => (
@@ -307,9 +330,9 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
             setRunPendingRemoval(null);
           }
         }}
-        title="Remove Run?"
-        description="This removes the saved run from this thread and removes any evaluations that reference it."
-        confirmLabel="Remove"
+        title={t.thread.runHistory.confirmRemoveRunTitle}
+        description={t.thread.runHistory.confirmRemoveRunDescription}
+        confirmLabel={t.thread.runHistory.remove}
         onConfirm={() => {
           const run = runPendingRemoval;
           setRunPendingRemoval(null);
@@ -325,9 +348,9 @@ function _RunHistoryListView({ onClose }: { onClose: () => void }) {
             setEvaluationPendingRemoval(null);
           }
         }}
-        title="Remove Evaluation?"
-        description="This removes the saved evaluation from this thread. The compared runs are kept."
-        confirmLabel="Remove"
+        title={t.thread.runHistory.confirmRemoveEvaluationTitle}
+        description={t.thread.runHistory.confirmRemoveEvaluationDescription}
+        confirmLabel={t.thread.runHistory.remove}
         onConfirm={() => {
           const evaluation = evaluationPendingRemoval;
           setEvaluationPendingRemoval(null);
@@ -359,6 +382,7 @@ function _RunHistoryItem({
   onRestore: (thread: RunSnapshot["thread"]) => void;
   onRequestRemove: (run: RunSnapshot) => void;
 }) {
+  const { t, fmt } = useI18n();
   const summary = summarizeRun(run.thread);
   const modelLabel = runModelLabel(run.thread);
   const messageCountLabel = runMessageCountLabel(run.thread);
@@ -387,7 +411,7 @@ function _RunHistoryItem({
       variant="muted"
       role="listitem"
       tabIndex={0}
-      aria-label={`Inspect run from ${time}: ${summary}`}
+      aria-label={fmt(t.thread.runHistory.ariaInspectRun, { time, summary })}
       className={cn(
         "group hover:bg-muted/70 focus-visible:ring-ring relative cursor-pointer flex-col items-start gap-1.5 focus-visible:ring-[3px]",
         selected && "ring-primary/50 ring-1",
@@ -402,7 +426,7 @@ function _RunHistoryItem({
           {summary}
         </ItemDescription>
         <div className="shrink-0" onClick={stopInspectClick}>
-          <Tooltip content="Remove run">
+          <Tooltip content={t.thread.runHistory.removeRun}>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -410,7 +434,7 @@ function _RunHistoryItem({
                 "hover:text-destructive pointer-events-none opacity-0 transition-opacity",
                 "group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
               )}
-              aria-label={`Remove run from ${time}`}
+              aria-label={fmt(t.thread.runHistory.ariaRemoveRun, { time })}
               onClick={() => onRequestRemove(run)}
             >
               <Trash2Icon className="size-3" />
@@ -431,7 +455,13 @@ function _RunHistoryItem({
           className="flex shrink-0 items-center gap-0.5"
           onClick={stopInspectClick}
         >
-          <Tooltip content={selected ? "Remove from comparison" : "Select run"}>
+          <Tooltip
+            content={
+              selected
+                ? t.thread.runHistory.removeFromComparison
+                : t.thread.runHistory.selectRun
+            }
+          >
             <Button
               variant="ghost"
               size="icon-sm"
@@ -442,8 +472,12 @@ function _RunHistoryItem({
               )}
               aria-label={
                 selected
-                  ? `Remove run from comparison: ${summary}`
-                  : `Select run for comparison: ${summary}`
+                  ? fmt(t.thread.runHistory.ariaRemoveFromComparison, {
+                      summary,
+                    })
+                  : fmt(t.thread.runHistory.ariaSelectRunForComparison, {
+                      summary,
+                    })
               }
               aria-pressed={selected}
               onClick={() => onToggleSelected(run.id)}
@@ -460,21 +494,31 @@ function _RunHistoryItem({
               </span>
             </Button>
           </Tooltip>
-          <Tooltip content="Inspect run">
+          <Tooltip content={t.thread.runHistory.inspectRun}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Inspect run from ${time}: ${summary}. ${modelLabel}. ${messageCountLabel}`}
+              aria-label={fmt(t.thread.runHistory.ariaInspectRunDetailed, {
+                time,
+                summary,
+                modelLabel,
+                messageCountLabel,
+              })}
               onClick={() => onInspectRun(run)}
             >
               <EyeIcon className="size-3" />
             </Button>
           </Tooltip>
-          <Tooltip content="Restore run">
+          <Tooltip content={t.thread.runHistory.restoreRun}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Restore run from ${time}: ${summary}. ${modelLabel}. ${messageCountLabel}`}
+              aria-label={fmt(t.thread.runHistory.ariaRestoreRun, {
+                time,
+                summary,
+                modelLabel,
+                messageCountLabel,
+              })}
               onClick={() => onRestore(run.thread)}
             >
               <RotateCcwIcon className="size-3" />
@@ -499,6 +543,7 @@ function _EvaluationList({
   onOpenEvaluation: (leftRunId: string, rightRunId: string) => void;
   onRequestRemove: (evaluation: EvaluationRecord) => void;
 }) {
+  const { t } = useI18n();
   const visibleEvaluations = evaluations
     .slice()
     .reverse()
@@ -515,7 +560,7 @@ function _EvaluationList({
   return (
     <div className="mt-5 flex flex-col gap-2">
       <div className="text-muted-foreground text-xs font-medium">
-        Evaluations
+        {t.thread.runHistory.evaluations}
       </div>
       <ItemGroup className="gap-2!">
         {visibleEvaluations.map(({ evaluation, leftRun, rightRun }) => (
@@ -546,7 +591,8 @@ function _EvaluationListItem({
   onOpenEvaluation: (leftRunId: string, rightRunId: string) => void;
   onRequestRemove: (evaluation: EvaluationRecord) => void;
 }) {
-  const verdictLabel = VERDICT_LABELS[evaluation.verdict];
+  const { t, fmt } = useI18n();
+  const verdictLabel = VERDICT_LABELS_BY_KEY(t)[evaluation.verdict];
   const leftAverage = averageScoreForRun(
     evaluation.rubric,
     evaluation.runScores,
@@ -582,7 +628,9 @@ function _EvaluationListItem({
       variant="outline"
       role="listitem"
       tabIndex={0}
-      aria-label={`Open saved evaluation: ${verdictLabel}`}
+      aria-label={fmt(t.thread.runHistory.ariaOpenEvaluation, {
+        verdict: verdictLabel,
+      })}
       className="group hover:bg-foreground/5! focus-visible:ring-ring cursor-pointer flex-col items-start gap-1 focus-visible:ring-[3px]"
       onClick={handleOpen}
       onKeyDown={handleOpenKeyDown}
@@ -594,7 +642,7 @@ function _EvaluationListItem({
             {format(evaluation.updatedAt)}
           </span>
           <div onClick={stopOpenClick}>
-            <Tooltip content="Remove evaluation">
+            <Tooltip content={t.thread.runHistory.removeEvaluation}>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -602,7 +650,9 @@ function _EvaluationListItem({
                   "hover:text-destructive pointer-events-none opacity-0 transition-opacity",
                   "group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
                 )}
-                aria-label={`Remove evaluation: ${verdictLabel}`}
+                aria-label={fmt(t.thread.runHistory.ariaRemoveEvaluation, {
+                  verdict: verdictLabel,
+                })}
                 onClick={() => onRequestRemove(evaluation)}
               >
                 <Trash2Icon className="size-3" />
@@ -612,8 +662,13 @@ function _EvaluationListItem({
         </div>
       </div>
       <div className="text-muted-foreground line-clamp-2 w-full font-mono text-[0.625rem]">
-        A: {summarizeRun(leftRun.thread)}
-        {"\n"}B: {summarizeRun(rightRun.thread)}
+        {fmt(t.thread.runHistory.runLabelA, {
+          summary: summarizeRun(leftRun.thread),
+        })}
+        {"\n"}
+        {fmt(t.thread.runHistory.runLabelB, {
+          summary: summarizeRun(rightRun.thread),
+        })}
       </div>
       {evaluation.rubric &&
         leftAverage !== null &&
@@ -621,12 +676,17 @@ function _EvaluationListItem({
         delta !== null && (
           <div className="w-full text-[0.625rem]">
             <div className="text-muted-foreground truncate">
-              {evaluation.rubric.name} · v{evaluation.rubric.revision}
+              {fmt(t.thread.runHistory.rubricRevision, {
+                name: evaluation.rubric.name,
+                revision: evaluation.rubric.revision,
+              })}
             </div>
             <div className="font-mono tabular-nums">
-              A {leftAverage.toFixed(1)} · B {rightAverage.toFixed(1)} · Δ{" "}
-              {delta >= 0 ? "+" : ""}
-              {delta.toFixed(1)}
+              {fmt(t.thread.runHistory.scoreDelta, {
+                aAvg: leftAverage.toFixed(1),
+                bAvg: rightAverage.toFixed(1),
+                delta: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}`,
+              })}
             </div>
           </div>
         )}

@@ -2,6 +2,7 @@
 
 
 import { Tooltip } from "@llm-space/ui/components/tooltip";
+import { useI18n } from "@llm-space/ui/i18n";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   Popover,
@@ -24,16 +25,17 @@ import { useUpdateStatus } from "@/components/update-status-provider";
 export function UpdateIndicator() {
   const { readyVersion } = useUpdateStatus();
   const { executeCommand } = useCommands();
+  const { t, fmt } = useI18n();
   if (!readyVersion) return null;
 
   return (
     <Popover>
-      <Tooltip content="Update ready — restart to install">
+      <Tooltip content={t.update.indicator.tooltipLabel}>
         <PopoverTrigger asChild>
           <Button
             size="icon-sm"
             variant="ghost"
-            aria-label="Update ready"
+            aria-label={t.update.indicator.ariaLabel}
             className="relative"
           >
             <ArrowDownToLineIcon />
@@ -42,9 +44,9 @@ export function UpdateIndicator() {
         </PopoverTrigger>
       </Tooltip>
       <PopoverContent align="end" className="flex w-64 flex-col gap-2">
-        <span className="text-sm font-medium">Update ready</span>
+        <span className="text-sm font-medium">{t.update.indicator.readyLabel}</span>
         <span className="text-muted-foreground text-xs">
-          v{readyVersion} has been downloaded. Restart to install.
+          {fmt(t.update.indicator.downloadedHint, { version: readyVersion })}
         </span>
         <Button
           size="sm"
@@ -53,7 +55,7 @@ export function UpdateIndicator() {
             executeCommand({ type: "applyUpdateAndRestart", args: {} })
           }
         >
-          Restart Now
+          {t.update.indicator.restartNow}
         </Button>
       </PopoverContent>
     </Popover>
