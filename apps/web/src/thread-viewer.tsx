@@ -157,7 +157,16 @@ export function ThreadViewer({
     return <ThreadViewerSkeleton embedded={embedded} />;
   }
   if (state.status === "error") {
-    return <NotFound message={state.message} />;
+    // A load failure isn't "not found" — label rate limits / network errors
+    // accurately so a transient error isn't mistaken for a missing thread.
+    const rateLimited = /rate limit/i.test(state.message);
+    return (
+      <NotFound
+        eyebrow={rateLimited ? "Rate limited" : "Unavailable"}
+        title="We couldn't load this shared thread"
+        message={state.message}
+      />
+    );
   }
 
   const { thread, meta } = state.shared;
