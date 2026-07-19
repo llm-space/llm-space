@@ -15,6 +15,10 @@ import { ScrollArea } from "@llm-space/ui/ui/scroll-area";
 
 import { useThreadStore, useThreadStoreActions } from "../stores";
 
+import {
+  ImageDisplayProvider,
+  type ImageDisplayContextValue,
+} from "./image-display-context";
 import { MessageListItem } from "./message-list-item";
 
 export function MessageListView({
@@ -22,11 +26,14 @@ export function MessageListView({
   context: contextFromProps,
   messages: messagesFromProps,
   readonly: readonlyFromProps = false,
+  compactImages = false,
 }: {
   className?: string;
   context?: ThreadContext;
   messages?: Message[];
   readonly?: boolean;
+  /** Render image attachments as `[Image #N]` placeholders. */
+  compactImages?: boolean;
 }) {
   const isSnapshotView = messagesFromProps !== undefined;
   const status = useThreadStore((s) => s.status);
@@ -35,10 +42,33 @@ export function MessageListView({
   const storeMessages = useThreadStore((s) => s.thread.context?.messages);
   const { appendMessage, moveMessage } = useThreadStoreActions();
   const [dragging, setDragging] = useState(false);
-  const messages = messagesFromProps ?? storeMessages ?? [];
+  const messages = useMemo(
+    () => messagesFromProps ?? storeMessages ?? [],
+    [messagesFromProps, storeMessages]
+  );
   const readonly = useMemo(() => {
     return readonlyFromProps || dragging || isSnapshotView;
   }, [dragging, isSnapshotView, readonlyFromProps]);
+
+  // Number every image attachment sequentially across the thread so the compact
+  // placeholder can label it `[Image #N]`.
+  const imageDisplay = useMemo<ImageDisplayContextValue>(() => {
+    const numbers = new Map<string, number>();
+    let count = 0;
+    for (const message of messages) {
+      message.content.forEach((content, contentIndex) => {
+        if (content.type === "image_data") {
+          count += 1;
+          numbers.set(`${message.id}:${contentIndex}`, count);
+        }
+      });
+    }
+    return {
+      compact: compactImages,
+      numberOf: (messageId, contentIndex) =>
+        numbers.get(`${messageId}:${contentIndex}`) ?? 0,
+    };
+  }, [messages, compactImages]);
 
   const handleDragStart = useCallback(() => {
     setDragging(true);
@@ -73,6 +103,7 @@ export function MessageListView({
 
   return (
     <ScrollArea type="auto" className={cn("size-full", className)}>
+      <ImageDisplayProvider value={imageDisplay}>
       <div ref={contentRef} className="flex flex-col p-3 pt-0.5">
         {isSnapshotView ? (
           <StaticMessageList
@@ -118,6 +149,7 @@ export function MessageListView({
           Add message
         </Button>
       </div>
+      </ImageDisplayProvider>
     </ScrollArea>
   );
 }
