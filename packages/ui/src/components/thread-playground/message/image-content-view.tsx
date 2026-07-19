@@ -1,5 +1,5 @@
 import type { ImageDataContent } from "@llm-space/core";
-import { XIcon } from "lucide-react";
+import { ImageIcon, XIcon } from "lucide-react";
 import React, { useCallback, useState } from "react";
 
 import { Tooltip } from "@llm-space/ui/components/tooltip";
@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogTitle } from "@llm-space/ui/ui/dialog";
 
 import { useThreadStoreActions } from "../stores";
 
+import { useImageDisplay } from "./image-display-context";
+
 const FRAME_SIZE_PX = 192; // size-48
 
 function _ImageContentView({
@@ -16,11 +18,16 @@ function _ImageContentView({
   readonly,
   onRemove,
   className,
+  compact,
+  imageNumber,
 }: {
   image: ImageDataContent;
   readonly?: boolean;
   onRemove?: () => void;
   className?: string;
+  /** Render as a `[Image #N]` placeholder that opens the preview on click. */
+  compact?: boolean;
+  imageNumber?: number;
 }) {
   const [fit, setFit] = useState<"contain" | "cover">("contain");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -53,46 +60,60 @@ function _ImageContentView({
 
   return (
     <>
-      <div
-        className={cn(
-          "group/image relative flex size-48 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border shadow",
-          className
-        )}
-        onClick={handleOpenPreview}
-        role="button"
-        tabIndex={0}
-        aria-label="Open image preview"
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleOpenPreview();
-          }
-        }}
-      >
-        <img
-          src={imageSrc}
-          alt=""
-          onLoad={handleLoad}
+      {compact ? (
+        <button
+          type="button"
+          onClick={handleOpenPreview}
           className={cn(
-            fit === "cover"
-              ? "size-full object-cover"
-              : "max-h-full max-w-full object-contain"
+            "text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-xs transition-colors",
+            className
           )}
-        />
-        {!readonly && onRemove && (
-          <Tooltip content="Remove image">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="bg-background/80 absolute top-1 right-1 rounded-full border opacity-0 transition-opacity group-hover/image:opacity-100"
-              aria-label="Remove image"
-              onClick={handleRemove}
-            >
-              <XIcon className="size-4" />
-            </Button>
-          </Tooltip>
-        )}
-      </div>
+          aria-label="Open image preview"
+        >
+          <ImageIcon className="size-3.5" />[Image #{imageNumber}]
+        </button>
+      ) : (
+        <div
+          className={cn(
+            "group/image relative flex size-48 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border shadow",
+            className
+          )}
+          onClick={handleOpenPreview}
+          role="button"
+          tabIndex={0}
+          aria-label="Open image preview"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleOpenPreview();
+            }
+          }}
+        >
+          <img
+            src={imageSrc}
+            alt=""
+            onLoad={handleLoad}
+            className={cn(
+              fit === "cover"
+                ? "size-full object-cover"
+                : "max-h-full max-w-full object-contain"
+            )}
+          />
+          {!readonly && onRemove && (
+            <Tooltip content="Remove image">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="bg-background/80 absolute top-1 right-1 rounded-full border opacity-0 transition-opacity group-hover/image:opacity-100"
+                aria-label="Remove image"
+                onClick={handleRemove}
+              >
+                <XIcon className="size-4" />
+              </Button>
+            </Tooltip>
+          )}
+        </div>
+      )}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent
@@ -127,18 +148,27 @@ function _ImageContentList({
   className?: string;
 }) {
   const { removeMessageImageContent } = useThreadStoreActions();
+  const { compact, numberOf } = useImageDisplay();
 
   if (images.length === 0) {
     return null;
   }
 
   return (
-    <div className={cn("flex w-full flex-wrap gap-3 px-3 pt-2", className)}>
+    <div
+      className={cn(
+        "flex w-full flex-wrap px-3 pt-2",
+        compact ? "gap-1.5" : "gap-3",
+        className
+      )}
+    >
       {images.map(({ content, contentIndex }) => (
         <ImageContentView
           key={`${content.mimeType}-${contentIndex}`}
           image={content}
           readonly={readonly}
+          compact={compact}
+          imageNumber={numberOf(messageId, contentIndex)}
           onRemove={() => {
             removeMessageImageContent(messageId, contentIndex);
           }}

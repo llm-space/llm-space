@@ -81,6 +81,12 @@ export interface ThreadPlaygroundProps {
   initialValue: Thread;
   readonly?: boolean;
   /**
+   * Render image attachments as compact `[Image #N]` placeholders instead of
+   * inline thumbnails. Decided once by the caller (e.g. embedded viewer or a
+   * narrow viewport); not reactive to later resizes.
+   */
+  compactImages?: boolean;
+  /**
    * Whether this playground belongs to the active tab. Only the active one
    * registers the `runThread` command handler (the command registry keeps a
    * single handler per type), so a global run always targets the active tab.
@@ -178,6 +184,7 @@ function ThreadPlaygroundContent({
   validateTitle,
   readonly: readonlyFromProps = false,
   active = false,
+  compactImages = false,
 }: Omit<
   ThreadPlaygroundProps,
   "initialValue" | "onChange" | "onStreamingStart" | "onStreamingEnd"
@@ -462,7 +469,10 @@ function ThreadPlaygroundContent({
             </ResizablePanel>
             <ResizableHandle className="opacity-50 hover:opacity-100" />
             <ResizablePanel minSize="300px">
-              <MessageListView readonly={readonly} />
+              <MessageListView
+                readonly={readonly}
+                compactImages={compactImages}
+              />
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>

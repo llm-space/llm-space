@@ -8,11 +8,11 @@ import { readLatestThread } from "@llm-space/core/storage";
 import { ThreadPlayground } from "@llm-space/ui/components/thread-playground";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
 import { Button } from "@llm-space/ui/ui/button";
+import { Skeleton } from "@llm-space/ui/ui/skeleton";
 import {
   ExpandIcon,
   ExternalLinkIcon,
   FileJsonIcon,
-  Loader2Icon,
   ShrinkIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,6 +25,21 @@ import { NotFound } from "@/not-found";
 /** `llm-space://shared/{connectorId}/threads/{threadId}` — desktop deep link. */
 function deepLink(connectorId: string, threadId: string): string {
   return `llm-space://shared/${connectorId}/threads/${threadId}`;
+}
+
+/** At or below this width, the viewer opens in embedded (chrome-free) mode. */
+const EMBEDDED_MAX_WIDTH_PX = 850;
+
+/**
+ * Whether the URL opts into compact/embedded rendering via an `embedded` query
+ * param in the hash (e.g. `#/shared/gist/threads/x?embedded`). Read straight off
+ * `window.location.hash` so it's independent of how the router splits the hash.
+ */
+function _isEmbedded(): boolean {
+  const hash = window.location.hash;
+  const queryIndex = hash.indexOf("?");
+  if (queryIndex < 0) return false;
+  return new URLSearchParams(hash.slice(queryIndex + 1)).has("embedded");
 }
 
 function formatDate(iso: string): string {
@@ -82,6 +97,14 @@ export function ThreadViewer({
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [fullscreen, setFullscreen] = useState(false);
   const navigate = useNavigate();
+  // Decide embedded/compact rendering once, at open — kept in state so later
+  // resizes don't reflow (and don't flash thumbnails in) after the thread loads.
+  // Embedded (strips the site chrome + collapses images) when the URL opts in
+  // (`?embedded`) or the viewport is narrow.
+  const [embedded] = useState(
+    () => _isEmbedded() || window.innerWidth <= EMBEDDED_MAX_WIDTH_PX
+  );
+  const compactImages = embedded;
 
   // Try to hand off to the installed desktop app; if it doesn't take over
   // within the timeout, fall back to the homepage (where the download lives).
@@ -109,6 +132,17 @@ export function ThreadViewer({
     };
   }, [connector, threadId]);
 
+  // Reflect the thread title in the tab/window title while it's open.
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    const title = state.shared.meta.title ?? "Untitled thread";
+    const previous = document.title;
+    document.title = `${title} - LLM Space`;
+    return () => {
+      document.title = previous;
+    };
+  }, [state]);
+
   // Let Escape leave full screen.
   useEffect(() => {
     if (!fullscreen) return;
@@ -120,12 +154,7 @@ export function ThreadViewer({
   }, [fullscreen]);
 
   if (state.status === "loading") {
-    return (
-      <div className="dark flex h-dvh items-center justify-center gap-2 bg-[#08080a] text-sm text-neutral-400">
-        <Loader2Icon className="size-4 animate-spin" />
-        Loading shared thread…
-      </div>
-    );
+    return <ThreadViewerSkeleton embedded={embedded} />;
   }
   if (state.status === "error") {
     return <NotFound message={state.message} />;
@@ -134,43 +163,55 @@ export function ThreadViewer({
   const { thread, meta } = state.shared;
   const headerActions = (
     <div className="flex items-center gap-2">
-      {fullscreen ? (
+      {/* Embedded has no meta block, so keep the "Open" affordance in-header. */}
+      {fullscreen || embedded ? (
         <Button size="sm" onClick={openApp}>
           Open in LLM Space
           <ExternalLinkIcon className="size-3.5" />
         </Button>
       ) : null}
-      <Tooltip content={fullscreen ? "Exit full screen" : "Full screen"}>
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          aria-label={fullscreen ? "Exit full screen" : "Enter full screen"}
-          aria-pressed={fullscreen}
-          onClick={() => setFullscreen((value) => !value)}
-        >
-          {fullscreen ? (
-            <ShrinkIcon className="size-4" />
-          ) : (
-            <ExpandIcon className="size-4" />
-          )}
-        </Button>
-      </Tooltip>
+      {/* Full-screen toggle is redundant when already embedded/full-bleed. */}
+      {embedded ? null : (
+        <Tooltip content={fullscreen ? "Exit full screen" : "Full screen"}>
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            aria-label={fullscreen ? "Exit full screen" : "Enter full screen"}
+            aria-pressed={fullscreen}
+            onClick={() => setFullscreen((value) => !value)}
+          >
+            {fullscreen ? (
+              <ShrinkIcon className="size-4" />
+            ) : (
+              <ExpandIcon className="size-4" />
+            )}
+          </Button>
+        </Tooltip>
+      )}
     </div>
   );
   const playground = (
     <ThreadPlayground
       className={
-        fullscreen
+        fullscreen || embedded
           ? "size-full overflow-hidden"
           : "size-full overflow-hidden rounded-xl border shadow-lg"
       }
       path={`shared/${connector.connectorId}/threads/${threadId}`}
       title={meta.title}
       readonly
+      compactImages={compactImages}
       initialValue={thread}
       headerActions={headerActions}
     />
   );
+  // Embedded: strip the site chrome (header + meta block) and let the playground
+  // fill the frame, for use inside an iframe.
+  if (embedded) {
+    return (
+      <div className="dark h-dvh bg-[#08080a] text-[#ededf0]">{playground}</div>
+    );
+  }
   return (
     <div className="dark flex h-dvh flex-col bg-[#08080a] text-[#ededf0]">
       <SiteHeader />
@@ -184,6 +225,47 @@ export function ThreadViewer({
           >
             {playground}
           </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Loading placeholder that mirrors the ready layout — same header, meta block,
+ * and playground shell — so the page doesn't shift once the thread arrives. In
+ * embedded mode it drops the chrome to match the embedded ready view.
+ */
+function ThreadViewerSkeleton({ embedded = false }: { embedded?: boolean }) {
+  if (embedded) {
+    return (
+      <div className="dark h-dvh bg-[#08080a] text-[#ededf0]">
+        <Skeleton className="size-full rounded-none" />
+      </div>
+    );
+  }
+  return (
+    <div className="dark flex h-dvh flex-col bg-[#08080a] text-[#ededf0]">
+      <SiteHeader />
+      <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-6 min-h-0 sm:px-10">
+        <section className="flex shrink-0 flex-col gap-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-8 w-72 max-w-full" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <div className="flex flex-col items-start gap-4 sm:items-end">
+            <Skeleton className="h-3 w-32" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <Skeleton className="h-10 w-40 rounded-md" />
+          </div>
+        </section>
+        <div className="min-h-0 flex-1 pb-6">
+          <Skeleton className="h-full w-full rounded-xl" />
         </div>
       </main>
     </div>
