@@ -272,6 +272,17 @@ export function createMainWindowRPC({
         fsReadText: async ({ path }) => ({
           text: await readUserTextFile(path),
         }),
+        // Native file picker for a "file content" prompt variable.
+        fsPickFile: async () => {
+          const selected = await Utils.openFileDialog({
+            startingFolder: "~/",
+            canChooseFiles: true,
+            canChooseDirectory: false,
+            allowsMultipleSelection: false,
+          });
+          const path = selected.map((p) => p.trim()).find(Boolean) ?? null;
+          return { path };
+        },
         mcpListServers: () => mcpManager.listServers(),
         mcpAddServer: ({ server }) => {
           const servers = mcpManager.addServer(server);

@@ -56,10 +56,15 @@ export interface PathsHost {
   ensureRootDir(relativePath: string): Promise<string>;
 }
 
-/** Arbitrary text-file reads for the prompt `@include` macro. */
+/** Arbitrary text-file reads + native file picking for prompt variables. */
 export interface FilesHost {
   /** Read a file's UTF-8 contents (`~` expands to home); `""` when missing. */
   readText(path: string): Promise<string>;
+  /**
+   * Open the native OS file picker; resolves to the chosen absolute path, or
+   * `null` when cancelled / unavailable (e.g. the display-only web viewer).
+   */
+  pickFile(): Promise<string | null>;
 }
 
 /**

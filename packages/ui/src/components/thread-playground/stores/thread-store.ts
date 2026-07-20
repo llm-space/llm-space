@@ -139,6 +139,7 @@ export interface ThreadState {
   removeMessage(id: string): void;
   updateSystemPrompt(systemPrompt: string): void;
   updatePromptVariable(name: string, variable: ThreadVariable): void;
+  removePromptVariable(name: string): void;
   renamePromptVariable(oldName: string, newName: string): boolean;
   addCustomVariable(name: string, value?: string): boolean;
   updateCustomVariable(name: string, value: string): void;
@@ -562,6 +563,12 @@ export function createThreadStore(
             { ...variables, [name]: variable },
             variableVariants
           );
+        },
+        removePromptVariable(name) {
+          const { variables, variableVariants } = getVariableState();
+          const nextVariables = { ...variables };
+          delete nextVariables[name];
+          setVariableState(nextVariables, variableVariants);
         },
         renamePromptVariable(oldName, newName) {
           if (oldName === newName) {
@@ -1433,6 +1440,7 @@ const selectActions = (s: ThreadState) => ({
   removeMessage: s.removeMessage,
   updateSystemPrompt: s.updateSystemPrompt,
   updatePromptVariable: s.updatePromptVariable,
+  removePromptVariable: s.removePromptVariable,
   renamePromptVariable: s.renamePromptVariable,
   addCustomVariable: s.addCustomVariable,
   updateCustomVariable: s.updateCustomVariable,

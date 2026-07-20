@@ -3,6 +3,7 @@ import type { ThreadContext, ThreadSkillsVariable } from "../types";
 import {
   DEFAULT_VARIABLE_VARIANT_NAME,
   formatCurrentDateVariable,
+  formatJsonVariable,
   formatSkillsVariable,
   normalizePromptVariableState,
   VARIABLE_NAME_RE,
@@ -36,6 +37,17 @@ export function resolvePromptVariableValueSync(
   }
   if (builtIn?.type === "skills") {
     return { status: "needsSkills", variable: builtIn };
+  }
+  if (builtIn?.type === "json") {
+    const value = formatJsonVariable(builtIn.value);
+    return value === undefined
+      ? { status: "empty", name }
+      : { status: "ok", value };
+  }
+  if (builtIn?.type === "file") {
+    // Display the path (reading the file's contents is async / run-time only).
+    const path = builtIn.value.trim();
+    return path ? { status: "ok", value: path } : { status: "empty", name };
   }
   const customValues =
     state.variableVariants.variants[DEFAULT_VARIABLE_VARIANT_NAME] ?? {};
@@ -97,14 +109,22 @@ export function listPromptVariableCompletions(
   const state = normalizePromptVariableState(context);
   const items: PromptVariableCompletion[] = [];
   for (const [name, variable] of Object.entries(state.variables)) {
-    const hint =
-      variable.type === "currentDate"
-        ? formatCurrentDateVariable(variable.format)
-        : variable.skillNames.length === 0
+    let hint: string;
+    if (variable.type === "currentDate") {
+      hint = formatCurrentDateVariable(variable.format);
+    } else if (variable.type === "json") {
+      const value = formatJsonVariable(variable.value);
+      hint = value ? _singleLine(value) : "(empty)";
+    } else if (variable.type === "file") {
+      hint = variable.value.trim() ? _singleLine(variable.value) : "(no file)";
+    } else {
+      hint =
+        variable.skillNames.length === 0
           ? "All enabled skills"
           : `${variable.skillNames.length} selected skill${
               variable.skillNames.length === 1 ? "" : "s"
             }`;
+    }
     items.push({ name, hint });
   }
   const customValues =

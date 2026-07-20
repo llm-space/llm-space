@@ -21,6 +21,13 @@ describe("TEMPLATE_MARKER_RE", () => {
     // A JSON-ish tool result with double braces is NOT a template.
     expect(TEMPLATE_MARKER_RE.test('{"a": {{ "nested" }} }')).toBe(false);
   });
+
+  test("matches member access, indexing, filters, and calls in {{ }}", () => {
+    expect(TEMPLATE_MARKER_RE.test("{{ user.name }}")).toBe(true);
+    expect(TEMPLATE_MARKER_RE.test("{{ items[0] }}")).toBe(true);
+    expect(TEMPLATE_MARKER_RE.test("{{ price | round }}")).toBe(true);
+    expect(TEMPLATE_MARKER_RE.test("{{ include(x) }}")).toBe(true);
+  });
 });
 
 describe("renderTemplateText", () => {
@@ -122,5 +129,58 @@ describe("renderTemplateText", () => {
       threw = true;
     }
     expect(threw).toBe(true);
+  });
+});
+
+describe("renderTemplateText — object (JSON) variables", () => {
+  const knownVars = {
+    user: { name: "Ada", active: true },
+    items: ["a", "b", "c"],
+    flags: { beta: true },
+  };
+
+  test("field access via {{ obj.field }}", async () => {
+    const out = await renderTemplateText({
+      text: "Hi {{ user.name }}",
+      knownVars,
+      loadFile: noFile,
+    });
+    expect(out).toBe("Hi Ada");
+  });
+
+  test("iterates an array field with {% for %}", async () => {
+    const out = await renderTemplateText({
+      text: "{% for i in items %}{{ i }}{% endfor %}",
+      knownVars,
+      loadFile: noFile,
+    });
+    expect(out).toBe("abc");
+  });
+
+  test("branches on a nested boolean with {% if %}", async () => {
+    const out = await renderTemplateText({
+      text: "{% if flags.beta %}beta{% else %}stable{% endif %}",
+      knownVars,
+      loadFile: noFile,
+    });
+    expect(out).toBe("beta");
+  });
+
+  test("missing field renders empty", async () => {
+    const out = await renderTemplateText({
+      text: "[{{ user.missing }}]",
+      knownVars,
+      loadFile: noFile,
+    });
+    expect(out).toBe("[]");
+  });
+
+  test("unknown top-level object name stays literal", async () => {
+    const out = await renderTemplateText({
+      text: "{% if true %}{{ user.name }} {{ stray }}{% endif %}",
+      knownVars,
+      loadFile: noFile,
+    });
+    expect(out).toBe("Ada {{stray}}");
   });
 });

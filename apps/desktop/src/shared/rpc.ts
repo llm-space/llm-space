@@ -199,6 +199,12 @@ export interface DesktopRPCType {
       // prompt `@include` macro. A leading `~` expands to the user's home.
       // Returns "" for a missing/unreadable path so includes degrade quietly.
       fsReadText: { params: { path: string }; response: { text: string } };
+      // Open the native file picker (for a "file content" prompt variable).
+      // `path` is null when the user cancels.
+      fsPickFile: {
+        params: Record<string, never>;
+        response: { path: string | null };
+      };
       mcpListServers: {
         params: Record<string, never>;
         response: McpServerView[];

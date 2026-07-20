@@ -33,6 +33,7 @@ export const webHost: HostServices = {
   files: {
     // No filesystem in the display-only viewer; `@include` resolves to "".
     readText: () => Promise.resolve(""),
+    pickFile: () => Promise.resolve(null),
   },
   actions: {
     openSettings: () => {

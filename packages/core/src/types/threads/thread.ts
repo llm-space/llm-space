@@ -37,9 +37,34 @@ export const ThreadSkillsVariable = Type.Object({
 });
 export type ThreadSkillsVariable = Static<typeof ThreadSkillsVariable>;
 
+/**
+ * A user-authored variable holding raw JSON source text. It is parsed into an
+ * object/array at render time and exposed to templates, so it can be used in
+ * `{% if %}` / `{% for %}` and field access (`{{ user.name }}`).
+ */
+export const ThreadJsonVariable = Type.Object({
+  type: Type.Literal("json"),
+  value: Type.String(),
+});
+export type ThreadJsonVariable = Static<typeof ThreadJsonVariable>;
+
+/**
+ * A user-authored variable holding a file path. At render time the file is read
+ * and its contents are inlined — the named-variable form of the `@include`
+ * macro. `value` is the path (a leading `~` expands to home); it is not
+ * validated for existence.
+ */
+export const ThreadFileVariable = Type.Object({
+  type: Type.Literal("file"),
+  value: Type.String(),
+});
+export type ThreadFileVariable = Static<typeof ThreadFileVariable>;
+
 export const ThreadVariable = Type.Union([
   ThreadCurrentDateVariable,
   ThreadSkillsVariable,
+  ThreadJsonVariable,
+  ThreadFileVariable,
 ]);
 export type ThreadVariable = Static<typeof ThreadVariable>;
 

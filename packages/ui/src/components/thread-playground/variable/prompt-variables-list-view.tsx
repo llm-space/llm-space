@@ -12,6 +12,8 @@ import {
   BracesIcon,
   CalendarDaysIcon,
   CopyIcon,
+  FileJson2Icon,
+  FileTextIcon,
   PlusIcon,
   SparklesIcon,
 } from "lucide-react";
@@ -81,6 +83,22 @@ export function PromptVariablesListView({
           name,
           variable,
           status: _dateFormatLabel(variable.format),
+        };
+      }
+      if (variable.type === "json") {
+        return {
+          kind: "builtIn" as const,
+          name,
+          variable,
+          status: variable.value.trim() ? "JSON" : "(empty)",
+        };
+      }
+      if (variable.type === "file") {
+        return {
+          kind: "builtIn" as const,
+          name,
+          variable,
+          status: variable.value.trim() || "(no file)",
         };
       }
       return {
@@ -263,7 +281,16 @@ function _variableIcon(item: VariableListItem) {
   if (item.kind === "custom") {
     return BracesIcon;
   }
-  return item.variable.type === "currentDate" ? CalendarDaysIcon : SparklesIcon;
+  if (item.variable.type === "currentDate") {
+    return CalendarDaysIcon;
+  }
+  if (item.variable.type === "json") {
+    return FileJson2Icon;
+  }
+  if (item.variable.type === "file") {
+    return FileTextIcon;
+  }
+  return SparklesIcon;
 }
 
 function _dateFormatLabel(value: ThreadCurrentDateVariable["format"]): string {

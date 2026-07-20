@@ -14,12 +14,14 @@ import nunjucks from "nunjucks";
  */
 
 /**
- * A text is treated as a template only when it contains a block tag (`{% … %}`)
- * or the `@`-macro form (`{{@ … }}`). Everything else — including untrusted
- * tool/web-search output with stray `{{…}}` — stays on the literal-safe simple
- * path so it can never be mangled or blanked.
+ * A text is treated as a template when it contains a block tag (`{% … %}`), the
+ * `@`-macro form (`{{@ … }}`), or a `{{ … }}` expression using member access,
+ * indexing, a filter, or a call (`.`, `[`, `|`, `(`) — e.g. `{{ user.name }}`,
+ * `{{ items[0] }}`, `{{ x | round }}`. Plain `{{name}}` placeholders and
+ * unrelated braces (including stray `{{…}}` in untrusted tool/web output) stay
+ * on the literal-safe simple path so they are never mangled or blanked.
  */
-export const TEMPLATE_MARKER_RE = /\{%|\{\{\s*@/;
+export const TEMPLATE_MARKER_RE = /\{%|\{\{\s*@|\{\{[^{}]*[.[|(]/;
 
 /** Max nesting for recursive `@include` (cycle / runaway guard). */
 export const MAX_INCLUDE_DEPTH = 10;
@@ -86,8 +88,12 @@ const RESERVED_NAMES = new Set([
 
 export interface RenderTemplateInput {
   text: string;
-  /** Pre-resolved built-in + custom variables (e.g. `current_date`). */
-  knownVars: Record<string, string>;
+  /**
+   * Pre-resolved variables. Values are strings (e.g. `current_date`), except
+   * JSON variables, which are the parsed object/array so templates can access
+   * fields and iterate.
+   */
+  knownVars: Record<string, unknown>;
   /** Reads a file's UTF-8 contents; returns `""` when missing. */
   loadFile: (path: string) => Promise<string>;
 }
@@ -116,9 +122,9 @@ function _rewriteMacros(text: string): string {
  */
 function _buildRenderContext(
   rewritten: string,
-  knownVars: Record<string, string>
-): Record<string, string> {
-  const context: Record<string, string> = { ...knownVars };
+  knownVars: Record<string, unknown>
+): Record<string, unknown> {
+  const context: Record<string, unknown> = { ...knownVars };
   for (const match of rewritten.matchAll(EXPRESSION_RE)) {
     const inner = (match[1] ?? match[2] ?? "").replace(STRING_LITERAL_RE, " ");
     for (const idMatch of inner.matchAll(IDENTIFIER_RE)) {

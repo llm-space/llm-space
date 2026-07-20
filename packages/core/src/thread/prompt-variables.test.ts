@@ -70,3 +70,61 @@ describe("renderThreadPromptVariables — template output freeze", () => {
     expect(fresh.context.systemPrompt).toBe("V2");
   });
 });
+
+describe("renderThreadPromptVariables — JSON variables", () => {
+  const jsonContext = (systemPrompt: string, value: string) =>
+    context(systemPrompt, { variables: { data: { type: "json", value } } });
+
+  test("field access and iteration in templates", async () => {
+    const { context: out } = await renderThreadPromptVariables({
+      context: jsonContext(
+        "{% for i in data.items %}{{ i }}{% endfor %}|{{ data.user.name }}",
+        '{"user":{"name":"Ada"},"items":["a","b"]}'
+      ),
+    });
+    expect(out.systemPrompt).toBe("ab|Ada");
+  });
+
+  test("whole object renders as pretty JSON on the simple path", async () => {
+    const { context: out } = await renderThreadPromptVariables({
+      context: jsonContext("{{ data }}", '{"n":1}'),
+    });
+    expect(out.systemPrompt).toBe('{\n  "n": 1\n}');
+  });
+
+  test("invalid JSON leaves field access empty", async () => {
+    const { context: out } = await renderThreadPromptVariables({
+      context: jsonContext("[{{ data.x }}]", "{bad"),
+    });
+    expect(out.systemPrompt).toBe("[]");
+  });
+});
+
+describe("renderThreadPromptVariables — file variables", () => {
+  const fileContext = (systemPrompt: string, value: string) =>
+    context(systemPrompt, { variables: { doc: { type: "file", value } } });
+
+  test("inlines the file's contents", async () => {
+    const { context: out } = await renderThreadPromptVariables({
+      context: fileContext("[{{ doc }}]", "notes.md"),
+      loadFile: (p) => Promise.resolve(p === "notes.md" ? "HELLO" : ""),
+    });
+    expect(out.systemPrompt).toBe("[HELLO]");
+  });
+
+  test("missing file inlines empty", async () => {
+    const { context: out } = await renderThreadPromptVariables({
+      context: fileContext("[{{ doc }}]", "missing.md"),
+      loadFile: () => Promise.resolve(""),
+    });
+    expect(out.systemPrompt).toBe("[]");
+  });
+
+  test("empty path leaves the placeholder literal", async () => {
+    const { context: out } = await renderThreadPromptVariables({
+      context: fileContext("[{{ doc }}]", ""),
+      loadFile: () => Promise.resolve("SHOULD NOT BE READ"),
+    });
+    expect(out.systemPrompt).toBe("[{{ doc }}]");
+  });
+});

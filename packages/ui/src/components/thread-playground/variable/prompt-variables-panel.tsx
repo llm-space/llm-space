@@ -2,6 +2,8 @@
 
 import type {
   ThreadCurrentDateVariable,
+  ThreadFileVariable,
+  ThreadJsonVariable,
   ThreadSkillsVariable,
   ThreadVariable,
 } from "@llm-space/core";
@@ -17,6 +19,9 @@ import {
 import {
   BracesIcon,
   CalendarDaysIcon,
+  FileJson2Icon,
+  FileTextIcon,
+  FolderOpenIcon,
   ListFilterIcon,
   PlusIcon,
   SparklesIcon,
@@ -32,11 +37,18 @@ import {
   type ReactNode,
 } from "react";
 
+import { CodeEditor } from "@llm-space/ui/components/code-editor";
 import { ConfirmDialog } from "@llm-space/ui/components/confirm-dialog";
 import { Tooltip } from "@llm-space/ui/components/tooltip";
 import { useHostServices } from "@llm-space/ui/host";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@llm-space/ui/ui/dropdown-menu";
 import { Input } from "@llm-space/ui/ui/input";
 import { ScrollArea } from "@llm-space/ui/ui/scroll-area";
 import {
@@ -100,6 +112,7 @@ function _PromptVariablesPanel({
   const messages = useThreadStore((s) => s.thread.context?.messages);
   const {
     updatePromptVariable,
+    removePromptVariable,
     renamePromptVariable,
     addCustomVariable,
     updateCustomVariable,
@@ -139,9 +152,10 @@ function _PromptVariablesPanel({
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [skillsError, setSkillsError] = useState<string | null>(null);
-  const [pendingRemoveCustom, setPendingRemoveCustom] = useState<{
+  const [pendingRemove, setPendingRemove] = useState<{
     name: string;
     hasReferences: boolean;
+    onConfirm: () => void;
   } | null>(null);
   const initialSelectionKey = initialSelection
     ? `${initialSelection.kind}:${initialSelection.name}`
@@ -153,22 +167,43 @@ function _PromptVariablesPanel({
     [skills]
   );
 
-  const { builtInItems, customItems } = useMemo(() => {
-    const builtInItems = Object.entries(variables).map(([name, variable]) => {
+  const { builtInItems, typedItems, customItems } = useMemo(() => {
+    const builtInItems: VariableListItem[] = [];
+    const typedItems: VariableListItem[] = [];
+    for (const [name, variable] of Object.entries(variables)) {
       if (variable.type === "currentDate") {
-        return {
-          kind: "builtIn" as const,
+        builtInItems.push({
+          kind: "builtIn",
           name,
           variable,
           status: _dateFormatLabel(variable.format),
-        };
+        });
+        continue;
+      }
+      if (variable.type === "json") {
+        typedItems.push({
+          kind: "builtIn",
+          name,
+          variable,
+          status: _jsonStatus(variable.value),
+        });
+        continue;
+      }
+      if (variable.type === "file") {
+        typedItems.push({
+          kind: "builtIn",
+          name,
+          variable,
+          status: variable.value.trim() || "(no file)",
+        });
+        continue;
       }
       const selectedCount = variable.skillNames.length;
       const missingCount = variable.skillNames.filter(
         (skillName) => !skillsByName.has(skillName)
       ).length;
-      return {
-        kind: "builtIn" as const,
+      builtInItems.push({
+        kind: "builtIn",
         name,
         variable,
         status:
@@ -178,15 +213,17 @@ function _PromptVariablesPanel({
               ? `${missingCount} missing`
               : `${selectedCount} selected`,
         warning: missingCount > 0 || Boolean(skillsError),
-      };
-    });
-    const custom = Object.entries(customValues).map(([name, value]) => ({
-      kind: "custom" as const,
-      name,
-      value,
-      status: value.trim() ? value : "(empty)",
-    }));
-    return { builtInItems, customItems: custom };
+      });
+    }
+    const custom: VariableListItem[] = Object.entries(customValues).map(
+      ([name, value]) => ({
+        kind: "custom",
+        name,
+        value,
+        status: value.trim() ? value : "(empty)",
+      })
+    );
+    return { builtInItems, typedItems, customItems: custom };
   }, [customValues, skillsByName, skillsError, variables]);
 
   // Apply a chip-open target once, then let in-dialog selection stay user-owned
@@ -259,22 +296,56 @@ function _PromptVariablesPanel({
     }
   }, [addCustomVariable, customNames, variables]);
 
+  const addJson = useCallback(() => {
+    const used = new Set([...Object.keys(variables), ...customNames]);
+    const name = _uniqueName("json_variable", used);
+    updatePromptVariable(name, { type: "json", value: "" });
+    setSelection({ kind: "builtIn", name });
+  }, [customNames, updatePromptVariable, variables]);
+
+  const addFile = useCallback(() => {
+    const used = new Set([...Object.keys(variables), ...customNames]);
+    const name = _uniqueName("file_variable", used);
+    updatePromptVariable(name, { type: "file", value: "" });
+    setSelection({ kind: "builtIn", name });
+  }, [customNames, updatePromptVariable, variables]);
+
   const confirmRemoveCustom = useCallback(
     (name: string) => {
-      setPendingRemoveCustom({
+      setPendingRemove({
         name,
         hasReferences: hasThreadPromptVariableReference(
           { systemPrompt, messages },
           name
         ),
+        onConfirm: () => removeCustomVariable(name),
       });
     },
-    [messages, systemPrompt]
+    [messages, removeCustomVariable, systemPrompt]
   );
+
+  // Removes any user-created typed variable (json / file) from context.variables.
+  const confirmRemoveTypedVariable = useCallback(
+    (name: string) => {
+      setPendingRemove({
+        name,
+        hasReferences: hasThreadPromptVariableReference(
+          { systemPrompt, messages },
+          name
+        ),
+        onConfirm: () => removePromptVariable(name),
+      });
+    },
+    [messages, removePromptVariable, systemPrompt]
+  );
+  const selectedType =
+    selection?.kind === "builtIn"
+      ? variables[selection.name]?.type
+      : undefined;
   const detailFillsAvailableHeight =
     selection?.kind === "custom" ||
-    (selection?.kind === "builtIn" &&
-      variables[selection.name]?.type === "skills");
+    selectedType === "skills" ||
+    selectedType === "json";
 
   return (
     <section
@@ -305,20 +376,37 @@ function _PromptVariablesPanel({
             <VariableListGroup
               title="Custom"
               action={
-                <Button
-                  className="h-6 px-1.5 text-[0.6875rem]"
-                  size="sm"
-                  variant="ghost"
-                  disabled={disabled}
-                  onClick={addCustom}
-                >
-                  <PlusIcon className="size-3" />
-                  Add variable
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      className="h-6 px-1.5 text-[0.6875rem]"
+                      size="sm"
+                      variant="ghost"
+                      disabled={disabled}
+                    >
+                      <PlusIcon className="size-3" />
+                      Add variable
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={addCustom}>
+                      <BracesIcon className="size-3.5" />
+                      Text
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={addJson}>
+                      <FileJson2Icon className="size-3.5" />
+                      JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={addFile}>
+                      <FileTextIcon className="size-3.5" />
+                      File content
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               }
             >
-              {customItems.length > 0 ? (
-                customItems.map((item) => (
+              {typedItems.length + customItems.length > 0 ? (
+                [...typedItems, ...customItems].map((item) => (
                   <VariableListRow
                     key={`${item.kind}:${item.name}`}
                     item={item}
@@ -365,6 +453,7 @@ function _PromptVariablesPanel({
               return renamed;
             }}
             onUpdateBuiltIn={updatePromptVariable}
+            onRemoveBuiltIn={confirmRemoveTypedVariable}
             onRenameCustom={(oldName, newName) => {
               const renamed = renameCustomVariable(oldName, newName);
               if (renamed) {
@@ -378,26 +467,24 @@ function _PromptVariablesPanel({
         </ScrollArea>
       </div>
       <ConfirmDialog
-        open={pendingRemoveCustom !== null}
+        open={pendingRemove !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingRemoveCustom(null);
+            setPendingRemove(null);
           }
         }}
-        title="Delete custom variable?"
+        title="Delete variable?"
         description={
-          pendingRemoveCustom
-            ? pendingRemoveCustom.hasReferences
-              ? `This thread references "{{${pendingRemoveCustom.name}}}". Deleting this variable will leave unresolved placeholders.`
-              : `This removes "{{${pendingRemoveCustom.name}}}" and its value from this thread.`
+          pendingRemove
+            ? pendingRemove.hasReferences
+              ? `This thread references "{{${pendingRemove.name}}}". Deleting this variable will leave unresolved placeholders.`
+              : `This removes "{{${pendingRemove.name}}}" and its value from this thread.`
             : undefined
         }
         confirmLabel="Delete variable"
         onConfirm={() => {
-          if (pendingRemoveCustom) {
-            removeCustomVariable(pendingRemoveCustom.name);
-          }
-          setPendingRemoveCustom(null);
+          pendingRemove?.onConfirm();
+          setPendingRemove(null);
         }}
       />
     </section>
@@ -481,6 +568,7 @@ function VariableDetail({
   skillsError,
   onRenameBuiltIn,
   onUpdateBuiltIn,
+  onRemoveBuiltIn,
   onRenameCustom,
   onUpdateCustom,
   onRemoveCustom,
@@ -496,6 +584,7 @@ function VariableDetail({
   skillsError: string | null;
   onRenameBuiltIn: (oldName: string, newName: string) => boolean;
   onUpdateBuiltIn: (name: string, variable: ThreadVariable) => void;
+  onRemoveBuiltIn: (name: string) => void;
   onRenameCustom: (oldName: string, newName: string) => boolean;
   onUpdateCustom: (name: string, value: string) => void;
   onRemoveCustom: (name: string) => void;
@@ -550,6 +639,36 @@ function VariableDetail({
         customNames={customNames}
         onRename={onRenameBuiltIn}
         onUpdate={(name, next) => onUpdateBuiltIn(name, next)}
+      />
+    );
+  }
+
+  if (variable.type === "json") {
+    return (
+      <JsonVariableDetail
+        name={selection.name}
+        variable={variable}
+        disabled={disabled}
+        variables={variables}
+        customNames={customNames}
+        onRename={onRenameBuiltIn}
+        onUpdate={(name, next) => onUpdateBuiltIn(name, next)}
+        onRemove={onRemoveBuiltIn}
+      />
+    );
+  }
+
+  if (variable.type === "file") {
+    return (
+      <FileVariableDetail
+        name={selection.name}
+        variable={variable}
+        disabled={disabled}
+        variables={variables}
+        customNames={customNames}
+        onRename={onRenameBuiltIn}
+        onUpdate={(name, next) => onUpdateBuiltIn(name, next)}
+        onRemove={onRemoveBuiltIn}
       />
     );
   }
@@ -833,6 +952,162 @@ function CustomVariableDetail({
   );
 }
 
+function JsonVariableDetail({
+  name,
+  variable,
+  disabled,
+  variables,
+  customNames,
+  onRename,
+  onUpdate,
+  onRemove,
+}: {
+  name: string;
+  variable: ThreadJsonVariable;
+  disabled?: boolean;
+  variables: Record<string, ThreadVariable>;
+  customNames: Set<string>;
+  onRename: (oldName: string, newName: string) => boolean;
+  onUpdate: (name: string, variable: ThreadVariable) => void;
+  onRemove: (name: string) => void;
+}) {
+  const error = _jsonError(variable.value);
+  return (
+    <DetailShell
+      icon={<FileJson2Icon className="text-muted-foreground size-4" />}
+      title="JSON variable"
+      disabled={disabled}
+      action={
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Delete JSON variable"
+          disabled={disabled}
+          onClick={() => onRemove(name)}
+        >
+          <Trash2Icon className="size-3.5" />
+        </Button>
+      }
+      className="flex h-full flex-col"
+      contentClassName="flex min-h-0 grow flex-col"
+    >
+      <Field label="Name">
+        <VariableNameInput
+          name={name}
+          disabled={disabled}
+          isAvailable={(next) =>
+            _isBuiltInNameAvailable(next, name, variables, customNames)
+          }
+          onCommit={(next) => onRename(name, next)}
+        />
+      </Field>
+      <Field label="Value (JSON)" className="flex min-h-0 grow flex-col">
+        <CodeEditor
+          language="json"
+          value={variable.value}
+          readonly={disabled}
+          placeholder={'{ "key": "value" }'}
+          className="min-h-32 grow"
+          onChange={(next) => onUpdate(name, { ...variable, value: next })}
+        />
+      </Field>
+      {error ? (
+        <p className="text-destructive text-xs">{error}</p>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          Use it in templates, e.g. {"{% if data.enabled %}"},{" "}
+          {"{% for x in data.items %}"}, {"{{ data.name }}"}.
+        </p>
+      )}
+    </DetailShell>
+  );
+}
+
+function FileVariableDetail({
+  name,
+  variable,
+  disabled,
+  variables,
+  customNames,
+  onRename,
+  onUpdate,
+  onRemove,
+}: {
+  name: string;
+  variable: ThreadFileVariable;
+  disabled?: boolean;
+  variables: Record<string, ThreadVariable>;
+  customNames: Set<string>;
+  onRename: (oldName: string, newName: string) => boolean;
+  onUpdate: (name: string, variable: ThreadVariable) => void;
+  onRemove: (name: string) => void;
+}) {
+  const { files } = useHostServices();
+  const browse = useCallback(async () => {
+    const path = await files.pickFile();
+    if (path) {
+      onUpdate(name, { ...variable, value: path });
+    }
+  }, [files, name, onUpdate, variable]);
+
+  return (
+    <DetailShell
+      icon={<FileTextIcon className="text-muted-foreground size-4" />}
+      title="File content variable"
+      disabled={disabled}
+      action={
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Delete file variable"
+          disabled={disabled}
+          onClick={() => onRemove(name)}
+        >
+          <Trash2Icon className="size-3.5" />
+        </Button>
+      }
+    >
+      <Field label="Name">
+        <VariableNameInput
+          name={name}
+          disabled={disabled}
+          isAvailable={(next) =>
+            _isBuiltInNameAvailable(next, name, variables, customNames)
+          }
+          onCommit={(next) => onRename(name, next)}
+        />
+      </Field>
+      <Field label="File path">
+        <div className="flex items-center gap-2">
+          <Input
+            className="h-7 font-mono text-xs"
+            value={variable.value}
+            disabled={disabled}
+            placeholder="~/notes/style.md"
+            onChange={(event) =>
+              onUpdate(name, { ...variable, value: event.currentTarget.value })
+            }
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0"
+            disabled={disabled}
+            onClick={() => void browse()}
+          >
+            <FolderOpenIcon className="size-3.5" />
+            Browse…
+          </Button>
+        </div>
+      </Field>
+      <p className="text-muted-foreground text-xs">
+        Inlines the file contents at run time (a missing file → empty). For
+        recursive rendering, use {'{{@include("...")}}'} instead.
+      </p>
+    </DetailShell>
+  );
+}
+
 function DetailShell({
   icon,
   title,
@@ -985,6 +1260,12 @@ function _variableIcon(item: VariableListItem): ReactNode {
       <CalendarDaysIcon className="text-muted-foreground size-4 shrink-0" />
     );
   }
+  if (item.variable.type === "json") {
+    return <FileJson2Icon className="text-muted-foreground size-4 shrink-0" />;
+  }
+  if (item.variable.type === "file") {
+    return <FileTextIcon className="text-muted-foreground size-4 shrink-0" />;
+  }
   return <SparklesIcon className="text-muted-foreground size-4 shrink-0" />;
 }
 
@@ -992,6 +1273,29 @@ function _dateFormatLabel(value: ThreadCurrentDateVariable["format"]): string {
   return (
     PROMPT_DATE_FORMATS.find((format) => format.value === value)?.label ?? value
   );
+}
+
+/** A JSON parse error message for the editor, or `null` when valid/empty. */
+function _jsonError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    JSON.parse(trimmed);
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : "Invalid JSON.";
+  }
+}
+
+/** The list-row status line for a JSON variable. */
+function _jsonStatus(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "(empty)";
+  }
+  return _jsonError(trimmed) ? "Invalid JSON" : trimmed.replace(/\s+/g, " ");
 }
 
 function _selectionExists(

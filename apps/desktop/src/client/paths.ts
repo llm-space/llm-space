@@ -30,3 +30,9 @@ export async function readTextFile(path: string): Promise<string> {
   const { text } = await _rpc().request.fsReadText({ path });
   return text;
 }
+
+/** Open the native file picker; resolves to the chosen path or `null`. */
+export async function pickFile(): Promise<string | null> {
+  const { path } = await _rpc().request.fsPickFile({});
+  return path;
+}

@@ -435,8 +435,8 @@ function createVariableCompletion(list: PromptVariableLister): Extension {
     }
 
     // Tag completion: after `{%`, offer the block tags (if/for/set/…). Each
-    // inserts a complete `{% … %}` tag, rewriting from the `{%` and swallowing a
-    // trailing `%}` if one is already present.
+    // inserts a complete `{% … %}` tag, rewriting from the `{%` and swallowing
+    // whatever close already trails the cursor so we never double a brace.
     const tagBefore = context.matchBefore(TAG_TRIGGER_RE);
     if (tagBefore) {
       const typedTag = /[a-zA-Z]*$/.exec(tagBefore.text)?.[0] ?? "";
@@ -449,9 +449,10 @@ function createVariableCompletion(list: PromptVariableLister): Extension {
           const head = view.state.sliceDoc(Math.max(0, applyTo - 64), applyTo);
           const rel = head.lastIndexOf("{%");
           const start = rel === -1 ? applyTo : applyTo - (head.length - rel);
-          // Swallow an existing `%}` (with leading spaces) so we never double it.
+          // Swallow an existing close that bracket auto-close left behind — a
+          // full `%}` OR a lone `}` (typing `{` inserts `}`, so `{%` → `{%}`).
           const after = view.state.sliceDoc(applyTo, applyTo + 16);
-          const closeLen = /^\s*%\}/.exec(after)?.[0].length ?? 0;
+          const closeLen = /^\s*%?\}/.exec(after)?.[0].length ?? 0;
           view.dispatch({
             changes: { from: start, to: applyTo + closeLen, insert: tag.insert },
             selection: { anchor: start + tag.caret },
