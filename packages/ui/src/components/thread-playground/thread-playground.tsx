@@ -143,7 +143,7 @@ function _ThreadPlayground({
   const defaultModel = useDefaultModel();
   const defaultModelRef = useRef(defaultModel);
   defaultModelRef.current = defaultModel;
-  const { executeTool, skills } = useHostServices();
+  const { executeTool, skills, files } = useHostServices();
   const [store] = useState(() =>
     createThreadStore(initialValue, {
       transport,
@@ -157,6 +157,7 @@ function _ThreadPlayground({
       getReactLoop,
       executeTool: executeTool ?? undefined,
       loadSkills: () => listEnabledPromptVariableSkills(skills),
+      loadFile: (path) => files.readText(path),
     })
   );
   useThreadPlaygroundEvents(store, {

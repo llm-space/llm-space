@@ -54,34 +54,54 @@ function truncate(value: string, max: number): string {
 // `g` flag is required by MatchDecorator. Highlighting never consults the
 // variable table, so this stays a pure, viewport-bounded scan.
 const PLACEHOLDER_RE = /\{\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\}\}/g;
+// A Jinja/Nunjucks tag `{% … %}` (with optional whitespace-control `-`/`+`),
+// highlighted as one unit — purely syntactic, viewport-bounded like above.
+const TEMPLATE_TAG_RE = /\{%[-+]?[\s\S]*?[-+]?%\}/g;
 // Cap tooltip length so a large skills list can't produce a giant tooltip.
 const MAX_VALUE_CHARS = 2000;
 
 const placeholderMark = Decoration.mark({ class: "cm-prompt-variable" });
+const templateTagMark = Decoration.mark({ class: "cm-template-tag" });
 
 const matcher = new MatchDecorator({
   regexp: PLACEHOLDER_RE,
   decoration: placeholderMark,
 });
+const templateTagMatcher = new MatchDecorator({
+  regexp: TEMPLATE_TAG_RE,
+  decoration: templateTagMark,
+});
 
-// MatchDecorator only scans the visible ranges and maps existing decorations
-// through edits, so highlighting cost never scales with document length.
-const placeholderHighlighter = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-    constructor(view: EditorView) {
-      this.decorations = matcher.createDeco(view);
-    }
-    update(update: ViewUpdate) {
-      this.decorations = matcher.updateDeco(update, this.decorations);
-    }
-  },
-  { decorations: (plugin) => plugin.decorations }
-);
+// Build a viewport-bounded highlighter from a MatchDecorator. Only visible
+// ranges are scanned and existing decorations map through edits, so cost never
+// scales with document length.
+function _createHighlighter(decorator: MatchDecorator): ViewPlugin<{
+  decorations: DecorationSet;
+}> {
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet;
+      constructor(view: EditorView) {
+        this.decorations = decorator.createDeco(view);
+      }
+      update(update: ViewUpdate) {
+        this.decorations = decorator.updateDeco(update, this.decorations);
+      }
+    },
+    { decorations: (plugin) => plugin.decorations }
+  );
+}
+
+const placeholderHighlighter = _createHighlighter(matcher);
+const templateTagHighlighter = _createHighlighter(templateTagMatcher);
 
 const theme = EditorView.theme({
   ".cm-prompt-variable": {
     color: "var(--cm-variable)",
+    fontWeight: "500",
+  },
+  ".cm-template-tag": {
+    color: "var(--cm-template-tag)",
     fontWeight: "500",
   },
   ".cm-prompt-variable-tooltip": {
@@ -340,9 +360,107 @@ function createHoverTooltip(
  */
 // Match `{{` (optional inner whitespace) + a partial name ending at the cursor.
 const COMPLETION_TRIGGER_RE = /\{\{\s*[A-Za-z0-9_]*$/;
+// Match `{{@` + a partial macro name ending at the cursor (e.g. `{{@inc`).
+const MACRO_TRIGGER_RE = /\{\{\s*@[A-Za-z]*$/;
+// Inserted before the quoted path, e.g. `@include("`.
+const INCLUDE_SNIPPET_PREFIX = '@include("';
+// Placeholder path inserted (and pre-selected) so the user can type over it.
+const INCLUDE_PLACEHOLDER = "path/to/your/file";
+
+// The `@include` macro completion. Offered both after `{{@` and alongside the
+// plain `{{` variable list, so it is discoverable without typing `@` first.
+const includeCompletion: Completion = {
+  label: "@include",
+  detail: "Insert file contents",
+  type: "function",
+  apply: (view, _completion, applyFrom, applyTo) => {
+    const hasClose = view.state.sliceDoc(applyTo, applyTo + 2) === "}}";
+    const body = `${INCLUDE_SNIPPET_PREFIX}${INCLUDE_PLACEHOLDER}")`;
+    const selectionStart = applyFrom + INCLUDE_SNIPPET_PREFIX.length;
+    view.dispatch({
+      changes: {
+        from: applyFrom,
+        to: applyTo,
+        insert: hasClose ? body : `${body}}}`,
+      },
+      // Select the placeholder path so the user can type over it immediately.
+      selection: {
+        anchor: selectionStart,
+        head: selectionStart + INCLUDE_PLACEHOLDER.length,
+      },
+    });
+  },
+};
+
+// Match `{%` (optional whitespace-control + spaces) + a partial tag keyword.
+const TAG_TRIGGER_RE = /\{%[-+]?\s*[a-zA-Z]*$/;
+// Caret positions are encoded as numeric offsets in TEMPLATE_TAGS below.
+// " ";
+// The Jinja/Nunjucks block tags offered after `{%`. `insert` is a complete
+// `{% … %}` tag; `caret` is the cursor offset within it after insertion.
+const TEMPLATE_TAGS: {
+  label: string;
+  detail: string;
+  insert: string;
+  caret: number;
+}[] = [
+  { label: "if", detail: "Conditional", insert: "{% if  %}", caret: 6 },
+  { label: "elif", detail: "Else-if branch", insert: "{% elif  %}", caret: 8 },
+  { label: "else", detail: "Else branch", insert: "{% else %}", caret: 10 },
+  { label: "endif", detail: "Close if", insert: "{% endif %}", caret: 11 },
+  { label: "for", detail: "Loop", insert: "{% for  in  %}", caret: 7 },
+  { label: "endfor", detail: "Close for", insert: "{% endfor %}", caret: 12 },
+  { label: "set", detail: "Assign", insert: "{% set  =  %}", caret: 7 },
+  {
+    label: "raw",
+    detail: "Literal block",
+    insert: "{% raw %}{% endraw %}",
+    caret: 9,
+  },
+  { label: "endraw", detail: "Close raw", insert: "{% endraw %}", caret: 12 },
+];
 
 function createVariableCompletion(list: PromptVariableLister): Extension {
   const source = (context: CompletionContext): CompletionResult | null => {
+    // Macro completion: only `@include(path)` is offered, per design. The `@`
+    // form can't match the variable trigger below, so the two never overlap.
+    const macroBefore = context.matchBefore(MACRO_TRIGGER_RE);
+    if (macroBefore) {
+      const typedMacro = /@[A-Za-z]*$/.exec(macroBefore.text)?.[0] ?? "@";
+      return {
+        from: context.pos - typedMacro.length,
+        filter: true,
+        options: [includeCompletion],
+      };
+    }
+
+    // Tag completion: after `{%`, offer the block tags (if/for/set/…). Each
+    // inserts a complete `{% … %}` tag, rewriting from the `{%` and swallowing a
+    // trailing `%}` if one is already present.
+    const tagBefore = context.matchBefore(TAG_TRIGGER_RE);
+    if (tagBefore) {
+      const typedTag = /[a-zA-Z]*$/.exec(tagBefore.text)?.[0] ?? "";
+      const options: Completion[] = TEMPLATE_TAGS.map((tag) => ({
+        label: tag.label,
+        detail: tag.detail,
+        type: "keyword",
+        apply: (view, _completion, _applyFrom, applyTo) => {
+          // Anchor the rewrite at the opening `{%` (robust to stale positions).
+          const head = view.state.sliceDoc(Math.max(0, applyTo - 64), applyTo);
+          const rel = head.lastIndexOf("{%");
+          const start = rel === -1 ? applyTo : applyTo - (head.length - rel);
+          // Swallow an existing `%}` (with leading spaces) so we never double it.
+          const after = view.state.sliceDoc(applyTo, applyTo + 16);
+          const closeLen = /^\s*%\}/.exec(after)?.[0].length ?? 0;
+          view.dispatch({
+            changes: { from: start, to: applyTo + closeLen, insert: tag.insert },
+            selection: { anchor: start + tag.caret },
+          });
+        },
+      }));
+      return { from: context.pos - typedTag.length, options, filter: true };
+    }
+
     const before = context.matchBefore(COMPLETION_TRIGGER_RE);
     if (!before) {
       return null;
@@ -368,9 +486,9 @@ function createVariableCompletion(list: PromptVariableLister): Extension {
         });
       },
     }));
-    if (options.length === 0) {
-      return null;
-    }
+    // Also surface `@include` in the plain `{{` list so it's discoverable
+    // without typing `@` first; fuzzy filtering hides it as the user narrows.
+    options.push(includeCompletion);
     return { from, options, filter: true };
   };
   return autocompletion({
@@ -388,6 +506,7 @@ export function createPromptVariableExtension({
 }: PromptVariableExtensionOptions): Extension[] {
   return [
     placeholderHighlighter,
+    templateTagHighlighter,
     createHoverTooltip(resolve, onInspect),
     createVariableCompletion(listVariables),
     // Render tooltips (hover + the completion dropdown) under document.body so

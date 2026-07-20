@@ -56,6 +56,12 @@ export interface PathsHost {
   ensureRootDir(relativePath: string): Promise<string>;
 }
 
+/** Arbitrary text-file reads for the prompt `@include` macro. */
+export interface FilesHost {
+  /** Read a file's UTF-8 contents (`~` expands to home); `""` when missing. */
+  readText(path: string): Promise<string>;
+}
+
 /**
  * Host navigation, replacing the desktop command bus. On web these are no-ops
  * (or `openLink` → `window.open`). `registerRunThread` wires the playground's
@@ -94,6 +100,7 @@ export interface HostServices {
   mcp: McpHost;
   builtinTools: BuiltinToolsHost;
   paths: PathsHost;
+  files: FilesHost;
   actions: HostActions;
 }
 

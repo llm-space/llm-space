@@ -2,7 +2,6 @@
 
 import { type ModelConfig } from "@llm-space/core";
 import { SettingsIcon } from "lucide-react";
-import type { FocusEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useHostServices } from "@llm-space/ui/host";

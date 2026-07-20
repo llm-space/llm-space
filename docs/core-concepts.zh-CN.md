@@ -120,6 +120,8 @@ Variables（变量）是可以在 System Prompt、消息和工具结果中复用
 - 内置变量的定义保存在 `context.variables`，自定义变量的取值保存在 `context.variableVariants`。
 - 如果引用了不存在或取值为空的变量，界面会给出提示。
 
+除了简单替换，你还可以添加逻辑——文件引入（`@include`）、条件判断和循环。详见 [变量与模板](./variables-and-templates.zh-CN.md)。
+
 # Messages
 
 Messages 是 Thread 的对话历史。LLM Space 当前主要使用两种消息角色：

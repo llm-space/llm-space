@@ -21,3 +21,12 @@ export async function ensureRootDir(relativePath: string): Promise<string> {
 export async function getWorkspacePath(): Promise<string> {
   return ensureRootDir("workspace");
 }
+
+/**
+ * Read an arbitrary text file (any path, `~` expands to home) for the prompt
+ * `@include` macro. Resolves to `""` for a missing/unreadable path.
+ */
+export async function readTextFile(path: string): Promise<string> {
+  const { text } = await _rpc().request.fsReadText({ path });
+  return text;
+}

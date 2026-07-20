@@ -4,6 +4,8 @@ English | [中文](./README.zh-CN.md)
 
 # LLM Space 4
 
+<a href="https://trendshift.io/repositories/83147?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-83147" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/83147/daily?language=TypeScript" alt="deer-flow%2Fllm-space | Trendshift" width="250" height="55"/></a>
+
 ![screenshot](https://github.com/user-attachments/assets/e207bc62-4dab-4b13-a541-d176a8f96c40)
 
 https://github.com/user-attachments/assets/2ba7a600-1f1a-44c0-b9f1-34ad42100213

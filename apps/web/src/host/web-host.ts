@@ -30,6 +30,10 @@ export const webHost: HostServices = {
   paths: {
     ensureRootDir: (relativePath) => Promise.resolve(relativePath),
   },
+  files: {
+    // No filesystem in the display-only viewer; `@include` resolves to "".
+    readText: () => Promise.resolve(""),
+  },
   actions: {
     openSettings: () => {
       /* no settings surface in the viewer */

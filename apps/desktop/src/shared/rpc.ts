@@ -195,6 +195,10 @@ export interface DesktopRPCType {
       };
       // Resolve a workspace-relative path to its absolute on-disk path.
       fsRealpath: { params: { path: string }; response: { path: string } };
+      // Read an arbitrary text file (NOT confined to the workspace) for the
+      // prompt `@include` macro. A leading `~` expands to the user's home.
+      // Returns "" for a missing/unreadable path so includes degrade quietly.
+      fsReadText: { params: { path: string }; response: { text: string } };
       mcpListServers: {
         params: Record<string, never>;
         response: McpServerView[];

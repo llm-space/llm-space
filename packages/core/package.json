@@ -16,7 +16,11 @@
     "@earendil-works/pi-agent-core": "catalog:",
     "@earendil-works/pi-ai": "catalog:",
     "best-effort-json-parser": "^1.4.1",
+    "nunjucks": "^3.2.4",
     "parse-sse": "^0.1.0",
     "typebox": "catalog:"
+  },
+  "devDependencies": {
+    "@types/nunjucks": "^3.2.6"
   }
 }

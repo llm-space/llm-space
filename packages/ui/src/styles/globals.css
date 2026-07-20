@@ -169,6 +169,8 @@
 
   /* {{variable}} placeholder highlight — deeper amber for contrast on light. */
   --cm-variable: oklch(0.6 0.14 80);
+  /* {% template tag %} highlight — violet, distinct from the amber variable. */
+  --cm-template-tag: oklch(0.55 0.19 300);
 
   font-weight: 300;
 }
@@ -213,6 +215,8 @@
 
   /* {{variable}} placeholder highlight — brighter yellow for the dark theme. */
   --cm-variable: oklch(0.86 0.15 95);
+  /* {% template tag %} highlight — brighter violet for the dark theme. */
+  --cm-template-tag: oklch(0.78 0.16 300);
 
   --color-1: oklch(66.2% 0.225 25.9);
 

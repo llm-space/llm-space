@@ -13,7 +13,7 @@ import {
   revealSkill,
 } from "@/client/built-in-tools";
 import { listMcpServers, listMcpTools } from "@/client/mcp";
-import { ensureRootDir } from "@/client/paths";
+import { ensureRootDir, readTextFile } from "@/client/paths";
 import { createRpcTransport } from "@/client/rpc-transport";
 import { getSkillsSettings, listSkills } from "@/client/skills";
 import { executeTool } from "@/client/tool-execution";
@@ -85,6 +85,7 @@ export function DesktopHostProvider({ children }: { children: ReactNode }) {
         revealSkill,
       },
       paths: { ensureRootDir },
+      files: { readText: readTextFile },
       actions: {
         openSettings: (tab) =>
           executeCommand({

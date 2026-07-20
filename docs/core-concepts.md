@@ -120,6 +120,8 @@ A variable name must start with a letter or underscore and contain only letters,
 - Built-in variable definitions are stored under `context.variables`, and custom variable values are stored under `context.variableVariants`.
 - If you reference a variable that doesn't exist or has an empty value, the UI shows a hint.
 
+Beyond plain substitution, you can also add logic — file includes (`@include`), conditionals, and loops. See [Variables and Templates](./variables-and-templates.md) for the template language.
+
 # Messages
 
 Messages are the conversation history of a Thread. LLM Space currently uses two main message roles:

@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { ModelProviderGroup } from "@llm-space/core";
+import { readUserTextFile } from "@llm-space/core/server";
 import type { LocalFileSystem } from "@llm-space/core/server";
 import {
   GIST_CONNECTOR_ID,
@@ -267,6 +268,10 @@ export function createMainWindowRPC({
         },
         fsRealpath: ({ path }) =>
           Promise.resolve({ path: localFs.realpath(path) }),
+        // Unconfined text read for the prompt `@include` macro (any path + `~`).
+        fsReadText: async ({ path }) => ({
+          text: await readUserTextFile(path),
+        }),
         mcpListServers: () => mcpManager.listServers(),
         mcpAddServer: ({ server }) => {
           const servers = mcpManager.addServer(server);

@@ -81,6 +81,9 @@ const toolValidator = Compile(ToolSchema);
 /** Default `loadSkills` for hosts with no skills access (e.g. web display-only). */
 const _noSkills = (): Promise<SkillInfo[]> => Promise.resolve([]);
 
+/** Default `loadFile` for hosts with no filesystem (e.g. web display-only). */
+const _noFile = (): Promise<string> => Promise.resolve("");
+
 /**
  * Upper bound on model turns in a single auto-call-tools run. Each turn is one
  * model call (the server terminates the agent loop after tool calls), so this
@@ -206,6 +209,11 @@ export function createThreadStore(
      * to none (e.g. a display-only web host).
      */
     loadSkills?: () => Promise<SkillInfo[]>;
+    /**
+     * Read a file's contents for the prompt `@include` macro. Injected like
+     * `loadSkills`; defaults to none (e.g. a display-only web host).
+     */
+    loadFile?: (path: string) => Promise<string>;
   } = {}
 ): ThreadStore {
   const normalizedInputThread = ensureThreadVariableState(
@@ -891,6 +899,7 @@ export function createThreadStore(
             const rendered = await renderThreadPromptVariables({
               context: { ...get().thread.context, messages },
               loadSkills: options.loadSkills ?? _noSkills,
+              loadFile: options.loadFile ?? _noFile,
             });
             preparedContext = rendered.context;
             promptSnapshot = rendered.snapshot;
@@ -1049,6 +1058,7 @@ export function createThreadStore(
                         snapshot: promptSnapshot,
                       },
                       loadSkills: options.loadSkills ?? _noSkills,
+                      loadFile: options.loadFile ?? _noFile,
                     })
                   ).context;
               preparedContext = null;
