@@ -60,12 +60,20 @@ apps/
 
 ## 下载
 
-从 [最新 release](https://github.com/deer-flow/llm-space/releases/latest) 下载 DMG —— 支持 macOS 的 Apple Silicon 和 Intel。有两个版本：
+### macOS
+
+从 [最新 release](https://github.com/deer-flow/llm-space/releases/latest) 下载 DMG —— 支持 Apple Silicon 和 Intel。有两个版本：
 
 - **LLM Space** —— 使用系统 WebView。体积小（约 27 MB），内存和耗电更低。
 - **LLM Space Performance** —— 内嵌渲染引擎（约 130 MB）。渲染在不同 macOS 版本上保持一致，性能通常更好。
 
 装其中一个，或者两个都装。它们共享同一份 `~/.llm-space` 数据，所以切换版本后 thread 和设置都还在，两者也都会自动更新。
+
+### Windows x64 Canary
+
+Windows 10/11 x64 用户可以从 [Canary 预发布版本](https://github.com/deer-flow/llm-space/releases) 下载 `LLMSpace-*-windows-x64.zip`，解压后运行其中的 `LLM Space-Setup-canary.exe`。当前早期 Canary 尚未签名，因此 Microsoft Defender SmartScreen 可能会在启动前显示警告。该版本使用系统 WebView2 runtime；目前没有 Windows Performance/CEF 或原生 ARM64 构建。
+
+Canary 已知限制：Windows 不会注册 `llm-space://` URL scheme，WebView2 在高 DPI 缩放下可能略显模糊，从 Explorer 拖入文件后应用也可能暂时失去焦点。要导入共享 thread，请复制其 HTTPS viewer URL，然后在应用中选择 **File → Import from Clipboard**。
 
 ## 安装
 

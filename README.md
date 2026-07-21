@@ -60,12 +60,20 @@ apps/
 
 ## Download
 
-Grab a DMG from the [latest release](https://github.com/deer-flow/llm-space/releases/latest) — macOS, Apple Silicon and Intel. It comes in two editions:
+### macOS
+
+Grab a DMG from the [latest release](https://github.com/deer-flow/llm-space/releases/latest) — Apple Silicon and Intel are supported. It comes in two editions:
 
 - **LLM Space** — uses the system WebView. Small download (~27 MB), light on memory and battery.
 - **LLM Space Performance** — embeds its own rendering engine (~130 MB). Rendering stays consistent across macOS versions, and usually performs better.
 
 Install either, or both. They share the same `~/.llm-space` data, so switching editions keeps your threads and settings, and both update themselves in place.
+
+### Windows x64 Canary
+
+Windows 10/11 x64 users can download `LLMSpace-*-windows-x64.zip` from a [Canary prerelease](https://github.com/deer-flow/llm-space/releases), extract it, and run the included `LLM Space-Setup-canary.exe`. This early Canary is unsigned, so Microsoft Defender SmartScreen may warn before launch. It uses the system WebView2 runtime; there is no Windows Performance/CEF or native ARM64 build yet.
+
+Known Canary limitations: Windows does not register the `llm-space://` URL scheme, WebView2 can appear soft at high display scaling, and dragging a file from Explorer may temporarily move focus away from the app. To import a shared thread, copy its HTTPS viewer URL and choose **File → Import from Clipboard**.
 
 ## Install
 
