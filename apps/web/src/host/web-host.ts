@@ -35,6 +35,8 @@ export const webHost: HostServices = {
     readText: () => Promise.resolve(""),
     pickFile: () => Promise.resolve(null),
   },
+  // No code generation in the display-only viewer.
+  generator: null,
   actions: {
     openSettings: () => {
       /* no settings surface in the viewer */

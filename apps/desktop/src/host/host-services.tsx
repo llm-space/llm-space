@@ -12,9 +12,19 @@ import {
   revealAbsolutePath,
   revealSkill,
 } from "@/client/built-in-tools";
+import {
+  checkUv,
+  pickGeneratorDirectory,
+  prepareGeneratorDirectory,
+  removeProjectFile,
+  resolveGeneratorEnv,
+  runUv,
+  writeProjectFile,
+} from "@/client/generator";
 import { listMcpServers, listMcpTools } from "@/client/mcp";
 import { ensureRootDir, pickFile, readTextFile } from "@/client/paths";
 import { createRpcTransport } from "@/client/rpc-transport";
+import { getSearchSettings } from "@/client/search";
 import { getSkillsSettings, listSkills } from "@/client/skills";
 import { executeTool } from "@/client/tool-execution";
 import { useCommands } from "@/commands";
@@ -86,6 +96,16 @@ export function DesktopHostProvider({ children }: { children: ReactNode }) {
       },
       paths: { ensureRootDir },
       files: { readText: readTextFile, pickFile },
+      generator: {
+        pickDirectory: pickGeneratorDirectory,
+        prepareDirectory: prepareGeneratorDirectory,
+        checkUv,
+        runUv,
+        writeFile: writeProjectFile,
+        removeFile: removeProjectFile,
+        getSearchSettings,
+        resolveEnv: resolveGeneratorEnv,
+      },
       actions: {
         openSettings: (tab) =>
           executeCommand({
