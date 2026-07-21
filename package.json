@@ -17,8 +17,8 @@
     "release:canary": "bun scripts/release.ts --prerelease canary",
     "gen:langgraph-tools": "bun scripts/gen-langgraph-tools.ts",
     "test": "bun test",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
+    "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint .",
+    "lint:fix": "NODE_OPTIONS=--max-old-space-size=8192 eslint --fix .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p apps/desktop/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json",
     "prepare": "husky"
   },
