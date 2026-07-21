@@ -12,6 +12,7 @@ import type { Command } from "../../shared/commands";
 import type { MainWindowRPC } from "../rpc";
 
 import { registerMenuActions } from "./menu";
+import { getWindowChromeOptions } from "./window-options";
 import { attachWindowStates } from "./window-state";
 
 const DEV_SERVER_PORT = 5173;
@@ -49,12 +50,8 @@ export async function createMainWindow({
   const window = new BrowserWindow({
     title: "LLM Space",
     url,
-    titleBarStyle: "hiddenInset",
+    ...getWindowChromeOptions(process.platform),
     rpc,
-    trafficLightOffset: {
-      x: 2,
-      y: 16,
-    },
     frame: savedFrame,
   });
 
