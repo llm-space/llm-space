@@ -4,6 +4,7 @@ import path from "node:path";
 
 import rcedit from "rcedit";
 
+import { compileWindowsGuiExecutable } from "./windows-csharp";
 import { patchWindowsExecutableFileToGui } from "./windows-executable";
 
 if (process.env.ELECTROBUN_OS === "win") {
@@ -32,9 +33,35 @@ if (process.env.ELECTROBUN_OS === "win") {
       );
     }
     const setup = path.join(stagingDirectory, setupFiles[0]);
-    await rcedit(setup, {
-      icon: path.resolve(import.meta.dir, "..", "icon.ico"),
+    const setupCore = path.join(tempDirectory, "setup-core.exe");
+    const installerPayload = path.join(stagingDirectory, ".installer");
+    const metadataFiles = readdirSync(installerPayload).filter((name) =>
+      name.endsWith(".metadata.json")
+    );
+    const archiveFiles = readdirSync(installerPayload).filter((name) =>
+      name.endsWith(".tar.zst")
+    );
+    if (metadataFiles.length !== 1 || archiveFiles.length !== 1) {
+      throw new Error(
+        `Expected one installer metadata file and archive in ${installerZip}.`
+      );
+    }
+    const metadata = path.join(installerPayload, metadataFiles[0]);
+    const archive = path.join(installerPayload, archiveFiles[0]);
+    const icon = path.resolve(import.meta.dir, "..", "icon.ico");
+    copyFileSync(setup, setupCore);
+    compileWindowsGuiExecutable({
+      source: path.join(import.meta.dir, "windows-installer.cs"),
+      output: setup,
+      icon,
+      resources: [
+        { file: setupCore, name: "ElectrobunSetupCore" },
+        { file: metadata, name: "ElectrobunSetupMetadata" },
+        { file: archive, name: "ElectrobunSetupArchive" },
+      ],
     });
+    rmSync(archive, { force: true });
+    await rcedit(setup, { icon });
     patchWindowsExecutableFileToGui(setup);
 
     const repacked = path.join(tempDirectory, "installer.zip");
@@ -46,7 +73,9 @@ if (process.env.ELECTROBUN_OS === "win") {
     // Windows, so renameSync would fail with EXDEV here. copyFileSync replaces
     // the build artifact across volumes; a failure still fails the build hook.
     copyFileSync(repacked, zipPath);
-    console.info(`Embedded Windows icon: ${installerZip}/${setupFiles[0]}`);
+    console.info(
+      `Configured Windows installer progress UI: ${installerZip}/${setupFiles[0]}`
+    );
   } finally {
     rmSync(tempDirectory, { force: true, recursive: true });
   }

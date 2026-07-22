@@ -18,10 +18,11 @@ All notable changes to LLM Space are documented here. This project follows
 
 - Windows installation and shortcut launches no longer open command windows;
   only the installer progress and LLM Space application window remain visible.
-- Electrobun's internal renderer RPC server is restricted to loopback, avoiding
-  a Windows Firewall prompt on first launch.
+- On Windows, Electrobun's internal renderer RPC server is restricted to
+  loopback, avoiding a Windows Firewall prompt on first launch.
 - Windows uses the native title bar so resize, snap, minimize, maximize, and
-  close behavior follow the operating system.
+  close behavior follow the operating system, and the title bar now displays
+  the bundled LLM Space icon.
 - The Bash tool is offered only when Bash is available; structured file tools
   continue to work without it.
 - Windows proxy settings now accurately describe the supported environment

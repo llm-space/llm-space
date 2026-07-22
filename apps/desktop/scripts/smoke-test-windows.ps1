@@ -8,6 +8,21 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class LlmSpaceNativeWindow
+{
+    [DllImport("user32.dll")]
+    public static extern IntPtr SendMessage(
+        IntPtr window,
+        uint message,
+        IntPtr wParam,
+        IntPtr lParam
+    );
+}
+"@
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
   throw "The Windows package smoke test must run on Windows."
 }
@@ -171,10 +186,43 @@ try {
   if (-not $metadata.identifier -or -not $metadata.channel) {
     throw "Installer metadata must contain identifier and channel."
   }
-
+  $installerPayload = Join-Path $expandedInstaller ".installer"
+  Remove-Item -LiteralPath $installerPayload -Recurse -Force
+  if (Test-Path -LiteralPath $installerPayload) {
+    throw "Setup.exe must remain installable without the external .installer payload."
+  }
   Assert-WindowsGuiExecutable $setupFiles[0].FullName "Setup.exe"
   Write-Host "Installing $($installerZip[0].Name) into isolated LOCALAPPDATA..."
-  $setupProcess = Start-Process -FilePath $setupFiles[0].FullName -Wait -PassThru
+  $setupProcess = Start-Process -FilePath $setupFiles[0].FullName -PassThru
+  [void]$ownedProcessIds.Add($setupProcess.Id)
+  $setupWindowSeen = $false
+  $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+  while (-not $setupProcess.HasExited -and [DateTime]::UtcNow -lt $deadline) {
+    $setupProcess.Refresh()
+    if ($setupProcess.HasExited) { break }
+    $setupDescendants = @(Get-DescendantProcesses $setupProcess.Id)
+    $setupDescendants | ForEach-Object { [void]$ownedProcessIds.Add([int]$_.ProcessId) }
+    $visibleSetupProcesses = @(@($setupProcess) + @($setupDescendants | ForEach-Object {
+      Get-Process -Id ([int]$_.ProcessId) -ErrorAction SilentlyContinue
+    }) | Where-Object { $_.MainWindowHandle -ne 0 })
+    $unexpectedSetupWindows = @($visibleSetupProcesses | Where-Object {
+      $_.MainWindowTitle -and $_.MainWindowTitle -ne "LLM Space Setup"
+    })
+    if ($unexpectedSetupWindows.Count -gt 0) {
+      $titles = @($unexpectedSetupWindows | ForEach-Object { "$($_.ProcessName): $($_.MainWindowTitle)" }) -join "; "
+      throw "Expected only the LLM Space installation progress window; found: $titles"
+    }
+    if ($visibleSetupProcesses | Where-Object { $_.MainWindowTitle -eq "LLM Space Setup" }) {
+      $setupWindowSeen = $true
+    }
+    Start-Sleep -Milliseconds 100
+  }
+  if (-not $setupProcess.HasExited) {
+    throw "Setup.exe did not finish within $TimeoutSeconds seconds."
+  }
+  if (-not $setupWindowSeen) {
+    throw "Setup.exe did not show the LLM Space installation progress window."
+  }
   if ($setupProcess.ExitCode -ne 0) {
     throw "Setup.exe exited with code $($setupProcess.ExitCode)."
   }
@@ -239,7 +287,22 @@ try {
   if (-not $mainWindow) {
     throw "The installed app did not create the LLM Space main window."
   }
-
+  $smallIcon = [LlmSpaceNativeWindow]::SendMessage(
+    $mainWindow.MainWindowHandle,
+    0x007F,
+    [IntPtr]::Zero,
+    [IntPtr]::Zero
+  )
+  $largeIcon = [LlmSpaceNativeWindow]::SendMessage(
+    $mainWindow.MainWindowHandle,
+    0x007F,
+    [IntPtr]::new(1),
+    [IntPtr]::Zero
+  )
+  if ($smallIcon -eq [IntPtr]::Zero -or $largeIcon -eq [IntPtr]::Zero) {
+    throw "The LLM Space window did not load its small and large application icons."
+  }
+  Write-Host "Verified LLM Space native window icons."
   Write-Host "Observing the single app window and process liveness for $ObservationSeconds seconds..."
   for ($second = 0; $second -lt $ObservationSeconds; $second++) {
     if (-not (Get-Process -Id $launcherProcess.Id -ErrorAction SilentlyContinue)) {

@@ -1,6 +1,64 @@
 diff --git a/dist/api/bun/core/Socket.ts b/dist/api/bun/core/Socket.ts
-index cdaa2bca0fabe577cb667056aa6f8f84211189c2..2d291f7dd7b97a644d40f2d105b0e7028387b0ce 100644
 --- a/dist/api/bun/core/Socket.ts
 +++ b/dist/api/bun/core/Socket.ts
 @@ -67,0 +68 @@ const startRPCServer = () => {
-+				hostname: "127.0.0.1",
++				...(process.platform === "win32" ? { hostname: "127.0.0.1" } : {}),
+diff --git a/dist/api/bun/proc/native.ts b/dist/api/bun/proc/native.ts
+--- a/dist/api/bun/proc/native.ts
++++ b/dist/api/bun/proc/native.ts
+@@ -81,0 +82,52 @@ function getWindowPtr(winId: number) {
++const windowsWindowIconApi =
++	process.platform === "win32"
++		? dlopen("user32.dll", {
++				LoadImageW: {
++					args: [
++						FFIType.ptr,
++						FFIType.ptr,
++						FFIType.u32,
++						FFIType.i32,
++						FFIType.i32,
++						FFIType.u32,
++					],
++					returns: FFIType.ptr,
++				},
++				SendMessageW: {
++					args: [FFIType.ptr, FFIType.u32, FFIType.u64, FFIType.ptr],
++					returns: FFIType.ptr,
++				},
++			})
++		: null;
++
++function setWindowsWindowIcon(windowPtr: Pointer): void {
++	if (!windowsWindowIconApi) return;
++
++	const iconPath = Buffer.from(
++		`${join(process.cwd(), "..", "Resources", "app.ico")}\0`,
++		"utf16le",
++	);
++	const smallIcon = windowsWindowIconApi.symbols.LoadImageW(
++		null,
++		ptr(iconPath),
++		1,
++		16,
++		16,
++		0x10,
++	);
++	const largeIcon = windowsWindowIconApi.symbols.LoadImageW(
++		null,
++		ptr(iconPath),
++		1,
++		32,
++		32,
++		0x10,
++	);
++	if (smallIcon) {
++		windowsWindowIconApi.symbols.SendMessageW(windowPtr, 0x80, 0, smallIcon);
++	}
++	if (largeIcon) {
++		windowsWindowIconApi.symbols.SendMessageW(windowPtr, 0x80, 1, largeIcon);
++	}
++}
++
+@@ -927,0 +980,2 @@ const _ffiImpl = {
++			setWindowsWindowIcon(windowPtr);
++
