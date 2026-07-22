@@ -57,9 +57,6 @@ const PLACEHOLDER_RE = /\{\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\}\}/g;
 // A Jinja/Nunjucks tag `{% … %}` (with optional whitespace-control `-`/`+`),
 // highlighted as one unit — purely syntactic, viewport-bounded like above.
 const TEMPLATE_TAG_RE = /\{%[-+]?[\s\S]*?[-+]?%\}/g;
-// Cap tooltip length so a large skills list can't produce a giant tooltip.
-const MAX_VALUE_CHARS = 2000;
-
 const placeholderMark = Decoration.mark({ class: "cm-prompt-variable" });
 const templateTagMark = Decoration.mark({ class: "cm-template-tag" });
 
@@ -300,10 +297,7 @@ function renderTooltipDom(
   if (resolution.status === "ok") {
     body.className = "cm-pv-value";
     // textContent (never innerHTML) — resolved values are user / skill data.
-    body.textContent =
-      resolution.value.length > MAX_VALUE_CHARS
-        ? `${resolution.value.slice(0, MAX_VALUE_CHARS)}…`
-        : resolution.value;
+    body.textContent = resolution.value;
   } else {
     body.className = "cm-pv-warning";
     body.textContent =

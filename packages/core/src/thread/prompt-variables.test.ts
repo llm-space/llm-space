@@ -145,6 +145,45 @@ describe("removePromptVariableSnapshotNames — value-edit invalidation", () => 
   });
 });
 
+describe("renderThreadPromptVariables — live skills", () => {
+  test("re-resolves skills for a new run while preserving each run snapshot", async () => {
+    const base = context("{{available_skills}}", {
+      variables: {
+        available_skills: {
+          type: "skills",
+          skillNames: [],
+          format: "markdown-list",
+          indent: 0,
+        },
+      },
+    });
+    const firstValue = [
+      { name: "first", description: "First skill", path: "/skills/first" },
+    ];
+    const secondValue = [
+      { name: "second", description: "Second skill", path: "/skills/second" },
+    ];
+
+    const first = await renderThreadPromptVariables({
+      context: base,
+      loadSkills: () => Promise.resolve(firstValue),
+    });
+    const second = await renderThreadPromptVariables({
+      context: { ...base, snapshot: first.snapshot },
+      loadSkills: () => Promise.resolve(secondValue),
+    });
+
+    expect(first.context.systemPrompt).toBe("- **first**: First skill");
+    expect(second.context.systemPrompt).toBe("- **second**: Second skill");
+    expect(
+      first.snapshot?.variables?.[SYSTEM_PROMPT_PLACE_KEY]?.available_skills
+    ).toBe("- **first**: First skill");
+    expect(
+      second.snapshot?.variables?.[SYSTEM_PROMPT_PLACE_KEY]?.available_skills
+    ).toBe("- **second**: Second skill");
+  });
+});
+
 describe("renderThreadPromptVariables — JSON variables", () => {
   const jsonContext = (systemPrompt: string, value: string) =>
     context(systemPrompt, { variables: { data: { type: "json", value } } });

@@ -3,6 +3,7 @@ import type { ThreadContext } from "@llm-space/core";
 import type { SkillInfo } from "@llm-space/core";
 import {
   listPromptVariableCompletions,
+  resolvePromptVariableValue,
   resolvePromptVariableValueForPlace,
 } from "@llm-space/core/thread";
 import { useCallback, useContext, useMemo } from "react";
@@ -13,30 +14,6 @@ import { ThreadStoreContext, type ThreadStore } from "../stores";
 
 import { createPromptVariableExtension } from "./prompt-variable-extension";
 import { listEnabledPromptVariableSkills } from "./prompt-variable-skills";
-
-// Skills settings are global (not per-thread), so the resolved list is cached
-// module-wide with a short TTL and in-flight de-dupe. Repeated hovers over a
-// skills placeholder reuse the cache instead of re-firing the N+1 IPC load.
-const SKILLS_TTL_MS = 30_000;
-let skillsCache: { at: number; skills: SkillInfo[] } | null = null;
-let skillsInflight: Promise<SkillInfo[]> | null = null;
-
-function loadSkillsCached(
-  load: () => Promise<SkillInfo[]>
-): Promise<SkillInfo[]> {
-  if (skillsCache && Date.now() - skillsCache.at < SKILLS_TTL_MS) {
-    return Promise.resolve(skillsCache.skills);
-  }
-  skillsInflight ??= load()
-    .then((skills) => {
-      skillsCache = { at: Date.now(), skills };
-      return skills;
-    })
-    .finally(() => {
-      skillsInflight = null;
-    });
-  return skillsInflight;
-}
 
 // One identity-stable extension per thread store and prompt place. Stable
 // identity keeps @uiw/react-codemirror from reconfiguring the editor on each
@@ -62,11 +39,10 @@ function getExtensionForStore(
       // Lazy, non-reactive reads — run only on hover / while completing, so edits
       // to variables are always reflected without any subscription.
       resolve: (name) =>
-        resolvePromptVariableValueForPlace(
+        resolvePromptVariableValue(
           name,
           store.getState().thread.context,
-          placeKey,
-          () => loadSkillsCached(loadSkills)
+          loadSkills
         ),
       listVariables: () =>
         listPromptVariableCompletions(store.getState().thread.context),
@@ -112,8 +88,11 @@ export function usePromptVariableExtensionForContext(
     if (context) {
       return createPromptVariableExtension({
         resolve: (name) =>
-          resolvePromptVariableValueForPlace(name, context, placeKey, () =>
-            loadSkillsCached(loadSkills)
+          resolvePromptVariableValueForPlace(
+            name,
+            context,
+            placeKey,
+            loadSkills
           ),
         listVariables: () => listPromptVariableCompletions(context),
       });
