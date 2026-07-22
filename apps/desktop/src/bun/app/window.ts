@@ -14,6 +14,7 @@ import type { MainWindowRPC } from "../rpc";
 import { registerMenuActions } from "./menu";
 import { getWindowChromeOptions } from "./window-options";
 import { attachWindowStates } from "./window-state";
+import { setWindowsWindowIcon } from "./windows-window-icon";
 
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
@@ -54,6 +55,10 @@ export async function createMainWindow({
     rpc,
     frame: savedFrame,
   });
+
+  if (process.platform === "win32") {
+    setWindowsWindowIcon(window.ptr);
+  }
 
   attachWindowStates(window, {
     isMaximized: getWindowMaximized(windowState),
