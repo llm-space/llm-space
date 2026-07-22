@@ -18,6 +18,9 @@ export default defineConfig([
       "**/.turbo/**",
       ".agents/**",
       ".llm-space/**",
+      // Generated files (huge embedded string literals) — not authored by hand,
+      // and large enough to OOM eslint's typed-lint pass.
+      "**/*.generated.ts",
       "apps/desktop/electrobun.config.ts",
       "packages/ui/src/ui/**",
       // Excluded from packages/ui's typecheck project (no test runner), so the
