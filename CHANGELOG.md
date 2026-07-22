@@ -4,30 +4,6 @@ All notable changes to LLM Space are documented here. This project follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- Windows 10/11 x64 Canary packages using the system WebView2 runtime, with
-  automated archive verification and isolated install/start smoke tests.
-- HTTPS shared-thread viewer URLs can be imported through **File → Import from
-  Clipboard**, providing a Windows-safe alternative to the unsupported custom
-  URL scheme.
-
-### Changed
-
-- Windows installation and shortcut launches no longer open command windows;
-  only the installer progress and LLM Space application window remain visible.
-- On Windows, Electrobun's internal renderer RPC server is restricted to
-  loopback, avoiding a Windows Firewall prompt on first launch.
-- Windows uses the native title bar so resize, snap, minimize, maximize, and
-  close behavior follow the operating system, and the title bar now displays
-  the bundled LLM Space icon.
-- The Bash tool is offered only when Bash is available; structured file tools
-  continue to work without it.
-- Windows proxy settings now accurately describe the supported environment
-  variables and the lack of automatic Internet Settings/WinHTTP detection.
-
 ## [4.3.0] - 2026-07-20
 
 Prompt templates grow up: Jinja2 logic, richer variables, and in-app reminders
@@ -129,9 +105,6 @@ Baseline for this changelog. See the
 [GitHub releases](https://github.com/deer-flow/llm-space/releases) for earlier
 history.
 
-[Unreleased]: https://github.com/deer-flow/llm-space/compare/v4.3.0...HEAD
-[4.3.0]: https://github.com/deer-flow/llm-space/releases/tag/v4.3.0
-[4.2.1]: https://github.com/deer-flow/llm-space/releases/tag/v4.2.1
 [4.2.0]: https://github.com/deer-flow/llm-space/releases/tag/v4.2.0
 [4.1.1]: https://github.com/deer-flow/llm-space/releases/tag/v4.1.1
 [4.1.0]: https://github.com/deer-flow/llm-space/releases/tag/v4.1.0
