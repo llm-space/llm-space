@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { Compile } from "typebox/compile";
 
 import { Thread } from "./thread";

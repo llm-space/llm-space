@@ -1,5 +1,6 @@
-import { createModels } from "@earendil-works/pi-ai";
 import { describe, expect, test } from "bun:test";
+
+import { createModels } from "@earendil-works/pi-ai";
 
 import { openaiCodexProvider } from "./openai-codex";
 

@@ -4,6 +4,32 @@ All notable changes to LLM Space are documented here. This project follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.2] - 2026-07-23
+
+A prompt-template maintenance release focused on workspace-aware agents,
+conditional file inclusion, and more predictable skill selection.
+
+### Added
+
+- **Current working directory variable.** Threads now include the built-in
+  `current_working_directory` variable, editable by hand or through a native
+  directory picker. General Agent uses it to describe its workspace.
+- **Conditional file inclusion.** Prompt templates can call `exists(path)` to
+  guard optional files such as `AGENTS.md`.
+- Skill directories can be opened directly from the skills settings page.
+
+### Changed
+
+- Skill selection now distinguishes “include all enabled skills” from an
+  intentionally empty selection.
+
+### Fixed
+
+- Recursive `@include(...)` rendering preserves readable file content when the
+  included text is not itself a valid template.
+- Updated include snapshots are invalidated when include-rendering semantics
+  change, preventing stale empty output from surviving the fix.
+
 ## [4.4.1] - 2026-07-22
 
 A maintenance release focused on carrying meta user prompts into generated

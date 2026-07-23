@@ -1,8 +1,8 @@
+import { describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { describe, expect, test } from "bun:test";
 
 import { ensureRootDir } from "./ensure-root-dir";
 

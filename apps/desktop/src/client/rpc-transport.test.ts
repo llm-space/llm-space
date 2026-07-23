@@ -1,5 +1,6 @@
-import type { AgentEvent, AgentStreamRequest } from "@llm-space/core";
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+
+import type { AgentEvent, AgentStreamRequest } from "@llm-space/core";
 
 import type {
   AbortStreamThreadPayload,
