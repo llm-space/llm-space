@@ -6,16 +6,17 @@ import type {
 } from "@llm-space/core";
 import {
   DEFAULT_VARIABLE_VARIANT_NAME,
+  includesAllSkills,
   normalizePromptVariableState,
 } from "@llm-space/core/thread";
 import {
   BracesIcon,
   CalendarDaysIcon,
   CopyIcon,
-  FileJson2Icon,
   FileTextIcon,
   PlusIcon,
   SparklesIcon,
+  TypeIcon,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -25,7 +26,6 @@ import { useHostServices } from "@llm-space/ui/host";
 import { useAutoAnimation } from "@llm-space/ui/lib/use-auto-animation";
 import { cn } from "@llm-space/ui/lib/utils";
 import { Button } from "@llm-space/ui/ui/button";
-
 
 import { useThreadStore } from "../stores";
 
@@ -105,9 +105,10 @@ export function PromptVariablesListView({
         kind: "builtIn" as const,
         name,
         variable,
-        status:
-          variable.skillNames.length === 0
-            ? "All skills"
+        status: includesAllSkills(variable)
+          ? "All skills"
+          : variable.skillNames.length === 0
+            ? "None selected"
             : `${variable.skillNames.length} selected`,
       };
     });
@@ -279,13 +280,13 @@ const VariableEntry = memo(_VariableEntry);
 
 function _variableIcon(item: VariableListItem) {
   if (item.kind === "custom") {
-    return BracesIcon;
+    return TypeIcon;
   }
   if (item.variable.type === "currentDate") {
     return CalendarDaysIcon;
   }
   if (item.variable.type === "json") {
-    return FileJson2Icon;
+    return BracesIcon;
   }
   if (item.variable.type === "file") {
     return FileTextIcon;

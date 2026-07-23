@@ -32,6 +32,8 @@ export type ThreadCurrentDateVariable = Static<
 export const ThreadSkillsVariable = Type.Object({
   type: Type.Literal("skills"),
   skillNames: Type.Array(Type.String()),
+  /** Missing preserves the legacy behavior: an empty list includes all skills. */
+  includeAll: Type.Optional(Type.Boolean()),
   format: ThreadSkillsVariableFormat,
   indent: Type.Number(),
 });

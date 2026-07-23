@@ -31,7 +31,9 @@ describe("renderThreadPromptVariables — dispatcher", () => {
 
   test("template path renders logic + @include + known vars", async () => {
     const { context: out } = await renderThreadPromptVariables({
-      context: context('{% if true %}{{ greeting }}-{{@include("f.md")}}{% endif %}'),
+      context: context(
+        '{% if true %}{{ greeting }}-{{@include("f.md")}}{% endif %}'
+      ),
       loadFile: file("INC"),
     });
     expect(out.systemPrompt).toBe("Hi-INC");
@@ -78,7 +80,10 @@ describe("renderThreadPromptVariables — template output freeze", () => {
 describe("removePromptVariableSnapshotNames — value-edit invalidation", () => {
   const withGreeting = (systemPrompt: string, value: string) =>
     context(systemPrompt, {
-      variableVariants: { active: "default", variants: { default: { greeting: value } } },
+      variableVariants: {
+        active: "default",
+        variants: { default: { greeting: value } },
+      },
     });
 
   test("re-run stays frozen without invalidation, re-renders after it", async () => {
@@ -92,7 +97,10 @@ describe("removePromptVariableSnapshotNames — value-edit invalidation", () => 
 
     // Edit the value but keep the snapshot: the frozen value still wins.
     const frozen = await renderThreadPromptVariables({
-      context: { ...withGreeting("{{ greeting }}", "Hello"), snapshot: first.snapshot },
+      context: {
+        ...withGreeting("{{ greeting }}", "Hello"),
+        snapshot: first.snapshot,
+      },
     });
     expect(frozen.context.systemPrompt).toBe("Hi");
 
@@ -107,8 +115,12 @@ describe("removePromptVariableSnapshotNames — value-edit invalidation", () => 
   });
 
   test("empties collapse to an undefined snapshot", () => {
-    const snapshot = { variables: { [SYSTEM_PROMPT_PLACE_KEY]: { greeting: "Hi" } } };
-    expect(removePromptVariableSnapshotNames(snapshot, ["greeting"])).toBeUndefined();
+    const snapshot = {
+      variables: { [SYSTEM_PROMPT_PLACE_KEY]: { greeting: "Hi" } },
+    };
+    expect(
+      removePromptVariableSnapshotNames(snapshot, ["greeting"])
+    ).toBeUndefined();
   });
 
   test("other names and places stay frozen", () => {
@@ -119,7 +131,9 @@ describe("removePromptVariableSnapshotNames — value-edit invalidation", () => 
       },
     };
     const next = removePromptVariableSnapshotNames(snapshot, ["greeting"]);
-    expect(next?.variables?.[SYSTEM_PROMPT_PLACE_KEY]).toEqual({ location: "SF" });
+    expect(next?.variables?.[SYSTEM_PROMPT_PLACE_KEY]).toEqual({
+      location: "SF",
+    });
     // The message place held only greeting, so it is pruned entirely.
     expect(next?.variables?.["message:m1:text"]).toBeUndefined();
   });
@@ -181,6 +195,28 @@ describe("renderThreadPromptVariables — live skills", () => {
     expect(
       second.snapshot?.variables?.[SYSTEM_PROMPT_PLACE_KEY]?.available_skills
     ).toBe("- **second**: Second skill");
+  });
+
+  test("distinguishes an explicit empty selection from legacy all-skills mode", async () => {
+    const result = await renderThreadPromptVariables({
+      context: context("before{{available_skills}}after", {
+        variables: {
+          available_skills: {
+            type: "skills",
+            skillNames: [],
+            includeAll: false,
+            format: "markdown-list",
+            indent: 0,
+          },
+        },
+      }),
+      loadSkills: () =>
+        Promise.resolve([
+          { name: "first", description: "First skill", path: "/skills/first" },
+        ]),
+    });
+
+    expect(result.context.systemPrompt).toBe("beforeafter");
   });
 });
 

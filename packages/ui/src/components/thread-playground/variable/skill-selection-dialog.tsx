@@ -1,10 +1,11 @@
 "use client";
 
 import type { SkillInfo } from "@llm-space/core";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, Settings2Icon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 import { SkillListItem } from "@llm-space/ui/components/skill-list-item";
+import { useHostServices } from "@llm-space/ui/host";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   Dialog,
@@ -17,8 +18,6 @@ import {
 import { Input } from "@llm-space/ui/ui/input";
 import { ScrollArea } from "@llm-space/ui/ui/scroll-area";
 
-
-
 interface SkillSelectionDialogProps {
   open: boolean;
   disabled?: boolean;
@@ -26,8 +25,9 @@ interface SkillSelectionDialogProps {
   error: string | null;
   skills: SkillInfo[];
   selectedSkillNames: string[];
+  includeAllSkills: boolean;
   onOpenChange: (open: boolean) => void;
-  onApply: (skillNames: string[]) => void;
+  onApply: (skillNames: string[], includeAll: boolean) => void;
 }
 
 function _SkillSelectionDialog({
@@ -37,22 +37,29 @@ function _SkillSelectionDialog({
   error,
   skills,
   selectedSkillNames,
+  includeAllSkills,
   onOpenChange,
   onApply,
 }: SkillSelectionDialogProps) {
+  const { actions } = useHostServices();
   const [query, setQuery] = useState("");
   const [draftSkillNames, setDraftSkillNames] = useState(selectedSkillNames);
+  const [draftIncludesAll, setDraftIncludesAll] = useState(includeAllSkills);
 
   useEffect(() => {
     if (open) {
       setDraftSkillNames(selectedSkillNames);
+      setDraftIncludesAll(includeAllSkills);
       setQuery("");
     }
-  }, [open, selectedSkillNames]);
+  }, [includeAllSkills, open, selectedSkillNames]);
 
-  const selectedSet = useMemo(() => new Set(draftSkillNames), [draftSkillNames]);
+  const selectedSet = useMemo(
+    () => new Set(draftSkillNames),
+    [draftSkillNames]
+  );
   // Empty selection means "all enabled skills", so every switch reads as on.
-  const usingAllSkills = draftSkillNames.length === 0;
+  const usingAllSkills = draftIncludesAll;
   const allSkillNames = useMemo(
     () => skills.map((skill) => skill.name),
     [skills]
@@ -71,33 +78,40 @@ function _SkillSelectionDialog({
 
   const toggleSkill = useCallback(
     (skillName: string) => {
-      setDraftSkillNames((current) => {
-        // Turning a switch off from the "all skills" default materializes the
-        // full list minus that one skill.
-        if (current.length === 0) {
-          return allSkillNames.filter((name) => name !== skillName);
-        }
-        const next = current.includes(skillName)
-          ? current.filter((name) => name !== skillName)
-          : [...current, skillName];
-        // Re-selecting every skill collapses back to the "all skills" default.
-        if (
-          allSkillNames.length > 0 &&
-          next.length === allSkillNames.length &&
-          allSkillNames.every((name) => next.includes(name))
-        ) {
-          return [];
-        }
-        return next;
-      });
+      // Turning a switch off from the "all skills" default materializes the
+      // full list minus that one skill.
+      if (draftIncludesAll) {
+        setDraftIncludesAll(false);
+        setDraftSkillNames(allSkillNames.filter((name) => name !== skillName));
+        return;
+      }
+      const next = draftSkillNames.includes(skillName)
+        ? draftSkillNames.filter((name) => name !== skillName)
+        : [...draftSkillNames, skillName];
+      // Re-selecting every skill collapses back to the dynamic all-skills mode.
+      if (
+        allSkillNames.length > 0 &&
+        next.length === allSkillNames.length &&
+        allSkillNames.every((name) => next.includes(name))
+      ) {
+        setDraftIncludesAll(true);
+        setDraftSkillNames([]);
+        return;
+      }
+      setDraftSkillNames(next);
     },
-    [allSkillNames]
+    [allSkillNames, draftIncludesAll, draftSkillNames]
   );
 
   const apply = useCallback(() => {
-    onApply(draftSkillNames);
+    onApply(draftSkillNames, draftIncludesAll);
     onOpenChange(false);
-  }, [draftSkillNames, onApply, onOpenChange]);
+  }, [draftIncludesAll, draftSkillNames, onApply, onOpenChange]);
+
+  const manageSkills = useCallback(() => {
+    onOpenChange(false);
+    actions.openSettings("skills");
+  }, [actions, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,18 +136,37 @@ function _SkillSelectionDialog({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs">
-              {draftSkillNames.length === 0
+              {draftIncludesAll
                 ? "All skills (default)"
                 : `Selected ${draftSkillNames.length}`}
             </span>
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={disabled || draftSkillNames.length === 0}
-              onClick={() => setDraftSkillNames([])}
-            >
-              Clear
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={disabled || draftIncludesAll}
+                onClick={() => {
+                  setDraftSkillNames([]);
+                  setDraftIncludesAll(true);
+                }}
+              >
+                Select all
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={
+                  disabled ||
+                  (!draftIncludesAll && draftSkillNames.length === 0)
+                }
+                onClick={() => {
+                  setDraftSkillNames([]);
+                  setDraftIncludesAll(false);
+                }}
+              >
+                Select none
+              </Button>
+            </div>
           </div>
           <ScrollArea className="border-border/60 min-h-0 grow rounded-md border">
             <div className="flex flex-col gap-1.5 p-2">
@@ -165,6 +198,15 @@ function _SkillSelectionDialog({
           </ScrollArea>
         </div>
         <DialogFooter className="border-t px-4 py-3">
+          <Button
+            className="text-muted-foreground hover:text-foreground mr-auto"
+            variant="ghost"
+            disabled={disabled}
+            onClick={manageSkills}
+          >
+            <Settings2Icon className="size-3.5" />
+            Manage skill folders
+          </Button>
           <Button
             variant="outline"
             disabled={disabled}

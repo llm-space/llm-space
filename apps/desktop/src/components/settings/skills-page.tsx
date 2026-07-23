@@ -27,7 +27,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { revealAbsolutePath } from "@/client/built-in-tools";
+import { openAbsolutePath, revealAbsolutePath } from "@/client/built-in-tools";
 import {
   addSkillsPath,
   browseForSkillsPath,
@@ -37,7 +37,6 @@ import {
   setAllSkillsHidden,
   setSkillHidden,
 } from "@/client/skills";
-
 
 import { SettingsPage } from "./settings-page";
 
@@ -61,6 +60,22 @@ async function revealDiscoveryPath(path: string) {
     }
   } catch (error) {
     toast.error("Failed to reveal folder", {
+      description: error instanceof Error ? error.message : "Please try again.",
+    });
+  }
+}
+
+/** Open a skill directory in the OS file manager. */
+async function openSkillFolder(skill: SkillInfo) {
+  try {
+    const existed = await openAbsolutePath(skill.path);
+    if (!existed) {
+      toast.error("Skill folder not found", {
+        description: `"${skill.path}" no longer exists on disk.`,
+      });
+    }
+  } catch (error) {
+    toast.error("Failed to open skill folder", {
       description: error instanceof Error ? error.message : "Please try again.",
     });
   }
@@ -406,7 +421,10 @@ function PathSkills({ path }: { path: string | null }) {
             name={skill.name}
             description={skill.description}
             checked={skill.enabled}
-            onCheckedChange={(enabled) => void handleToggle(skill.name, enabled)}
+            onTitleClick={() => void openSkillFolder(skill)}
+            onCheckedChange={(enabled) =>
+              void handleToggle(skill.name, enabled)
+            }
           />
         ))}
       </div>

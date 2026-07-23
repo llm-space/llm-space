@@ -13,19 +13,20 @@ import {
   formatCurrentDateVariable,
   formatSkillsVariable,
   hasThreadPromptVariableReference,
+  includesAllSkills,
   normalizePromptVariableState,
   VARIABLE_NAME_RE,
 } from "@llm-space/core/thread";
 import {
   BracesIcon,
   CalendarDaysIcon,
-  FileJson2Icon,
   FileTextIcon,
   FolderOpenIcon,
   ListFilterIcon,
   PlusIcon,
   SparklesIcon,
   Trash2Icon,
+  TypeIcon,
 } from "lucide-react";
 import {
   memo,
@@ -58,8 +59,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@llm-space/ui/ui/select";
-import { Textarea } from "@llm-space/ui/ui/textarea";
-
 
 import { useThreadStore, useThreadStoreActions } from "../stores";
 
@@ -206,9 +205,10 @@ function _PromptVariablesPanel({
         kind: "builtIn",
         name,
         variable,
-        status:
-          selectedCount === 0
-            ? "All skills"
+        status: includesAllSkills(variable)
+          ? "All skills"
+          : selectedCount === 0
+            ? "None selected"
             : missingCount > 0
               ? `${missingCount} missing`
               : `${selectedCount} selected`,
@@ -339,74 +339,20 @@ function _PromptVariablesPanel({
     [messages, removePromptVariable, systemPrompt]
   );
   const selectedType =
-    selection?.kind === "builtIn"
-      ? variables[selection.name]?.type
-      : undefined;
+    selection?.kind === "builtIn" ? variables[selection.name]?.type : undefined;
   const detailFillsAvailableHeight =
     selection?.kind === "custom" ||
     selectedType === "skills" ||
     selectedType === "json";
 
   return (
-    <section
-      className={cn(
-        "bg-background/40 flex min-h-0 flex-col overflow-hidden",
-        className
-      )}
-    >
-      <div className="grid min-h-0 grow grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
-        <ScrollArea className="border-border/60 min-h-0 border-r">
-          <div className="grid gap-3 p-2">
-            <VariableListGroup title="Built-in">
-              {builtInItems.map((item) => (
-                <VariableListRow
-                  key={`${item.kind}:${item.name}`}
-                  item={item}
-                  selected={
-                    selection?.kind === item.kind &&
-                    selection.name === item.name
-                  }
-                  disabled={disabled}
-                  onSelect={() =>
-                    setSelection({ kind: item.kind, name: item.name })
-                  }
-                />
-              ))}
-            </VariableListGroup>
-            <VariableListGroup
-              title="Custom"
-              action={
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      className="h-6 px-1.5 text-[0.6875rem]"
-                      size="sm"
-                      variant="ghost"
-                      disabled={disabled}
-                    >
-                      <PlusIcon className="size-3" />
-                      Add variable
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={addCustom}>
-                      <BracesIcon className="size-3.5" />
-                      Text
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={addJson}>
-                      <FileJson2Icon className="size-3.5" />
-                      JSON
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={addFile}>
-                      <FileTextIcon className="size-3.5" />
-                      File content
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              }
-            >
-              {typedItems.length + customItems.length > 0 ? (
-                [...typedItems, ...customItems].map((item) => (
+    <section className={cn("flex min-h-0 flex-col overflow-hidden", className)}>
+      <div className="flex min-h-0 grow overflow-hidden">
+        <aside className="flex w-64 shrink-0 flex-col border-r px-2 py-3">
+          <ScrollArea className="min-h-0 grow">
+            <div className="grid gap-3">
+              <VariableListGroup title="Built-in">
+                {builtInItems.map((item) => (
                   <VariableListRow
                     key={`${item.kind}:${item.name}`}
                     item={item}
@@ -419,18 +365,94 @@ function _PromptVariablesPanel({
                       setSelection({ kind: item.kind, name: item.name })
                     }
                   />
-                ))
-              ) : (
-                <div className="text-muted-foreground px-2 py-1 text-[0.6875rem]">
-                  No custom variables.
-                </div>
-              )}
-            </VariableListGroup>
-          </div>
-        </ScrollArea>
+                ))}
+              </VariableListGroup>
+              <VariableListGroup
+                title="Custom"
+                action={
+                  <AddVariableMenu
+                    disabled={disabled}
+                    onAddText={addCustom}
+                    onAddJson={addJson}
+                    onAddFile={addFile}
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:text-foreground size-6"
+                      disabled={disabled}
+                      aria-label="Add custom variable"
+                    >
+                      <PlusIcon className="size-3.5" />
+                    </Button>
+                  </AddVariableMenu>
+                }
+              >
+                {typedItems.length + customItems.length > 0 ? (
+                  [...typedItems, ...customItems].map((item) => (
+                    <VariableListRow
+                      key={`${item.kind}:${item.name}`}
+                      item={item}
+                      selected={
+                        selection?.kind === item.kind &&
+                        selection.name === item.name
+                      }
+                      disabled={disabled}
+                      onSelect={() =>
+                        setSelection({ kind: item.kind, name: item.name })
+                      }
+                      onRemove={() =>
+                        item.kind === "custom"
+                          ? confirmRemoveCustom(item.name)
+                          : confirmRemoveTypedVariable(item.name)
+                      }
+                    />
+                  ))
+                ) : (
+                  <div className="text-muted-foreground px-2 py-1 text-xs">
+                    No custom variables.{" "}
+                    <AddVariableMenu
+                      disabled={disabled}
+                      onAddText={addCustom}
+                      onAddJson={addJson}
+                      onAddFile={addFile}
+                    >
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground focus-visible:text-foreground underline underline-offset-4 disabled:pointer-events-none disabled:opacity-50"
+                        disabled={disabled}
+                      >
+                        Add variable
+                      </button>
+                    </AddVariableMenu>
+                    .
+                  </div>
+                )}
+              </VariableListGroup>
+            </div>
+          </ScrollArea>
+          <AddVariableMenu
+            disabled={disabled}
+            onAddText={addCustom}
+            onAddJson={addJson}
+            onAddFile={addFile}
+            side="top"
+          >
+            <Button
+              className="text-muted-foreground mt-2 w-full"
+              size="sm"
+              variant="outline"
+              disabled={disabled}
+            >
+              <PlusIcon className="size-3.5" />
+              Add custom variable
+            </Button>
+          </AddVariableMenu>
+        </aside>
         <ScrollArea
           className={cn(
-            "min-h-0",
+            "min-h-0 min-w-0 grow",
             detailFillsAvailableHeight &&
               "[&_[data-radix-scroll-area-viewport]>div]:!flex [&_[data-radix-scroll-area-viewport]>div]:!h-full"
           )}
@@ -453,7 +475,6 @@ function _PromptVariablesPanel({
               return renamed;
             }}
             onUpdateBuiltIn={updatePromptVariable}
-            onRemoveBuiltIn={confirmRemoveTypedVariable}
             onRenameCustom={(oldName, newName) => {
               const renamed = renameCustomVariable(oldName, newName);
               if (renamed) {
@@ -462,7 +483,6 @@ function _PromptVariablesPanel({
               return renamed;
             }}
             onUpdateCustom={updateCustomVariable}
-            onRemoveCustom={confirmRemoveCustom}
           />
         </ScrollArea>
       </div>
@@ -502,7 +522,7 @@ function VariableListGroup({
 }) {
   return (
     <div className="grid gap-1">
-      <div className="text-muted-foreground flex min-h-6 items-center justify-between gap-2 px-1 text-[0.6875rem] font-medium tracking-wide uppercase">
+      <div className="text-muted-foreground flex min-h-6 items-center justify-between gap-2 px-2 text-[0.6875rem] font-medium tracking-wide uppercase">
         <span>{title}</span>
         {action}
       </div>
@@ -511,47 +531,94 @@ function VariableListGroup({
   );
 }
 
+function AddVariableMenu({
+  disabled,
+  onAddText,
+  onAddJson,
+  onAddFile,
+  side,
+  children,
+}: {
+  disabled?: boolean;
+  onAddText: () => void;
+  onAddJson: () => void;
+  onAddFile: () => void;
+  side?: "top" | "bottom";
+  children: ReactNode;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={disabled}>
+        {children}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side={side} sideOffset={4}>
+        <DropdownMenuItem onSelect={onAddText}>
+          <TypeIcon className="size-3.5" />
+          Text
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onAddJson}>
+          <BracesIcon className="size-3.5" />
+          JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onAddFile}>
+          <FileTextIcon className="size-3.5" />
+          File content
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function VariableListRow({
   item,
   selected,
   disabled,
   onSelect,
+  onRemove,
 }: {
   item: VariableListItem;
   selected: boolean;
   disabled?: boolean;
   onSelect: () => void;
+  onRemove?: () => void;
 }) {
   return (
     <div
       className={cn(
-        "border-border/60 bg-muted/10 flex min-w-0 items-center gap-1 rounded-md border transition-colors",
-        selected && "border-primary/50 bg-primary/10",
-        item.warning && !selected && "border-destructive/30"
+        "group/variable-row relative rounded-md transition-colors",
+        selected
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground",
+        item.warning && !selected && "text-destructive"
       )}
     >
       <button
         type="button"
-        className="hover:bg-muted/40 focus-visible:ring-ring/30 flex min-w-0 grow items-center gap-2 rounded-md px-2 py-1 text-left transition-colors outline-none focus-visible:ring-2"
+        className={cn(
+          "focus-visible:ring-ring/30 flex min-h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2",
+          onRemove && "pr-8"
+        )}
         disabled={disabled}
         aria-pressed={selected}
+        title={item.name}
         onClick={onSelect}
       >
         {_variableIcon(item)}
-        <span className="min-w-0 grow">
-          <span className="block truncate text-xs font-medium">
-            {`${item.name}`}
-          </span>
-          <span
-            className={cn(
-              "text-muted-foreground block truncate text-[0.6875rem]",
-              item.warning && "text-destructive"
-            )}
-          >
-            {item.status}
-          </span>
-        </span>
+        <span className="min-w-0 grow truncate font-mono">{item.name}</span>
       </button>
+      {onRemove ? (
+        <Tooltip content="Delete variable">
+          <button
+            type="button"
+            className="text-muted-foreground hover:bg-muted hover:text-destructive focus-visible:ring-ring/30 absolute top-1/2 right-1 flex size-6 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity outline-none group-hover/variable-row:opacity-100 focus-visible:opacity-100 focus-visible:ring-2"
+            aria-label={`Delete ${item.name}`}
+            disabled={disabled}
+            onClick={onRemove}
+          >
+            <Trash2Icon className="size-3.5" />
+          </button>
+        </Tooltip>
+      ) : null}
     </div>
   );
 }
@@ -568,10 +635,8 @@ function VariableDetail({
   skillsError,
   onRenameBuiltIn,
   onUpdateBuiltIn,
-  onRemoveBuiltIn,
   onRenameCustom,
   onUpdateCustom,
-  onRemoveCustom,
 }: {
   selection: PromptVariableSelection | null;
   disabled?: boolean;
@@ -584,10 +649,8 @@ function VariableDetail({
   skillsError: string | null;
   onRenameBuiltIn: (oldName: string, newName: string) => boolean;
   onUpdateBuiltIn: (name: string, variable: ThreadVariable) => void;
-  onRemoveBuiltIn: (name: string) => void;
   onRenameCustom: (oldName: string, newName: string) => boolean;
   onUpdateCustom: (name: string, value: string) => void;
-  onRemoveCustom: (name: string) => void;
 }) {
   if (!selection) {
     return (
@@ -615,7 +678,6 @@ function VariableDetail({
         customNames={customNames}
         onRename={onRenameCustom}
         onUpdate={onUpdateCustom}
-        onRemove={onRemoveCustom}
       />
     );
   }
@@ -653,7 +715,6 @@ function VariableDetail({
         customNames={customNames}
         onRename={onRenameBuiltIn}
         onUpdate={(name, next) => onUpdateBuiltIn(name, next)}
-        onRemove={onRemoveBuiltIn}
       />
     );
   }
@@ -668,7 +729,6 @@ function VariableDetail({
         customNames={customNames}
         onRename={onRenameBuiltIn}
         onUpdate={(name, next) => onUpdateBuiltIn(name, next)}
-        onRemove={onRemoveBuiltIn}
       />
     );
   }
@@ -783,7 +843,7 @@ function SkillsVariableDetail({
     return skill ? [skill] : [];
   });
   // Empty selection means "all enabled skills".
-  const usingAllSkills = variable.skillNames.length === 0;
+  const usingAllSkills = includesAllSkills(variable);
   const someMissing =
     !usingAllSkills && selectedSkills.length !== variable.skillNames.length;
   const preview =
@@ -805,17 +865,16 @@ function SkillsVariableDetail({
       title="Available skills"
       disabled={disabled}
       action={
-        <Tooltip content="Select skills">
-          <Button
-            size="icon-sm"
-            variant="outline"
-            aria-label="Select skills"
-            disabled={disabled}
-            onClick={() => setSkillsDialogOpen(true)}
-          >
-            <ListFilterIcon className="size-3.5" />
-          </Button>
-        </Tooltip>
+        <Button
+          className="text-muted-foreground hover:text-foreground focus-visible:text-foreground"
+          size="sm"
+          variant="outline"
+          disabled={disabled}
+          onClick={() => setSkillsDialogOpen(true)}
+        >
+          <ListFilterIcon className="size-3.5" />
+          Select skills
+        </Button>
       }
       className="flex h-full flex-col"
       contentClassName="flex min-h-0 grow flex-col"
@@ -871,9 +930,14 @@ function SkillsVariableDetail({
         </Field>
       </div>
       <Field label="Value" className="flex min-h-0 grow flex-col">
-        <PreviewBlock
-          className="max-h-none min-h-32 grow"
-          muted={skillsLoading || Boolean(skillsError) || someMissing}
+        <CodeEditor
+          className={cn(
+            "min-h-32 grow",
+            (skillsLoading || Boolean(skillsError) || someMissing) &&
+              "opacity-60"
+          )}
+          language="markdown"
+          readonly
           value={skillsLoading ? "Loading skills..." : preview}
         />
       </Field>
@@ -884,8 +948,9 @@ function SkillsVariableDetail({
         error={skillsError}
         skills={skills}
         selectedSkillNames={variable.skillNames}
+        includeAllSkills={usingAllSkills}
         onOpenChange={setSkillsDialogOpen}
-        onApply={(skillNames) => update({ skillNames })}
+        onApply={(skillNames, includeAll) => update({ skillNames, includeAll })}
       />
     </DetailShell>
   );
@@ -899,7 +964,6 @@ function CustomVariableDetail({
   customNames,
   onRename,
   onUpdate,
-  onRemove,
 }: {
   name: string;
   value: string;
@@ -908,24 +972,12 @@ function CustomVariableDetail({
   customNames: Set<string>;
   onRename: (oldName: string, newName: string) => boolean;
   onUpdate: (name: string, value: string) => void;
-  onRemove: (name: string) => void;
 }) {
   return (
     <DetailShell
-      icon={<BracesIcon className="text-muted-foreground size-4" />}
+      icon={<TypeIcon className="text-muted-foreground size-4" />}
       title="User defined variable"
       disabled={disabled}
-      action={
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label="Delete custom variable"
-          disabled={disabled}
-          onClick={() => onRemove(name)}
-        >
-          <Trash2Icon className="size-3.5" />
-        </Button>
-      }
       className="flex h-full flex-col"
       contentClassName="flex min-h-0 grow flex-col"
     >
@@ -940,12 +992,13 @@ function CustomVariableDetail({
         />
       </Field>
       <Field label="Value" className="flex min-h-0 grow flex-col">
-        <Textarea
-          className="min-h-32 grow resize-none font-mono text-xs"
+        <CodeEditor
+          className="min-h-32 grow"
+          language="markdown"
           value={value}
-          disabled={disabled}
+          readonly={disabled}
           placeholder="Variable value"
-          onChange={(event) => onUpdate(name, event.currentTarget.value)}
+          onChange={(next) => onUpdate(name, next)}
         />
       </Field>
     </DetailShell>
@@ -960,7 +1013,6 @@ function JsonVariableDetail({
   customNames,
   onRename,
   onUpdate,
-  onRemove,
 }: {
   name: string;
   variable: ThreadJsonVariable;
@@ -969,25 +1021,13 @@ function JsonVariableDetail({
   customNames: Set<string>;
   onRename: (oldName: string, newName: string) => boolean;
   onUpdate: (name: string, variable: ThreadVariable) => void;
-  onRemove: (name: string) => void;
 }) {
   const error = _jsonError(variable.value);
   return (
     <DetailShell
-      icon={<FileJson2Icon className="text-muted-foreground size-4" />}
+      icon={<BracesIcon className="text-muted-foreground size-4" />}
       title="JSON variable"
       disabled={disabled}
-      action={
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label="Delete JSON variable"
-          disabled={disabled}
-          onClick={() => onRemove(name)}
-        >
-          <Trash2Icon className="size-3.5" />
-        </Button>
-      }
       className="flex h-full flex-col"
       contentClassName="flex min-h-0 grow flex-col"
     >
@@ -1031,7 +1071,6 @@ function FileVariableDetail({
   customNames,
   onRename,
   onUpdate,
-  onRemove,
 }: {
   name: string;
   variable: ThreadFileVariable;
@@ -1040,7 +1079,6 @@ function FileVariableDetail({
   customNames: Set<string>;
   onRename: (oldName: string, newName: string) => boolean;
   onUpdate: (name: string, variable: ThreadVariable) => void;
-  onRemove: (name: string) => void;
 }) {
   const { files } = useHostServices();
   const browse = useCallback(async () => {
@@ -1055,17 +1093,6 @@ function FileVariableDetail({
       icon={<FileTextIcon className="text-muted-foreground size-4" />}
       title="File content variable"
       disabled={disabled}
-      action={
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label="Delete file variable"
-          disabled={disabled}
-          onClick={() => onRemove(name)}
-        >
-          <Trash2Icon className="size-3.5" />
-        </Button>
-      }
     >
       <Field label="Name">
         <VariableNameInput
@@ -1253,20 +1280,18 @@ function VariableNameInput({
 
 function _variableIcon(item: VariableListItem): ReactNode {
   if (item.kind === "custom") {
-    return <BracesIcon className="text-muted-foreground size-4 shrink-0" />;
+    return <TypeIcon className="size-3.5 shrink-0" />;
   }
   if (item.variable.type === "currentDate") {
-    return (
-      <CalendarDaysIcon className="text-muted-foreground size-4 shrink-0" />
-    );
+    return <CalendarDaysIcon className="size-3.5 shrink-0" />;
   }
   if (item.variable.type === "json") {
-    return <FileJson2Icon className="text-muted-foreground size-4 shrink-0" />;
+    return <BracesIcon className="size-3.5 shrink-0" />;
   }
   if (item.variable.type === "file") {
-    return <FileTextIcon className="text-muted-foreground size-4 shrink-0" />;
+    return <FileTextIcon className="size-3.5 shrink-0" />;
   }
-  return <SparklesIcon className="text-muted-foreground size-4 shrink-0" />;
+  return <SparklesIcon className="size-3.5 shrink-0" />;
 }
 
 function _dateFormatLabel(value: ThreadCurrentDateVariable["format"]): string {

@@ -5,6 +5,7 @@ import {
   formatCurrentDateVariable,
   formatJsonVariable,
   formatSkillsVariable,
+  includesAllSkills,
   normalizePromptVariableState,
   VARIABLE_NAME_RE,
   type PromptSkill,
@@ -70,13 +71,12 @@ export async function resolvePromptVariableValue(
   try {
     const all = await loadSkills();
     const byName = new Map(all.map((skill) => [skill.name, skill]));
-    const selected =
-      fast.variable.skillNames.length === 0
-        ? all
-        : fast.variable.skillNames.flatMap((skillName) => {
-            const skill = byName.get(skillName);
-            return skill ? [skill] : [];
-          });
+    const selected = includesAllSkills(fast.variable)
+      ? all
+      : fast.variable.skillNames.flatMap((skillName) => {
+          const skill = byName.get(skillName);
+          return skill ? [skill] : [];
+        });
     const value = formatSkillsVariable(selected, fast.variable);
     return value.trim() ? { status: "ok", value } : { status: "empty", name };
   } catch {
@@ -118,9 +118,10 @@ export function listPromptVariableCompletions(
     } else if (variable.type === "file") {
       hint = variable.value.trim() ? _singleLine(variable.value) : "(no file)";
     } else {
-      hint =
-        variable.skillNames.length === 0
-          ? "All enabled skills"
+      hint = includesAllSkills(variable)
+        ? "All enabled skills"
+        : variable.skillNames.length === 0
+          ? "No skills selected"
           : `${variable.skillNames.length} selected skill${
               variable.skillNames.length === 1 ? "" : "s"
             }`;

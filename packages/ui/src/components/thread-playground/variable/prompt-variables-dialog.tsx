@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@llm-space/ui/ui/dialog";
 
-
 import {
   PromptVariablesPanel,
   type PromptVariableSelection,
@@ -32,11 +31,11 @@ function _PromptVariablesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex h-[620px] max-h-[calc(100vh-4rem)] w-[min(920px,calc(100vw-2rem))] max-w-none! flex-col gap-0 overflow-hidden p-0"
+        className="flex h-[728px] max-h-[calc(100vh-4rem)] w-[min(1080px,calc(100vw-2rem))] max-w-none! flex-col gap-0 overflow-hidden p-0"
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="border-border/70 shrink-0 border-b px-4 py-3 pr-10">
+        <DialogHeader className="shrink-0 border-b px-4 py-3">
           <DialogTitle>Variables</DialogTitle>
           <DialogDescription>
             Use `{"{{variable_name}}"}` as placeholder in your prompt, messages

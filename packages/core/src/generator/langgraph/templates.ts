@@ -1,3 +1,4 @@
+import { includesAllSkills } from "../../thread/prompt-variables";
 import type {
   FunctionTool,
   McpTool,
@@ -394,15 +395,16 @@ export function applyTemplatePy(
   for (const [name, def] of Object.entries(context.variables ?? {})) {
     if (def.type === "currentDate") {
       usesVariablesModule = true;
-      entries.push(`        ${_pyStr(name)}: current_date(${_pyStr(def.format)}),`);
+      entries.push(
+        `        ${_pyStr(name)}: current_date(${_pyStr(def.format)}),`
+      );
     } else if (def.type === "skills") {
       usesVariablesModule = true;
       // Match the thread renderer: an empty selection means every enabled
       // skill, so newly enabled skills are included without editing the variable.
-      const selectedNames =
-        def.skillNames.length === 0
-          ? skills.map((skill) => skill.name)
-          : def.skillNames;
+      const selectedNames = includesAllSkills(def)
+        ? skills.map((skill) => skill.name)
+        : def.skillNames;
       const paths = selectedNames
         .map((n) => skillPath.get(n))
         .filter((p): p is string => Boolean(p));
@@ -414,9 +416,13 @@ export function applyTemplatePy(
       );
     } else if (def.type === "json") {
       needsJson = true;
-      entries.push(`        ${_pyStr(name)}: json.loads(${_pyStr(def.value)}),`);
+      entries.push(
+        `        ${_pyStr(name)}: json.loads(${_pyStr(def.value)}),`
+      );
     } else if (def.type === "file") {
-      entries.push(`        ${_pyStr(name)}: ${_pyStr(renderedValues[name] ?? "")},`);
+      entries.push(
+        `        ${_pyStr(name)}: ${_pyStr(renderedValues[name] ?? "")},`
+      );
     }
   }
 
@@ -445,7 +451,9 @@ export function applyTemplatePy(
   }
 
   const buildBody =
-    entries.length > 0 ? `    return {\n${entries.join("\n")}\n    }` : "    return {}";
+    entries.length > 0
+      ? `    return {\n${entries.join("\n")}\n    }`
+      : "    return {}";
 
   // Skip Jinja2 entirely for a prompt with no variables, so stray braces in
   // prose can't trip the renderer.
@@ -672,8 +680,7 @@ ${hasMeta ? "    middleware=[inject_meta_user_prompt(get_meta_user_prompt())],\n
 /** Python param signature from a tool's JSON-schema properties (best-effort). */
 function _functionParams(tool: FunctionTool): string {
   const schema = tool.parameters as
-    | { properties?: Record<string, unknown>; required?: string[] }
-    | undefined;
+    { properties?: Record<string, unknown>; required?: string[] } | undefined;
   const names = Object.keys(schema?.properties ?? {});
   if (names.length === 0) {
     return "**kwargs";
@@ -697,7 +704,10 @@ export function functionToolStub(tool: FunctionTool): string {
   const ident = toPyIdent(tool.name);
   const slug = slugifyToolName(tool.name);
   const params = _functionParams(tool);
-  const doc = (tool.description || `${tool.name} tool.`).replace(/"""/g, '\\"\\"\\"');
+  const doc = (tool.description || `${tool.name} tool.`).replace(
+    /"""/g,
+    '\\"\\"\\"'
+  );
   return `"""${tool.name} — function tool (STUB).
 
 Implement this tool's body. The parameter JSON schema is in
@@ -727,7 +737,8 @@ export interface McpEnvEntry {
 }
 
 /** `$VAR` / `${VAR}` references embedded in a config value. */
-const MCP_ENV_REF_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g;
+const MCP_ENV_REF_RE =
+  /\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g;
 
 /** Names of every `$VAR` / `${VAR}` reference in `value`. */
 function _mcpEnvRefs(value: string): string[] {
@@ -781,7 +792,9 @@ function _mcpServerBlock(server: GeneratorMcpServer): {
   const I12 = "            ";
   const envKey = _toEnvKey(server.serverName) || "MCP";
   const env: McpEnvEntry[] = [];
-  const body: string[] = [`${I8}"transport": ${_pyStr(_mcpTransport(server.transport))},`];
+  const body: string[] = [
+    `${I8}"transport": ${_pyStr(_mcpTransport(server.transport))},`,
+  ];
 
   if (server.transport === "stdio") {
     // command/args/cwd are the launcher — not secrets — so they stay literal.
@@ -908,7 +921,10 @@ async def get_mcp_tools():
  * the thread actually has custom (function) or MCP tools; otherwise the project
  * is complete and it just says how to run it.
  */
-export function planMd(functionTools: FunctionTool[], mcpTools: McpTool[]): string {
+export function planMd(
+  functionTools: FunctionTool[],
+  mcpTools: McpTool[]
+): string {
   const sections: string[] = [
     `# PLAN.md
 
@@ -959,9 +975,7 @@ ${list}`);
   }
 
   if (functionTools.length === 0 && mcpTools.length === 0) {
-    sections.push(
-      "Nothing else to implement — the agent is ready to run."
-    );
+    sections.push("Nothing else to implement — the agent is ready to run.");
   }
 
   return `${sections.join("\n\n")}\n`;
