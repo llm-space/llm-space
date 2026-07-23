@@ -107,7 +107,16 @@ export type LegacyTool = Omit<FunctionTool, "type"> & {
 };
 
 export function normalizeTool(tool: Tool | LegacyTool): Tool {
-  if (tool.type === "mcp" || tool.type === "builtin") {
+  if (tool.type === "builtin") {
+    // Older persisted threads may predate the terminate flag. Preserve the
+    // built-in's invariant when those snapshots are loaded so enabling the
+    // ReAct loop can never auto-execute a question that needs a human answer.
+    if (tool.name === "ask_user_question" && tool.terminate !== true) {
+      return { ...tool, terminate: true };
+    }
+    return tool;
+  }
+  if (tool.type === "mcp") {
     return tool;
   }
   const legacySource = _getLegacyMcpSource(tool);
@@ -151,7 +160,11 @@ export function isExecutableTool(tool: Tool): tool is McpTool | BuiltinTool {
   if (tool.type === "mcp") {
     return true;
   }
-  return tool.type === "builtin" && tool.terminate !== true;
+  return (
+    tool.type === "builtin" &&
+    tool.name !== "ask_user_question" &&
+    tool.terminate !== true
+  );
 }
 
 /**
