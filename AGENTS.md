@@ -117,6 +117,32 @@ UI action → Zustand `run()` (`components/thread-playground/stores/thread-store
 
 Each open thread owns its own Zustand store (`stores/thread-store.ts`), created per-tab via `createThreadStore()` and supplied through `ThreadStoreContext` — there is **no global store**. Read it with `useThreadStore(selector)` and `useThreadStoreActions()`. State holds the `thread`, `streamingMessage`, `status`, `runHistory`, and `changeHistory`; `run()` drives a streaming turn. Undo/redo lives in `stores/thread-history.ts`: snapshots are thread _references_ (copy-on-write shares unchanged substructure, so undo is an O(1) pointer move), capped by count and a retained-image-bytes budget.
 
+### LangGraph generator parity
+
+Prompt semantics have two runtime implementations that must stay in sync:
+the TypeScript thread renderer under `packages/core/src/thread/` and the
+generated Python runtime under `packages/core/src/generator/langgraph/`.
+
+Whenever a built-in prompt variable, template function, filter, or macro is
+added or changed, update the LangGraph generator in the same change. In
+particular:
+
+- Add every built-in variable type to `applyTemplatePy()`'s generated
+  `build_variables()`; do not assume exporting it to
+  `references/variables.json` makes it available at run time.
+- Keep `current_date`, `available_skills`, and
+  `current_working_directory` available to both generated system prompts and
+  generated meta user prompts.
+- Mirror template helpers such as `exists(path)` and `@include(...)` in the
+  generated Python renderer, including recursive-include and missing-file
+  behavior.
+- Add generator regression tests in
+  `packages/core/src/generator/langgraph/templates.test.ts`, then execute the
+  generated Python at least once for syntax and behavior; TypeScript
+  string/snapshot assertions alone are not sufficient.
+- Before releasing a prompt-runtime change, generate or inspect a General Agent
+  project and verify its `meta_user_prompt.md` renders successfully.
+
 ### Persistence
 
 State is **persisted to disk** under the llm-space root (`~/.llm-space` by default; override with `LLM_SPACE_HOME`):

@@ -378,9 +378,10 @@ export function variablesPy(): string {
 /**
  * `src/prompting/apply_template.py` — renders the system prompt template at
  * runtime. `current_date` and `available_skills` stay live via `variables.py`
- * (the user's skill paths baked in); `json` variables are parsed at runtime;
- * `file`/custom-string variables are baked as literals. `apply_template` is a
- * plain Jinja2 renderer the reader can reuse.
+ * (the user's skill paths baked in); `current_working_directory`, `file`, and
+ * custom-string variables are baked as literals; `json` variables are parsed
+ * at runtime. `apply_template` also translates LLM Space's `@include` macro to
+ * a recursive Jinja helper.
  */
 export function applyTemplatePy(
   context: ThreadContext,
@@ -399,6 +400,8 @@ export function applyTemplatePy(
       entries.push(
         `        ${_pyStr(name)}: current_date(${_pyStr(def.format)}),`
       );
+    } else if (def.type === "workingDirectory") {
+      entries.push(`        ${_pyStr(name)}: ${_pyStr(def.value)},`);
     } else if (def.type === "skills") {
       usesVariablesModule = true;
       // Match the thread renderer: an empty selection means every enabled
@@ -446,9 +449,10 @@ export function applyTemplatePy(
     imports.push("import json");
   }
   imports.push("import os");
+  imports.push("import re");
   imports.push("from pathlib import Path");
   imports.push("");
-  imports.push("from jinja2 import Template");
+  imports.push("from jinja2 import Template, TemplateError");
   if (usesVariablesModule) {
     imports.push("");
     imports.push(
@@ -479,6 +483,11 @@ ${imports.join("\n")}
 
 _SYSTEM_PROMPT_PATH = Path(__file__).parent / "system_prompt.md"
 _META_USER_PROMPT_PATH = Path(__file__).parent / "meta_user_prompt.md"
+_MAX_INCLUDE_DEPTH = 10
+_DOUBLE_PAREN_INCLUDE_RE = re.compile(
+    r"\\{\\{\\s*@include\\(\\((.*?)\\)\\)\\s*\\}\\}", re.DOTALL
+)
+_INCLUDE_RE = re.compile(r"\\{\\{\\s*@include\\((.*?)\\)\\s*\\}\\}", re.DOTALL)
 
 
 def _file_exists(value: object) -> bool:
@@ -495,9 +504,28 @@ def build_variables() -> dict:
 ${buildBody}
 
 
-def apply_template(variables: dict, content: str) -> str:
+def _normalize_include_macros(content: str) -> str:
+    """Translate LLM Space's @include expression into a Jinja helper call."""
+    content = _DOUBLE_PAREN_INCLUDE_RE.sub(r"{{ include(\\1) }}", content)
+    return _INCLUDE_RE.sub(r"{{ include(\\1) }}", content)
+
+
+def apply_template(variables: dict, content: str, include_depth: int = 0) -> str:
     """Render \`content\` as a Jinja2 template with \`variables\`, returning text."""
-    return Template(content).render(**variables)
+    def include(value: object) -> str:
+        if include_depth >= _MAX_INCLUDE_DEPTH:
+            return ""
+        try:
+            included = Path(str(value)).expanduser().read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            return ""
+        try:
+            return apply_template(variables, included, include_depth + 1)
+        except TemplateError:
+            return included
+
+    runtime_variables = {**variables, "include": include}
+    return Template(_normalize_include_macros(content)).render(**runtime_variables)
 
 
 def _render_prompt(path: Path) -> str:

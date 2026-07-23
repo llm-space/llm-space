@@ -142,6 +142,24 @@ describe("agentPy / langgraphJson MCP wiring", () => {
 });
 
 describe("meta prompt templates", () => {
+  test("working directory is emitted as a built-in runtime variable", () => {
+    const py = applyTemplatePy(
+      {
+        variables: {
+          current_working_directory: {
+            type: "workingDirectory",
+            value: "~/Desktop/llm-space-project",
+          },
+        },
+      },
+      [],
+      {}
+    );
+    expect(py).toContain(
+      '"current_working_directory": "~/Desktop/llm-space-project"'
+    );
+  });
+
   test("an empty skills selection emits every enabled skill path", () => {
     const py = applyTemplatePy(
       {
@@ -200,6 +218,16 @@ describe("meta prompt templates", () => {
     const py = applyTemplatePy({}, [], {}, true);
     expect(py).toContain('"exists": _file_exists');
     expect(py).toContain("path.is_file() and os.access(path, os.R_OK)");
+  });
+
+  test("apply-template translates and recursively renders @include macros", () => {
+    const py = applyTemplatePy({}, [], {});
+    expect(py).toContain("def _normalize_include_macros(content: str) -> str:");
+    expect(py).toContain('runtime_variables = {**variables, "include": include}');
+    expect(py).toContain(
+      "return apply_template(variables, included, include_depth + 1)"
+    );
+    expect(py).toContain("except TemplateError:");
   });
 
   test("middleware overrides sync and async model requests without updating state", () => {
