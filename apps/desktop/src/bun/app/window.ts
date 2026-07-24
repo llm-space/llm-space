@@ -12,7 +12,9 @@ import type { Command } from "../../shared/commands";
 import type { MainWindowRPC } from "../rpc";
 
 import { registerMenuActions } from "./menu";
+import { getWindowChromeOptions } from "./window-options";
 import { attachWindowStates } from "./window-state";
+import { setWindowsWindowIcon } from "./windows-window-icon";
 
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
@@ -49,14 +51,14 @@ export async function createMainWindow({
   const window = new BrowserWindow({
     title: "LLM Space",
     url,
-    titleBarStyle: "hiddenInset",
+    ...getWindowChromeOptions(process.platform),
     rpc,
-    trafficLightOffset: {
-      x: 2,
-      y: 16,
-    },
     frame: savedFrame,
   });
+
+  if (process.platform === "win32") {
+    setWindowsWindowIcon(window.ptr);
+  }
 
   attachWindowStates(window, {
     isMaximized: getWindowMaximized(windowState),
