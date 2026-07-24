@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from "react";
 
+import {
+  LOCAL_STORAGE_KEYS,
+  readLocalStorage,
+  writeLocalStorage,
+  type LocalStorageKey,
+} from "@llm-space/ui/lib/local-storage";
+
 /**
  * Persisted run-mode preferences. App-level and shared across every thread tab
  * (not persisted into a thread), so a single source of truth lives here rather
@@ -14,25 +21,14 @@ import { useSyncExternalStore } from "react";
  *   when tools are auto-run, so enabling it forces `autoRunTools` on (see
  *   {@link getEffectiveAutoRunTools}).
  */
-export const AUTO_RUN_TOOLS_STORAGE_KEY = "llm-space-auto-run-tools";
-export const REACT_LOOP_STORAGE_KEY = "llm-space-react-loop";
-
 const listeners = new Set<() => void>();
 
-function _read(key: string): boolean {
-  try {
-    return localStorage.getItem(key) === "true";
-  } catch {
-    return false;
-  }
+function _read(key: LocalStorageKey): boolean {
+  return readLocalStorage(key) === "true";
 }
 
-function _write(key: string, value: boolean): void {
-  try {
-    localStorage.setItem(key, value ? "true" : "false");
-  } catch {
-    // Ignored — the preference is best-effort.
-  }
+function _write(key: LocalStorageKey, value: boolean): void {
+  writeLocalStorage(key, value ? "true" : "false");
   for (const listener of listeners) {
     listener();
   }
@@ -40,20 +36,20 @@ function _write(key: string, value: boolean): void {
 
 /** Whether pending tool calls should be auto-executed, as stored by the user. */
 export function getAutoRunTools(): boolean {
-  return _read(AUTO_RUN_TOOLS_STORAGE_KEY);
+  return _read(LOCAL_STORAGE_KEYS.autoRunTools);
 }
 
 export function setAutoRunTools(value: boolean): void {
-  _write(AUTO_RUN_TOOLS_STORAGE_KEY, value);
+  _write(LOCAL_STORAGE_KEYS.autoRunTools, value);
 }
 
 /** Whether the ReAct loop is enabled. */
 export function getReactLoop(): boolean {
-  return _read(REACT_LOOP_STORAGE_KEY);
+  return _read(LOCAL_STORAGE_KEYS.reactLoop);
 }
 
 export function setReactLoop(value: boolean): void {
-  _write(REACT_LOOP_STORAGE_KEY, value);
+  _write(LOCAL_STORAGE_KEYS.reactLoop, value);
 }
 
 /**

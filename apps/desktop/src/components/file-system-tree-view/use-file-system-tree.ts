@@ -8,6 +8,11 @@ import {
   type Tool,
 } from "@llm-space/core";
 import {
+  LOCAL_STORAGE_KEYS,
+  readLocalStorage,
+  writeLocalStorage,
+} from "@llm-space/ui/lib/local-storage";
+import {
   basename,
   joinPath,
   normalizeThreadForPath,
@@ -26,9 +31,6 @@ export const fsKeys = {
   ls: (path: string) => ["fs", "local", "ls", path] as const,
 };
 
-/** localStorage key under which the expanded directory paths live. */
-const EXPANDED_KEY = "llm-space:fs-tree:expanded";
-
 /**
  * Deepest directory level whose expanded state is persisted across sessions.
  * Level 1 is a direct child of the root, level 2 its child, and so on.
@@ -46,9 +48,8 @@ function _depth(path: string): number {
  * `[]` when storage is unavailable or malformed.
  */
 function _loadPersistedExpanded(): string[] {
-  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(EXPANDED_KEY);
+    const raw = readLocalStorage(LOCAL_STORAGE_KEYS.fileTreeExpanded);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -62,12 +63,10 @@ function _loadPersistedExpanded(): string[] {
 
 /** Persist the expanded paths, ignoring any storage failure. */
 function _savePersistedExpanded(paths: string[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(EXPANDED_KEY, JSON.stringify(paths));
-  } catch {
-    // Storage unavailable (private mode, quota) ⇒ persistence is best-effort.
-  }
+  writeLocalStorage(
+    LOCAL_STORAGE_KEYS.fileTreeExpanded,
+    JSON.stringify(paths)
+  );
 }
 
 /**

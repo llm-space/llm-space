@@ -1,4 +1,9 @@
 import {
+  LOCAL_STORAGE_KEYS,
+  readLocalStorage,
+  writeLocalStorage,
+} from '@llm-space/ui/lib/local-storage';
+import {
   createContext,
   useContext,
   useEffect,
@@ -14,8 +19,6 @@ export const LANGUAGES = [
 ] as const;
 
 export type Lang = (typeof LANGUAGES)[number]['code'];
-
-const STORAGE_KEY = 'llm-space-lang';
 
 // Every user-facing string on the page, keyed by language. `en` is the source
 // of truth for shape — `zh` mirrors it exactly. Inline markup (the gradient
@@ -224,7 +227,7 @@ const I18nContext = createContext<I18nValue | null>(null);
 function _readInitialLang(): Lang {
   if (typeof window === 'undefined') return 'en';
   // An explicit past choice always wins.
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = readLocalStorage(LOCAL_STORAGE_KEYS.landingLanguage);
   if (stored === 'en' || stored === 'zh') return stored;
   // Otherwise fall back to the browser's preferred language — any Chinese
   // variant (zh, zh-CN, zh-TW, …) opens in Chinese; everything else in English.
@@ -242,12 +245,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLang = (next: Lang) => {
     setLangState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Ignore storage failures (private mode, etc.) — the choice still applies
-      // for this session.
-    }
+    writeLocalStorage(LOCAL_STORAGE_KEYS.landingLanguage, next);
   };
 
   return (

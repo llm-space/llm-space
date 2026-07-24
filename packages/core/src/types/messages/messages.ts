@@ -5,6 +5,19 @@ import { ToolCall } from "./tools";
 import { ModelUsage } from "./usage";
 
 /**
+ * Client-observed timing for one completed assistant/model step.
+ *
+ * Both values start immediately before the streaming request is dispatched.
+ * `firstTokenMs` ends at the first non-empty model delta, while `durationMs`
+ * ends when the completed assistant message is received.
+ */
+export const AssistantMessageTiming = Type.Object({
+  firstTokenMs: Type.Optional(Type.Number({ minimum: 0 })),
+  durationMs: Type.Number({ minimum: 0 }),
+});
+export type AssistantMessageTiming = Static<typeof AssistantMessageTiming>;
+
+/**
  * The allowed content types of a user message.
  */
 export const UserMessageContent = Type.Union([TextContent, ImageDataContent]);
@@ -69,6 +82,11 @@ export const AssistantMessage = Type.Object({
    * Provider-reported token usage for this completed assistant/model step.
    */
   usage: Type.Optional(ModelUsage),
+
+  /**
+   * Client-observed response timing for this completed assistant/model step.
+   */
+  timing: Type.Optional(AssistantMessageTiming),
 });
 export type AssistantMessage = Static<typeof AssistantMessage>;
 

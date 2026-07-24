@@ -21,7 +21,7 @@ import { Button } from "@llm-space/ui/ui/button";
 import { useThreadStoreActions } from "../stores";
 
 import { AddImagesMenu } from "./add-images-menu";
-import { TokenUsageSummary } from "./token-usage-summary";
+import { MessageStatsSummary } from "./message-stats-summary";
 
 function _MessageListItemHeader({
   className,
@@ -152,8 +152,12 @@ function _MessageListItemHeader({
             </Button>
           </Tooltip>
         </div>
-        {message.role === "assistant" && message.usage && (
-          <TokenUsageSummary usage={message.usage} variant="header" />
+        {message.role === "assistant" && (message.timing || message.usage) && (
+          <MessageStatsSummary
+            usage={message.usage}
+            timing={message.timing}
+            variant="header"
+          />
         )}
       </div>
       <div

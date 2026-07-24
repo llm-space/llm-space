@@ -1,6 +1,12 @@
 "use client";
 
 import { uuid } from "@llm-space/core";
+import {
+  LOCAL_STORAGE_KEYS,
+  readLocalStorage,
+  removeLocalStorage,
+  writeLocalStorage,
+} from "@llm-space/ui/lib/local-storage";
 import { threadTitleFromPath } from "@llm-space/ui/lib/thread-file";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -93,10 +99,6 @@ export interface ThreadTabs {
   reopenClosed: () => void;
 }
 
-const STORAGE_KEY = "llm-space:open-app-tabs";
-const LEGACY_STORAGE_KEY = "llm-space:open-tabs";
-const ACTIVE_KEY = "llm-space:active-tab";
-
 function _threadTabId(path: string): string {
   return `thread:${path}`;
 }
@@ -167,9 +169,8 @@ function _dedupeTabs(tabs: AppTab[]): AppTab[] {
 }
 
 function _loadPersistedTabs(): AppTab[] {
-  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = readLocalStorage(LOCAL_STORAGE_KEYS.openAppTabs);
     if (raw !== null) {
       const parsed: unknown = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
@@ -185,7 +186,7 @@ function _loadPersistedTabs(): AppTab[] {
       );
     }
 
-    const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    const legacyRaw = readLocalStorage(LOCAL_STORAGE_KEYS.legacyOpenTabs);
     if (legacyRaw === null) return [];
     const legacy: unknown = JSON.parse(legacyRaw);
     return Array.isArray(legacy)
@@ -201,21 +202,15 @@ function _loadPersistedTabs(): AppTab[] {
 }
 
 function _savePersistedTabs(tabs: AppTab[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(tabs.map(_persistable))
-    );
-  } catch {
-    // Best-effort persistence only.
-  }
+  writeLocalStorage(
+    LOCAL_STORAGE_KEYS.openAppTabs,
+    JSON.stringify(tabs.map(_persistable))
+  );
 }
 
 function _loadPersistedActive(tabs: AppTab[]): string | null {
-  if (typeof window === "undefined") return null;
   try {
-    const active = window.localStorage.getItem(ACTIVE_KEY);
+    const active = readLocalStorage(LOCAL_STORAGE_KEYS.activeTab);
     if (!active) return tabs[0]?.id ?? null;
     if (tabs.some((tab) => tab.id === active)) return active;
     const legacyThreadId = _threadTabId(active);
@@ -228,12 +223,10 @@ function _loadPersistedActive(tabs: AppTab[]): string | null {
 }
 
 function _savePersistedActive(id: string | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (id === null) window.localStorage.removeItem(ACTIVE_KEY);
-    else window.localStorage.setItem(ACTIVE_KEY, id);
-  } catch {
-    // Best-effort persistence only.
+  if (id === null) {
+    removeLocalStorage(LOCAL_STORAGE_KEYS.activeTab);
+  } else {
+    writeLocalStorage(LOCAL_STORAGE_KEYS.activeTab, id);
   }
 }
 

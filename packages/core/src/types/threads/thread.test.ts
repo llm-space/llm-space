@@ -169,3 +169,68 @@ describe("Thread evaluation schema", () => {
     ).toBe(false);
   });
 });
+
+describe("Thread assistant message timing schema", () => {
+  test("accepts legacy assistant messages without timing", () => {
+    expect(
+      validator.Check({
+        context: {
+          messages: [
+            {
+              id: "assistant-legacy",
+              role: "assistant",
+              content: [{ type: "text", text: "Legacy response" }],
+            },
+          ],
+        },
+      })
+    ).toBe(true);
+  });
+
+  test("accepts persisted first-token and duration timing", () => {
+    expect(
+      validator.Check({
+        context: {
+          messages: [
+            {
+              id: "assistant-1",
+              role: "assistant",
+              content: [{ type: "text", text: "Hello" }],
+              timing: {
+                firstTokenMs: 125.5,
+                durationMs: 840,
+              },
+            },
+          ],
+        },
+      })
+    ).toBe(true);
+  });
+
+  test("keeps first-token timing optional and rejects negative durations", () => {
+    const message = {
+      id: "assistant-1",
+      role: "assistant",
+      content: [{ type: "text", text: "" }],
+    };
+    expect(
+      validator.Check({
+        context: {
+          messages: [{ ...message, timing: { durationMs: 840 } }],
+        },
+      })
+    ).toBe(true);
+    expect(
+      validator.Check({
+        context: {
+          messages: [
+            {
+              ...message,
+              timing: { firstTokenMs: 125, durationMs: -1 },
+            },
+          ],
+        },
+      })
+    ).toBe(false);
+  });
+});

@@ -12,7 +12,7 @@ import { cn } from "@llm-space/ui/lib/utils";
 
 
 import { MessageListView } from "./message/message-list-view";
-import { TokenUsageSummary } from "./message/token-usage-summary";
+import { MessageStatsSummary } from "./message/message-stats-summary";
 
 function _RunTraceView({
   className,
@@ -50,7 +50,7 @@ function _RunTraceView({
           <span>{runMessageCountLabel(run.thread)}</span>
           <span>{new Date(run.timestamp).toLocaleString()}</span>
         </div>
-        {usage && <TokenUsageSummary className="mt-2" usage={usage} />}
+        {usage && <MessageStatsSummary className="mt-2" usage={usage} />}
       </div>
       <details className="group shrink-0 border-b px-3 py-2">
         <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-[0.625rem] font-medium">

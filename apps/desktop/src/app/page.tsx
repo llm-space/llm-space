@@ -1,5 +1,10 @@
 import { FirecrawlLimitDialog } from "@llm-space/ui/components/firecrawl-limit-dialog";
 import { useModels } from "@llm-space/ui/components/model-provider";
+import {
+  LOCAL_STORAGE_KEYS,
+  readLocalStorage,
+  writeLocalStorage,
+} from "@llm-space/ui/lib/local-storage";
 import { Button } from "@llm-space/ui/ui/button";
 import {
   ResizableHandle,
@@ -182,26 +187,20 @@ function hasFiles(e: React.DragEvent): boolean {
 // Persisted width (in px) of the sidebar file-tree panel, so it survives
 // restarts. Collapsing sets the panel to 0 — we never store that, so reopening
 // restores the last dragged width.
-const SIDEBAR_SIZE_KEY = "llm-space:sidebar-size";
 const DEFAULT_SIDEBAR_SIZE = "16.7%";
 
 function readSidebarSize(): number | string {
-  try {
-    const raw = localStorage.getItem(SIDEBAR_SIZE_KEY);
-    const size = raw ? Number(raw) : NaN;
-    if (Number.isFinite(size) && size > 0) return size;
-  } catch {
-    // localStorage unavailable — fall back to the default.
-  }
+  const raw = readLocalStorage(LOCAL_STORAGE_KEYS.sidebarSize);
+  const size = raw ? Number(raw) : NaN;
+  if (Number.isFinite(size) && size > 0) return size;
   return DEFAULT_SIDEBAR_SIZE;
 }
 
 function writeSidebarSize(sizeInPixels: number): void {
-  try {
-    localStorage.setItem(SIDEBAR_SIZE_KEY, String(Math.round(sizeInPixels)));
-  } catch {
-    // Ignore write failures (e.g. storage disabled / full).
-  }
+  writeLocalStorage(
+    LOCAL_STORAGE_KEYS.sidebarSize,
+    String(Math.round(sizeInPixels))
+  );
 }
 
 function PageInner() {

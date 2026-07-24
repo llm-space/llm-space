@@ -13,6 +13,7 @@ import {
   Tool as ToolSchema,
   uuid,
   type AgentTransport,
+  type AgentEvent,
   type BuiltinTool,
   type McpTool,
   type MessageContent,
@@ -219,6 +220,8 @@ export function createThreadStore(
     loadFile?: (path: string) => Promise<string>;
     /** Test readable-file existence for template `exists(path)` conditions. */
     fileExists?: (path: string) => Promise<boolean>;
+    /** Monotonic clock used for client-observed model timing. */
+    now?: () => number;
   } = {}
 ): ThreadStore {
   const normalizedInputThread = ensureThreadVariableState(
@@ -1087,6 +1090,7 @@ export function createThreadStore(
           > => {
             streamingMessage = null;
             content = [];
+            let firstTokenAt: number | null = null;
             try {
               const context = preparedContext
                 ? preparedContext
@@ -1104,6 +1108,8 @@ export function createThreadStore(
                   ).context;
               preparedContext = null;
               promptSnapshot = context.snapshot;
+              const now = options.now ?? (() => performance.now());
+              const turnStartedAt = now();
               const response = streamThread(
                 {
                   context,
@@ -1117,6 +1123,13 @@ export function createThreadStore(
               for await (const chunk of response) {
                 if (!isActiveRun()) {
                   return "aborted";
+                }
+                const receivedAt = now();
+                if (
+                  firstTokenAt === null &&
+                  _isNonEmptyAssistantDelta(chunk)
+                ) {
+                  firstTokenAt = receivedAt;
                 }
                 sawEvent = true;
                 const reduced = reduceMessages(chunk, {
@@ -1136,7 +1149,23 @@ export function createThreadStore(
                     set({ streamingMessage: null });
                   }
                 }
-                streamingMessage = reduced.message;
+                streamingMessage =
+                  reduced.type === "message_end"
+                    ? {
+                        ...reduced.message,
+                        timing: {
+                          ...(firstTokenAt === null
+                            ? {}
+                            : {
+                                firstTokenMs: Math.max(
+                                  0,
+                                  firstTokenAt - turnStartedAt
+                                ),
+                              }),
+                          durationMs: Math.max(0, receivedAt - turnStartedAt),
+                        },
+                      }
+                    : reduced.message;
                 content = reduced.content;
                 schedulePreview();
               }
@@ -1441,6 +1470,19 @@ export function createThreadStore(
         },
       };
     })
+  );
+}
+
+function _isNonEmptyAssistantDelta(event: AgentEvent): boolean {
+  if (event.type !== "message_update") {
+    return false;
+  }
+  const update = event.assistantMessageEvent;
+  return (
+    (update.type === "thinking_delta" ||
+      update.type === "text_delta" ||
+      update.type === "toolcall_delta") &&
+    update.delta.length > 0
   );
 }
 

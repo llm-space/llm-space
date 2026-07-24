@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  LOCAL_STORAGE_KEYS,
+  readLocalStorage,
+  writeLocalStorage,
+} from "@llm-space/ui/lib/local-storage";
+import {
   createContext,
   useCallback,
   useContext,
@@ -8,21 +13,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-
-/**
- * localStorage key for the opt-in tracing (beta) experiment. Kept flat and
- * client-only — these are UI experiments, not synced settings.
- */
-export const TRACING_ENABLED_STORAGE_KEY = "llm-space-experimental-tracing";
-
-/**
- * localStorage key for the react-scan render overlay. Read once at startup in
- * `mainview/main.tsx` (react-scan must patch the reconciler before React
- * renders), so toggling it only takes effect after a reload. Dev-only: the
- * overlay is tree-shaken out of production builds.
- */
-export const REACT_SCAN_ENABLED_STORAGE_KEY =
-  "llm-space-experimental-react-scan";
 
 interface ExperimentalContextValue {
   /** Whether the tracing (beta) experiment is enabled. */
@@ -38,11 +28,11 @@ const ExperimentalContext = createContext<ExperimentalContextValue | null>(
 );
 
 function _readStoredTracingEnabled(): boolean {
-  return localStorage.getItem(TRACING_ENABLED_STORAGE_KEY) === "true";
+  return readLocalStorage(LOCAL_STORAGE_KEYS.experimentalTracing) === "true";
 }
 
 function _readStoredReactScanEnabled(): boolean {
-  return localStorage.getItem(REACT_SCAN_ENABLED_STORAGE_KEY) === "true";
+  return readLocalStorage(LOCAL_STORAGE_KEYS.experimentalReactScan) === "true";
 }
 
 export function ExperimentalProvider({ children }: { children: ReactNode }) {
@@ -54,12 +44,12 @@ export function ExperimentalProvider({ children }: { children: ReactNode }) {
   );
 
   const setTracingEnabled = useCallback((next: boolean) => {
-    localStorage.setItem(TRACING_ENABLED_STORAGE_KEY, String(next));
+    writeLocalStorage(LOCAL_STORAGE_KEYS.experimentalTracing, String(next));
     setTracingEnabledState(next);
   }, []);
 
   const setReactScanEnabled = useCallback((next: boolean) => {
-    localStorage.setItem(REACT_SCAN_ENABLED_STORAGE_KEY, String(next));
+    writeLocalStorage(LOCAL_STORAGE_KEYS.experimentalReactScan, String(next));
     setReactScanEnabledState(next);
   }, []);
 

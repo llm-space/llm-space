@@ -1,6 +1,9 @@
 import "@fontsource-variable/geist/index.css";
 import "@fontsource-variable/geist-mono/index.css";
-import { THEME_STORAGE_KEY } from "@llm-space/ui/components/theme-provider";
+import {
+  LOCAL_STORAGE_KEYS,
+  writeLocalStorage,
+} from "@llm-space/ui/lib/local-storage";
 import "@llm-space/ui/styles/globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -13,7 +16,7 @@ import "@/landing/index.css";
 
 // This site is dark-only: pin the theme before React mounts so ThemeProvider
 // resolves dark and there's no light first paint. There is no theme toggle.
-localStorage.setItem(THEME_STORAGE_KEY, "dark");
+writeLocalStorage(LOCAL_STORAGE_KEYS.theme, "dark");
 document.documentElement.classList.add("dark");
 
 createRoot(document.getElementById("root")!).render(
